@@ -5,11 +5,7 @@ from flake8_scrapy import ScrapyStyleChecker
 
 
 def load_sample_file(filename):
-    path = os.path.join(
-        os.path.dirname(__file__),
-        'samples',
-        filename
-    )
+    path = os.path.join(os.path.dirname(__file__), "samples", filename)
     return open(path).read()
 
 
