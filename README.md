@@ -19,7 +19,7 @@ on Scrapy projects.
 ## Installation
 
 ```
-$ pip install flake8-scrapy
+pip install flake8-scrapy
 ```
 
 
@@ -29,5 +29,17 @@ Once installed, flake8-scrapy checks are run automatically when running
 [Flake8](https://flake8.pycqa.org/en/latest/):
 
 ```
-$ flake8
+flake8
+```
+
+When using [pre-commit](https://pre-commit.com/), configure Flake8 and list
+flake8-scrapy in `additional_dependencies`. For example:
+
+```yaml
+- repo: https://github.com/pycqa/flake8
+  rev: "7.2.0"
+  hooks:
+  - id: flake8
+    additional_dependencies:
+    - flake8-scrapy
 ```
