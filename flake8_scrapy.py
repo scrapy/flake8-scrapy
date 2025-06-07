@@ -6,13 +6,12 @@ from finders.domains import (
 )
 from finders.oldstyle import OldSelectorIssueFinder, UrlJoinIssueFinder
 
-
 __version__ = "0.0.2"
 
 
 class ScrapyStyleIssueFinder(ast.NodeVisitor):
     def __init__(self, *args, **kwargs):
-        super(ScrapyStyleIssueFinder, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.issues = []
         self.finders = {
             "Assign": [
@@ -40,7 +39,7 @@ class ScrapyStyleIssueFinder(ast.NodeVisitor):
         self.find_issues_visitor("Call", node)
 
 
-class ScrapyStyleChecker(object):
+class ScrapyStyleChecker:
     options = None
     name = "flake8-scrapy"
     version = __version__

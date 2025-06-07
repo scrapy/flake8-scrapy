@@ -1,8 +1,9 @@
 # scrapy-flake8
 ![](https://github.com/stummjr/flake8-scrapy/workflows/CI/badge.svg)
-[![Downloads](https://pepy.tech/badge/flake8-scrapy)](https://pepy.tech/project/scrapy-fieldstats)
+![](https://pepy.tech/badge/flake8-scrapy)
 
-A Flake8 plugin to catch common issues on Scrapy spiders.
+A [Flake8](https://flake8.pycqa.org/en/latest/) plugin to catch common issues
+on Scrapy projects.
 
 ## Issue types
 
@@ -17,12 +18,6 @@ This is a work in progress, so new issues will be added to this list.
 
 
 ## Installation
-
-To run this in your project, please make sure you have flake8 installed first:
-
-```
-$ pip install flake8
-```
 
 And then install flake8-scrapy:
 

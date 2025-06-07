@@ -1,7 +1,8 @@
 import pytest
 
-from . import run_checker
 from finders.oldstyle import UrlJoinIssueFinder
+
+from . import run_checker
 
 
 @pytest.mark.parametrize(
@@ -32,7 +33,7 @@ def test_dont_find_old_style_urljoin(code):
 
 
 @pytest.mark.parametrize(
-    "code,expected",
+    ("code", "expected"),
     [
         ("sel = Selector(response)", 1),
         ('sel = Selector(response, type="html")', 1),

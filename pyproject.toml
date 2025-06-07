@@ -1,0 +1,146 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "flake8-scrapy"
+version = "0.0.2"
+description = "A Flake8 plugin to catch common issues on Scrapy projects"
+dependencies = [
+    "flake8>=0.1",
+    "scrapy>=2.0.1",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Framework :: Flake8",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Quality Assurance",
+]
+license = "MIT"
+license-files = ["LICENSE"]
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Valdir Stumm Junior", email = "stummjr@gmail.com" }]
+maintainers = [{ name = "Valdir Stumm Junior", email = "stummjr@gmail.com" }]
+
+[project.entry-points."flake8.extension"]
+SCP0 = "flake8_scrapy:ScrapyStyleChecker"
+
+[project.urls]
+Source = "http://github.com/stummjr/flake8-scrapy"
+Tracker = "http://github.com/stummjr/flake8-scrapy/issues"
+"Release notes" = "https://github.com/stummjr/flake8-scrapy/blob/master/CHANGES.rst"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/finders",
+  "/flake8_scrapy.py",
+  "/tests",
+  "/CHANGES.rst",
+  "/tox.ini",
+]
+
+[tool.bumpversion]
+current_version = "0.0.2"
+commit = true
+tag = true
+tag_name = "v{new_version}"
+
+[[tool.bumpversion.files]]
+filename = "CHANGES.rst"
+search = "\\(unreleased\\)$"
+replace = "({now:%Y-%m-%d})"
+regex = true
+
+[[tool.bumpversion.files]]
+filename = "flake8_scrapy.py"
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.ruff.lint]
+extend-select = [
+    # flake8-bugbear
+    "B",
+    # flake8-comprehensions
+    "C4",
+    # pydocstyle
+    "D",
+    # flake8-future-annotations
+    "FA",
+    # flynt
+    "FLY",
+    # refurb
+    "FURB",
+    # isort
+    "I",
+    # flake8-implicit-str-concat
+    "ISC",
+    # flake8-logging
+    "LOG",
+    # Perflint
+    "PERF",
+    # pygrep-hooks
+    "PGH",
+    # flake8-pie
+    "PIE",
+    # pylint
+    "PL",
+    # flake8-pytest-style
+    "PT",
+    # flake8-use-pathlib
+    "PTH",
+    # flake8-pyi
+    "PYI",
+    # flake8-quotes
+    "Q",
+    # flake8-return
+    "RET",
+    # flake8-raise
+    "RSE",
+    # Ruff-specific rules
+    "RUF",
+    # flake8-bandit
+    "S",
+    # flake8-simplify
+    "SIM",
+    # flake8-slots
+    "SLOT",
+    # flake8-debugger
+    "T10",
+    # flake8-type-checking
+    "TC",
+    # flake8-tidy-imports
+    "TID",
+    # pyupgrade
+    "UP",
+    # pycodestyle warnings
+    "W",
+    # flake8-2020
+    "YTT",
+]
+ignore = [
+    # No API docs needed
+    "D",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S"]
+# Line and column numbers are expressed with hardcoded ints.
+"tests/test_domains.py" = ["PLR2004"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"

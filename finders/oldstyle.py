@@ -61,8 +61,7 @@ class OldSelectorIssueFinder(IssueFinder):
         as in: Selector(text=response.text) or Selector(response=response)
         """
         return (
-            node.arg == "text"
-            and self.is_response_dot_text_or_body(node.value)
+            (node.arg == "text" and self.is_response_dot_text_or_body(node.value))
             or self.is_response_dot_body_as_unicode(node.value)
         ) or (node.arg == "response" and self.is_response(node.value))
 
@@ -75,7 +74,7 @@ class OldSelectorIssueFinder(IssueFinder):
 
     def find_issues(self, node):
         if not self.issue_applies(node):
-            return
+            return None
 
         # look for: Selector(response)
         if node.value.args:
@@ -87,3 +86,5 @@ class OldSelectorIssueFinder(IssueFinder):
         for kw in node.value.keywords:
             if self.has_response_for_keyword_parameter(kw):
                 return [(node.lineno, node.col_offset, self.message)]
+
+        return None
