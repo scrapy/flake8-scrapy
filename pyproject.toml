@@ -49,7 +49,7 @@ include = [
 ]
 
 [tool.hatch.build.targets.wheel]
-only-include = ["flake8_scrapy.py", "finders"]
+packages = ["flake8_scrapy"]
 
 [tool.bumpversion]
 current_version = "0.0.2"

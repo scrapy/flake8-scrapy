@@ -1,6 +1,6 @@
 import ast
 
-from finders import IssueFinder
+from . import IssueFinder
 
 
 class UrlJoinIssueFinder(IssueFinder):

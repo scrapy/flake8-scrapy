@@ -2,7 +2,7 @@ import ast
 from collections.abc import Generator
 from urllib.parse import urlparse
 
-from finders import IssueFinder
+from . import IssueFinder
 
 
 def get_list_metadata(node):

@@ -1,6 +1,6 @@
 import pytest
 
-from finders.oldstyle import UrlJoinIssueFinder
+from flake8_scrapy._finders.oldstyle import UrlJoinIssueFinder
 
 from . import run_checker
 
