@@ -41,3 +41,10 @@ flake8-scrapy in ``additional_dependencies``. For example:
         - flake8-scrapy
 
 .. intro-end
+
+Rules
+=====
+
+See the documentation_ for a list of rules.
+
+.. _documentation: https://flake8-scrapy.readthedocs.io/en/latest/
