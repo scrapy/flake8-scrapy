@@ -43,12 +43,13 @@ Tracker = "http://github.com/stummjr/flake8-scrapy/issues"
 
 [tool.hatch.build.targets.sdist]
 include = [
-  "/finders",
-  "/flake8_scrapy.py",
   "/tests",
   "/CHANGES.rst",
   "/tox.ini",
 ]
+
+[tool.hatch.build.targets.wheel]
+only-include = ["flake8_scrapy.py", "finders"]
 
 [tool.bumpversion]
 current_version = "0.0.2"
