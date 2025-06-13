@@ -64,7 +64,7 @@ replace = "({now:%Y-%m-%d})"
 regex = true
 
 [[tool.bumpversion.files]]
-filename = "flake8_scrapy.py"
+filename = "flake8_scrapy/__init__.py"
 
 [tool.coverage.report]
 exclude_also = [
