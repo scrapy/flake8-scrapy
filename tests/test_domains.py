@@ -1,4 +1,4 @@
-from flake8_scrapy._finders.domains import (
+from flake8_scrapy.finders.domains import (
     UnreachableDomainIssueFinder,
     UrlInAllowedDomainsIssueFinder,
 )

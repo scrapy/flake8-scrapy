@@ -31,8 +31,6 @@ jobs:
     - name: Run tests
       run:
         tox -e ${{ matrix.toxenv || 'py' }}
-    - name: Upload coverage.xml to codecov
-      uses: codecov/codecov-action@v5
   check:
     runs-on: ubuntu-latest
     strategy:

@@ -1,10 +1,10 @@
 import ast
 
-from ._finders.domains import (
+from .finders.domains import (
     UnreachableDomainIssueFinder,
     UrlInAllowedDomainsIssueFinder,
 )
-from ._finders.oldstyle import OldSelectorIssueFinder, UrlJoinIssueFinder
+from .finders.oldstyle import OldSelectorIssueFinder, UrlJoinIssueFinder
 
 __version__ = "0.0.2"
 
