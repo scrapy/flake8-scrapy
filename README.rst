@@ -42,6 +42,11 @@ flake8-scrapy in ``additional_dependencies``. For example:
         additional_dependencies:
         - flake8-scrapy
 
+See `Configurign Flake8`_ for information on how to disable specific checks
+for a project, a file or a line.
+
+.. _Configurign Flake8: https://flake8.pycqa.org/en/latest/user/configuration.html
+
 .. intro-end
 
 Rules
