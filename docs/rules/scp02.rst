@@ -27,7 +27,7 @@ Example
 
     class MySpider(scrapy.Spider):
         name = "myspider"
-        allowed_domains = ["https://example.com/"]
+        allowed_domains = ["https://toscrape.com/"]
 
 Use instead:
 
@@ -38,4 +38,4 @@ Use instead:
 
     class MySpider(scrapy.Spider):
         name = "myspider"
-        allowed_domains = ["example.com"]
+        allowed_domains = ["toscrape.com"]

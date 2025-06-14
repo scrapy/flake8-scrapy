@@ -54,7 +54,7 @@ class UrlInAllowedDomainsIssueFinder(IssueFinder):
     msg_info = "allowed_domains should not contain URLs"
 
     def is_url(self, domain):
-        # when it's just a domain (as 'example.com'), the parsed URL contains
+        # when it's just a domain (as 'toscrape.com'), the parsed URL contains
         # only the 'path' component
         forbidden_components = [
             "scheme",
