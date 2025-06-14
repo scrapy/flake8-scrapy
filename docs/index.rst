@@ -9,6 +9,7 @@ flake8-scrapy documentation
 .. toctree::
     :maxdepth: 1
     :caption: Rules
+    :hidden:
     :glob:
 
     rules/*
