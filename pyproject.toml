@@ -37,8 +37,8 @@ maintainers = [{ name = "Valdir Stumm Junior", email = "stummjr@gmail.com" }]
 SCP0 = "flake8_scrapy:ScrapyStyleChecker"
 
 [project.urls]
-Source = "http://github.com/stummjr/flake8-scrapy"
-Tracker = "http://github.com/stummjr/flake8-scrapy/issues"
+Source = "https://github.com/stummjr/flake8-scrapy"
+Tracker = "https://github.com/stummjr/flake8-scrapy/issues"
 "Release notes" = "https://github.com/stummjr/flake8-scrapy/blob/master/CHANGES.rst"
 
 [tool.hatch.build.targets.sdist]

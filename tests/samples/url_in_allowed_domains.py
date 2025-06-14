@@ -8,6 +8,6 @@ class URLINAllowedDomainsSpider(scrapy.Spider):
 
     name = "url_not_in_allowed_domains"
     allowed_domains = (
-        "http://example.com",
+        "https://example.com",
         "scrapy.org",
     )
