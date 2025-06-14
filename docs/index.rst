@@ -7,10 +7,8 @@ flake8-scrapy documentation
    :end-before: intro-end
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Rules
+    :maxdepth: 1
+    :caption: Rules
+    :glob:
 
-   rules/scp01
-   rules/scp02
-   rules/scp03
-   rules/scp04
+    rules/*
