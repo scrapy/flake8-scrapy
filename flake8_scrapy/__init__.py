@@ -1,5 +1,9 @@
-import ast
+from __future__ import annotations
 
+from ast import AST, NodeVisitor
+from typing import TYPE_CHECKING
+
+from .context import Context
 from .finders.domains import (
     UnreachableDomainIssueFinder,
     UrlInAllowedDomainsIssueFinder,
@@ -10,27 +14,31 @@ from .finders.oldstyle import (
     OldSelectorIssueFinder,
     UrlJoinIssueFinder,
 )
+from .finders.setting_modules import SettingModuleIssueFinder
 from .finders.unsupported import LambdaCallbackIssueFinder
 
 __version__ = "0.0.2"
 
+if TYPE_CHECKING:
+    from collections.abc import Generator, Sequence
 
-class ScrapyStyleIssueFinder(ast.NodeVisitor):
+
+class ScrapyStyleIssueFinder(NodeVisitor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.issues = []
         lambda_callback_issue_finder = LambdaCallbackIssueFinder()
-        self.finders = {
+        self.finders: dict[str, Sequence] = {
             "Assign": [
+                lambda_callback_issue_finder,
+                OldSelectorIssueFinder(),
                 UnreachableDomainIssueFinder(),
                 UrlInAllowedDomainsIssueFinder(),
-                OldSelectorIssueFinder(),
-                lambda_callback_issue_finder,
             ],
             "Call": [
                 GetFirstByIndexIssueFinder(),
-                UrlJoinIssueFinder(),
                 lambda_callback_issue_finder,
+                UrlJoinIssueFinder(),
             ],
             "Subscript": [
                 ExtractThenIndexIssueFinder(),
@@ -60,13 +68,25 @@ class ScrapyStyleChecker:
     name = "flake8-scrapy"
     version = __version__
 
-    def __init__(self, tree, filename):
+    def __init__(
+        self, tree: AST | None, filename: str, lines: Sequence[str] | None = None
+    ):
         self.tree = tree
-        self.filename = filename
+        context = Context.from_flake8_params(tree, filename, lines)
+        self.setting_module_finder = SettingModuleIssueFinder(context)
 
     def run(self):
-        finder = ScrapyStyleIssueFinder()
-        finder.visit(self.tree)
+        for issue in self.run_checks():
+            yield (*issue, self.__class__)
 
-        for line, col, msg in finder.issues:
-            yield (line, col, msg, ScrapyStyleChecker)
+    def run_checks(self):
+        if self.setting_module_finder.in_setting_module():
+            yield from self.setting_module_finder.check()
+        elif self.tree:
+            yield from self.check_code()
+
+    def check_code(self) -> Generator[tuple[str, int, int], None, None]:
+        finder = ScrapyStyleIssueFinder()
+        assert self.tree is not None
+        finder.visit(self.tree)
+        yield from finder.issues
