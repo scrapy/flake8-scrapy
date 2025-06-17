@@ -8,12 +8,12 @@ class AllowedDomainsSpider(scrapy.Spider):
 
     # name = 'allowed_domains'
     allowed_domains = (
-        "example.com",
-        "scrapy.org",
+        "a.example",
+        "b.example",
     )
     start_urls = [  # noqa: RUF012
-        "http://quotes.toscrape.com",
-        "http://httpbin.org",
+        "https://c.example",
+        "https://d.example",
     ]
 
     def parse(self, response):
