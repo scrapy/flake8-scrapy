@@ -37,14 +37,19 @@ def load_sample_file(filename):
 
 
 def run_checker(code: str, file_path: str = "a.py") -> Sequence[tuple[int, int, str]]:
-    tree = ast.parse(code)
-    checker = ScrapyStyleChecker(tree, file_path)
+    if file_path.endswith(".py"):
+        tree = ast.parse(code)
+        lines = None
+    else:
+        tree = None
+        lines = code.splitlines()
+    checker = ScrapyStyleChecker(tree, file_path, lines)
     return tuple(checker.run())
 
 
 @dataclass
 class File:
-    text: str
+    text: str | bytes
     path: str | None = None
 
 
