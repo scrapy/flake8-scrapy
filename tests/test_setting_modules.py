@@ -16,7 +16,10 @@ def default_issues(
             message=message,
             path=path,
         )
-        for message in ("SCP08 no project USER_AGENT",)
+        for message in (
+            "SCP08 no project USER_AGENT",
+            "SCP09 robots.txt ignored by default",
+        )
         if not any(message.startswith(f"SCP{code:02} ") for code in exclude)
     ]
 
@@ -140,28 +143,45 @@ CASES = [
             ),
         )
     ),
-    # Checks that trigger on empty setting modules
+    # Silencing or repositioning of checks that trigger on empty setting
+    # modules.
     *(
         (
             [
                 File("[settings]\na=a", path="scrapy.cfg"),
                 File(code, path=path),
             ],
-            (*default_issues(path, exclude=exclude),),
+            (*default_issues(path, exclude=exclude), *issues),
         )
         for path in ["a.py"]
-        for code, exclude in (
+        for code, exclude, issues in (
             # SCP08 no project USER_AGENT
-            (
-                "USER_AGENT = 'Jane Doe (jane@doe.example)'",
-                8,
+            *(
+                (code, 8, ())
+                for code in (
+                    "USER_AGENT = 'Jane Doe (jane@doe.example)'",
+                    "if a:\n"
+                    "    USER_AGENT = 'Jane Doe (jane@doe.example)'\n"
+                    "else:\n"
+                    "    USER_AGENT = 'Example Company (+https://company.example)'",
+                )
             ),
-            (
-                "if a:\n"
-                "    USER_AGENT = 'Jane Doe (jane@doe.example)'\n"
-                "else:\n"
-                "    USER_AGENT = 'Example Company (+https://company.example)'",
-                8,
+            # SCP09 robots.txt ignored by default
+            *(
+                (f"ROBOTSTXT_OBEY = {value}", 9, ())
+                for value in ("True", "'true'", "1", "'foo'")
+            ),
+            *(
+                (
+                    f"ROBOTSTXT_OBEY = {value}",
+                    9,
+                    (
+                        Issue(
+                            "SCP09 robots.txt ignored by default", column=17, path=path
+                        ),
+                    ),
+                )
+                for value in ("False", "'false'", "0")
             ),
         )
     ),

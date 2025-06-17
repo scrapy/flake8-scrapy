@@ -72,6 +72,9 @@ exclude_also = [
     "if TYPE_CHECKING:",
     "@abstractmethod",
 ]
+omit = [
+    "flake8_scrapy/typing.py",
+]
 
 [tool.mypy]
 check_untyped_defs = true
