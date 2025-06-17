@@ -37,9 +37,9 @@ maintainers = [{ name = "Valdir Stumm Junior", email = "stummjr@gmail.com" }]
 SCP0 = "flake8_scrapy:ScrapyStyleChecker"
 
 [project.urls]
-Source = "https://github.com/stummjr/flake8-scrapy"
-Tracker = "https://github.com/stummjr/flake8-scrapy/issues"
-"Release notes" = "https://github.com/stummjr/flake8-scrapy/blob/master/CHANGES.rst"
+Source = "https://github.com/scrapy/flake8-scrapy"
+Tracker = "https://github.com/scrapy/flake8-scrapy/issues"
+"Release notes" = "https://github.com/scrapy/flake8-scrapy/blob/master/CHANGES.rst"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -56,6 +56,7 @@ current_version = "0.0.2"
 commit = true
 tag = true
 tag_name = "v{new_version}"
+pre_commit_hooks = ["utils/update-flake8-version.py"]
 
 [[tool.bumpversion.files]]
 filename = "CHANGES.rst"
@@ -70,9 +71,6 @@ filename = "flake8_scrapy/__init__.py"
 exclude_also = [
     "if TYPE_CHECKING:",
     "@abstractmethod",
-]
-omit = [
-    "flake8_scrapy/typing.py",
 ]
 
 [tool.mypy]
