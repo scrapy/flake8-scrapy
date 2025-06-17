@@ -2,10 +2,19 @@
 scrapy-flake8
 =============
 
-.. |ci| image:: https://github.com/scrapy/flake8-scrapy/workflows/CI/badge.svg
-.. |downloads| image:: https://pepy.tech/badge/flake8-scrapy
+|version| |python_version| |ci|
 
-|ci| |downloads|
+.. |version| image:: https://img.shields.io/pypi/v/flake8-scrapy.svg
+   :target: https://pypi.org/pypi/flake8-scrapy
+   :alt: PyPI version
+
+.. |python_version| image:: https://img.shields.io/pypi/pyversions/flake8-scrapy.svg
+   :target: https://pypi.org/pypi/flake8-scrapy
+   :alt: Supported Python versions
+
+.. |ci| image:: https://github.com/scrapy/flake8-scrapy/workflows/CI/badge.svg
+   :target: https://github.com/scrapy/flake8-scrapy/actions?query=workflow%3ACI
+   :alt: CI
 
 .. intro-start
 
