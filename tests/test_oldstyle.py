@@ -67,6 +67,9 @@ def test_find_old_style_selector(code, expected):
         ('response.jmespath("*").extract()[0]', 0),
         ('response.css("*")[1].extract()', 0),
         ('response.css("*").extract()[1]', 0),
+        # Non-constant subscripts
+        ('response.css("*")[n].extract()', 0),
+        ('response.css("*").extract()[n]', 0),
     ],
 )
 def test_find_oldstyle_get_first_by_index(code, expected):

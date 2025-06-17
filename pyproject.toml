@@ -8,7 +8,7 @@ version = "0.0.2"
 description = "A Flake8 plugin to catch common issues on Scrapy projects"
 dependencies = [
     "flake8>=0.1",
-    "scrapy>=2.0.1",
+    "packaging>=20.0",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -37,9 +37,9 @@ maintainers = [{ name = "Valdir Stumm Junior", email = "stummjr@gmail.com" }]
 SCP0 = "flake8_scrapy:ScrapyStyleChecker"
 
 [project.urls]
-Source = "https://github.com/scrapy/flake8-scrapy"
-Tracker = "https://github.com/scrapy/flake8-scrapy/issues"
-"Release notes" = "https://github.com/scrapy/flake8-scrapy/blob/master/CHANGES.rst"
+Source = "https://github.com/stummjr/flake8-scrapy"
+Tracker = "https://github.com/stummjr/flake8-scrapy/issues"
+"Release notes" = "https://github.com/stummjr/flake8-scrapy/blob/master/CHANGES.rst"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -56,7 +56,6 @@ current_version = "0.0.2"
 commit = true
 tag = true
 tag_name = "v{new_version}"
-pre_commit_hooks = ["utils/update-flake8-version.py"]
 
 [[tool.bumpversion.files]]
 filename = "CHANGES.rst"
@@ -70,8 +69,15 @@ filename = "flake8_scrapy/__init__.py"
 [tool.coverage.report]
 exclude_also = [
     "if TYPE_CHECKING:",
-    "@(abc\\.)?abstractmethod",
+    "@abstractmethod",
 ]
+omit = [
+    "flake8_scrapy/typing.py",
+]
+
+[tool.mypy]
+check_untyped_defs = true
+exclude = "samples"
 
 [tool.ruff.lint]
 extend-select = [
@@ -137,12 +143,15 @@ extend-select = [
 ignore = [
     # No API docs needed
     "D",
+    # asserts for mypy
+    "S101",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S"]
-# Line and column numbers are expressed with hardcoded ints.
-"tests/test_domains.py" = ["PLR2004"]
+# FLY002: "\n".join(lines) instead of f-strings
+# PLR2004: Line and column numbers are expressed with hardcoded ints.
+# S: Security issues, irrelevant for tests
+"tests/**" = ["FLY002", "PLR2004", "S"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"

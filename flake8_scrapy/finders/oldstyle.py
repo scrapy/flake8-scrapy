@@ -38,6 +38,7 @@ class OldSelectorIssueFinder(IssueFinder):
         return (
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Attribute)
+            and isinstance(node.func.value, ast.Name)
             and node.func.value.id == "response"
             and node.func.attr == "body_as_unicode"
         )
@@ -48,6 +49,7 @@ class OldSelectorIssueFinder(IssueFinder):
         """
         return (
             isinstance(node, ast.Attribute)
+            and isinstance(node.value, ast.Name)
             and node.value.id == "response"
             and node.attr in ("text", "body")
         )
@@ -106,6 +108,9 @@ class GetFirstByIndexIssueFinder(IssueFinder):
         if not isinstance(subscript_node, ast.Subscript):
             return
 
+        if not isinstance(subscript_node.slice, ast.Constant):
+            return
+
         index = subscript_node.slice.value
         if index != 0:
             return
@@ -126,6 +131,8 @@ class GetFirstByIndexIssueFinder(IssueFinder):
 
 class ExtractThenIndexIssueFinder(GetFirstByIndexIssueFinder):
     def find_issues(self, node):
+        if not isinstance(node.slice, ast.Constant):
+            return
         if node.slice.value != 0:
             return
         if not isinstance(node.value, ast.Call):
