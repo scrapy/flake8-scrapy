@@ -88,3 +88,58 @@ class OldSelectorIssueFinder(IssueFinder):
                 return [(node.lineno, node.col_offset, self.message)]
 
         return None
+
+
+class GetFirstByIndexIssueFinder(IssueFinder):
+    msg_code = "SCP06"
+    msg_info = "use .get() to get the first item"
+
+    def find_issues(self, node):
+        node_func = node.func
+        if not (
+            isinstance(node_func, ast.Attribute)
+            and node_func.attr in ("extract", "get")
+        ):
+            return
+
+        subscript_node = node.func.value
+        if not isinstance(subscript_node, ast.Subscript):
+            return
+
+        index = subscript_node.slice.value
+        if index != 0:
+            return
+
+        subscripted_value = subscript_node.value
+        if not isinstance(subscripted_value, ast.Call):
+            return
+
+        subscripted_value_func = subscripted_value.func
+        if not (
+            isinstance(subscripted_value_func, ast.Attribute)
+            and subscripted_value_func.attr in ("css", "xpath")
+        ):
+            return
+
+        yield (node.lineno, node.col_offset, self.message)
+
+
+class ExtractThenIndexIssueFinder(GetFirstByIndexIssueFinder):
+    def find_issues(self, node):
+        if node.slice.value != 0:
+            return
+        if not isinstance(node.value, ast.Call):
+            return
+        if not (
+            isinstance(node.value.func, ast.Attribute)
+            and node.value.func.attr in ("extract", "getall")
+        ):
+            return
+        extract_target = node.value.func.value
+        if not (
+            isinstance(extract_target, ast.Call)
+            and isinstance(extract_target.func, ast.Attribute)
+            and extract_target.func.attr in ("css", "xpath")
+        ):
+            return
+        yield (node.lineno, node.col_offset, self.message)
