@@ -1,8 +1,25 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from tests.helpers import check_project
 
 from . import NO_ISSUE, File, Issue, cases
+
+
+def default_issues(
+    path: str | None = None, exclude: int | set[int] | None = None
+) -> Sequence[Issue]:
+    exclude = {exclude} if isinstance(exclude, int) else exclude or set()
+    return [
+        Issue(
+            message=message,
+            path=path,
+        )
+        for message in ("SCP08 no project USER_AGENT",)
+        if not any(message.startswith(f"SCP{code:02} ") for code in exclude)
+    ]
+
 
 CASES = [
     # Code checks on a single setting module
@@ -12,7 +29,16 @@ CASES = [
                 File("[settings]\na=a", path="scrapy.cfg"),
                 File(code, path=path),
             ],
-            issues,
+            (
+                *(
+                    issues
+                    if isinstance(issues, Sequence)
+                    else (issues,)
+                    if issues
+                    else ()
+                ),
+                *default_issues(path),
+            ),
         )
         for path in ["a.py"]
         for code, issues in (
@@ -42,12 +68,7 @@ CASES = [
     # Setting module detection and checking
     *(
         (files, issues)
-        for code, issue in (
-            (
-                'BOT_NAME = "a"\nBOT_NAME = "a"',
-                Issue("SCP07 redefined setting: seen first at line 1", line=2),
-            ),
-        )
+        for default_issues in (default_issues(),)
         for files, issues in (
             # - Only modules declared in scrapy.cfg are checked.
             # - settings.py is not assumed to be a setting module.
@@ -58,15 +79,16 @@ CASES = [
             (
                 (
                     File("[settings]\na=b\nc=d\ne=f", path="scrapy.cfg"),
-                    File(code, path="a.py"),
-                    File(code, path="b.py"),
-                    File(code, path="d.py"),
-                    File(code, path="d/__init__.py"),
-                    File(code, path="settings.py"),
+                    File("", path="a.py"),
+                    File("", path="b.py"),
+                    File("", path="d.py"),
+                    File("", path="d/__init__.py"),
+                    File("", path="settings.py"),
                 ),
-                (
-                    issue.replace(path="b.py"),
-                    issue.replace(path="d/__init__.py"),
+                tuple(
+                    issue.replace(path=path)
+                    for path in ("b.py", "d/__init__.py")
+                    for issue in default_issues
                 ),
             ),
             # scrapy.cfg files may miss the [settings] section, in which case
@@ -74,14 +96,14 @@ CASES = [
             (
                 (
                     File("", path="scrapy.cfg"),
-                    File(code, path="a.py"),
+                    File("", path="a.py"),
                 ),
                 NO_ISSUE,
             ),
         )
     ),
-    # Checks supporting unknown settings should ignore module variables with
-    # any lowercase character in the name, but should take into account
+    # Checks that may work with unknown settings should ignore module variables
+    # with any lowercase character in the name, but should take into account
     # anything else.
     *(
         (
@@ -89,7 +111,16 @@ CASES = [
                 File("[settings]\na=a", path="scrapy.cfg"),
                 File(code, path=path),
             ],
-            issues if is_setting_like else NO_ISSUE,
+            (
+                *(
+                    issues
+                    if isinstance(issues, Sequence)
+                    else (issues,)
+                    if issues and is_setting_like
+                    else ()
+                ),
+                *default_issues(path),
+            ),
         )
         for path in ["a.py"]
         for setting, is_setting_like in (
@@ -106,6 +137,31 @@ CASES = [
                     line=2,
                     path=path,
                 ),
+            ),
+        )
+    ),
+    # Checks that trigger on empty setting modules
+    *(
+        (
+            [
+                File("[settings]\na=a", path="scrapy.cfg"),
+                File(code, path=path),
+            ],
+            (*default_issues(path, exclude=exclude),),
+        )
+        for path in ["a.py"]
+        for code, exclude in (
+            # SCP08 no project USER_AGENT
+            (
+                "USER_AGENT = 'Jane Doe (jane@doe.example)'",
+                8,
+            ),
+            (
+                "if a:\n"
+                "    USER_AGENT = 'Jane Doe (jane@doe.example)'\n"
+                "else:\n"
+                "    USER_AGENT = 'Example Company (+https://company.example)'",
+                8,
             ),
         )
     ),
