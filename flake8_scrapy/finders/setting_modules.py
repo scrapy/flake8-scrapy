@@ -1,4 +1,4 @@
-from ast import Assign, Constant, Module, Name, NodeVisitor
+from ast import Assign, ClassDef, Constant, FunctionDef, Module, Name, NodeVisitor
 from ast import walk as iter_nodes
 from collections.abc import Generator
 from contextlib import suppress
@@ -45,6 +45,16 @@ class SettingModuleIssueFinder(NodeVisitor):
     def check_body_level_issues(self, node: Module) -> None:
         seen: dict[str, LineNumber] = {}
         for child in node.body:
+            if isinstance(child, (ClassDef, FunctionDef)) and child.name.isupper():
+                self.issues.append(
+                    Issue(
+                        11,
+                        "improper setting definition",
+                        line=child.lineno,
+                        column=child.col_offset,
+                    )
+                )
+                continue
             if not isinstance(child, Assign):
                 continue
             for target in child.targets:
