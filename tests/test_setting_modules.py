@@ -6,19 +6,20 @@ from tests.helpers import check_project
 
 from . import NO_ISSUE, File, Issue, cases
 
+FALSE_BOOLS = ("False", "'false'", "0")
+TRUE_UNKNOWN_OR_INVALID_BOOLS = ("True", "'true'", "1", "foo", "'foo'")
+
 
 def default_issues(
     path: str | None = None, exclude: int | set[int] | None = None
 ) -> Sequence[Issue]:
     exclude = {exclude} if isinstance(exclude, int) else exclude or set()
     return [
-        Issue(
-            message=message,
-            path=path,
-        )
+        Issue(message=message, path=path)
         for message in (
             "SCP08 no project USER_AGENT",
             "SCP09 robots.txt ignored by default",
+            "SCP10 incomplete project throttling",
         )
         if not any(message.startswith(f"SCP{code:02} ") for code in exclude)
     ]
@@ -169,7 +170,7 @@ CASES = [
             # SCP09 robots.txt ignored by default
             *(
                 (f"ROBOTSTXT_OBEY = {value}", 9, ())
-                for value in ("True", "'true'", "1", "'foo'")
+                for value in TRUE_UNKNOWN_OR_INVALID_BOOLS
             ),
             *(
                 (
@@ -181,7 +182,45 @@ CASES = [
                         ),
                     ),
                 )
-                for value in ("False", "'false'", "0")
+                for value in FALSE_BOOLS
+            ),
+            # SCP10 incomplete project throttling
+            *(
+                (f"AUTOTHROTTLE_ENABLED = {value}", 10, ())
+                for value in TRUE_UNKNOWN_OR_INVALID_BOOLS
+            ),
+            *(
+                (
+                    f"AUTOTHROTTLE_ENABLED = {value}",
+                    10,
+                    (
+                        Issue(
+                            "SCP10 incomplete project throttling", column=0, path=path
+                        ),
+                    ),
+                )
+                for value in FALSE_BOOLS
+            ),
+            (
+                "CONCURRENT_REQUESTS = 1\nCONCURRENT_REQUESTS_PER_DOMAIN = 1\nDOWNLOAD_DELAY = 5.0",
+                10,
+                (),
+            ),
+            *(
+                (
+                    code,
+                    10,
+                    (
+                        Issue(
+                            "SCP10 incomplete project throttling", column=0, path=path
+                        ),
+                    ),
+                )
+                for code in (
+                    "CONCURRENT_REQUESTS = 1\nCONCURRENT_REQUESTS_PER_DOMAIN = 1",
+                    "CONCURRENT_REQUESTS = 1\nDOWNLOAD_DELAY = 5.0",
+                    "CONCURRENT_REQUESTS_PER_DOMAIN = 1\nDOWNLOAD_DELAY = 5.0",
+                )
             ),
         )
     ),
