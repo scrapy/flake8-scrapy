@@ -2,7 +2,7 @@
 scrapy-flake8
 =============
 
-.. |ci| image:: https://github.com/stummjr/flake8-scrapy/workflows/CI/badge.svg
+.. |ci| image:: https://github.com/scrapy/flake8-scrapy/workflows/CI/badge.svg
 .. |downloads| image:: https://pepy.tech/badge/flake8-scrapy
 
 |ci| |downloads|
