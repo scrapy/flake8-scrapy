@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from ast import Assign, Constant, Import, ImportFrom, Module, Name, NodeVisitor
+from ast import Assign, Constant, Module, Name, NodeVisitor
 from ast import walk as iter_nodes
 from contextlib import suppress
 from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from flake8_scrapy.ast import extract_literal_value
+from flake8_scrapy.data.settings import SETTINGS
 from flake8_scrapy.issues import Issue
-from flake8_scrapy.settings import getbool
+from flake8_scrapy.settings import UNKNOWN_SETTING_VALUE, getbool
 from flake8_scrapy.utils import extend_sys_path
 
 if TYPE_CHECKING:
@@ -48,73 +50,40 @@ class SettingModuleIssueFinder(NodeVisitor):
     def check_body_level_issues(self, node: Module) -> None:
         seen: dict[str, LineNumber] = {}
         for child in node.body:
-            if isinstance(child, Assign):
-                seen = self.check_assignment_redefinition(child, seen)
-            elif isinstance(child, (ImportFrom, Import)):
-                self.check_import_statement(child)
-
-    def check_assignment_redefinition(
-        self, node: Assign, seen: dict[str, LineNumber]
-    ) -> dict[str, LineNumber]:
-        for target in node.targets:
-            if not (isinstance(target, Name) and target.id.isupper()):
+            if not isinstance(child, Assign):
                 continue
-            name = target.id
-            if name in seen:
-                self.issues.append(
-                    Issue(
-                        7,
-                        "redefined setting",
-                        detail=f"seen first at line {seen[name]}",
-                        line=node.lineno,
-                        column=node.col_offset,
+            for target in child.targets:
+                if not (isinstance(target, Name) and target.id.isupper()):
+                    continue
+                name = target.id
+                if name in seen:
+                    self.issues.append(
+                        Issue(
+                            7,
+                            "redefined setting",
+                            detail=f"seen first at line {seen[name]}",
+                            line=child.lineno,
+                            column=child.col_offset,
+                        )
                     )
-                )
-                continue
-            seen[name] = node.lineno
-        return seen
+                    continue
+                seen[name] = child.lineno
 
     def check_all_nodes_issues(self, node: Module) -> None:
-        processor = SettingsProcessor()
+        processor = SettingsProcessor(self.context)
         for child in iter_nodes(node):
             if isinstance(child, Assign):
                 processor.process_assignment(child)
         self.issues.extend(processor.get_issues())
 
-    def check_import_statement(self, node: Import | ImportFrom) -> None:
-        for alias in node.names:
-            name = alias.asname if alias.asname else alias.name
-            if not (name and name.isupper()):
-                continue
-            if alias.asname:
-                # For "from foo import BAR as BAZ" or "import foo as BAR", point to "BAZ"/"BAR"
-                # Need to find position of alias name after " as "
-                if hasattr(alias, "col_offset"):
-                    column = alias.col_offset + len(alias.name) + 4  # " as " is 4 chars
-                else:
-                    # Python 3.9 compatibility: alias objects don't have col_offset
-                    column = node.col_offset
-            # For "from foo import FOO" or "import FOO", point to "FOO"
-            elif hasattr(alias, "col_offset"):
-                column = alias.col_offset
-            else:
-                # Python 3.9 compatibility: alias objects don't have col_offset
-                column = node.col_offset
-            self.issues.append(
-                Issue(
-                    12,
-                    "imported setting",
-                    line=node.lineno,
-                    column=column,
-                )
-            )
-
 
 class SettingsProcessor:
-    def __init__(self):
+    def __init__(self, context: Context):
+        self.context = context
         self.seen_settings: set[str] = set()
         self.autothrottle_enabled = False
         self.robotstxt_obey_values: list[tuple[bool, int, int]] = []
+        self.redundant_values: list[tuple[int, int]] = []
         self.issues: list[Issue] = []
 
     def process_assignment(self, assignment: Assign) -> None:
@@ -130,6 +99,7 @@ class SettingsProcessor:
             self.process_autothrottle(child)
         elif name == "ROBOTSTXT_OBEY":
             self.process_robotstxt(child)
+        self.check_redundant_values(name, child)
 
     def process_autothrottle(self, child: Assign) -> None:
         if not isinstance(child.value, Constant):
@@ -169,6 +139,7 @@ class SettingsProcessor:
         self.validate_user_agent()
         self.validate_robotstxt()
         self.validate_throttling()
+        self.validate_redundant_values()
         return self.issues
 
     def validate_user_agent(self) -> None:
@@ -194,3 +165,28 @@ class SettingsProcessor:
             )
         ):
             self.issues.append(Issue(10, "incomplete project throttling"))
+
+    def check_redundant_values(self, name: str, assignment: Assign) -> None:
+        if name not in SETTINGS:
+            return
+        setting_info = SETTINGS[name]
+        default_value = setting_info.get_default_value(self.context.project)
+        if default_value is UNKNOWN_SETTING_VALUE:
+            return
+        setting_value, is_literal = extract_literal_value(assignment.value)
+        if not is_literal:
+            return
+        try:
+            parsed_value = setting_info.parse(setting_value)
+        except (ValueError, TypeError):
+            return
+        if parsed_value == default_value:
+            self.redundant_values.append(
+                (assignment.value.lineno, assignment.value.col_offset)
+            )
+
+    def validate_redundant_values(self) -> None:
+        for line, column in self.redundant_values:
+            self.issues.append(
+                Issue(17, "redundant setting value", line=line, column=column)
+            )

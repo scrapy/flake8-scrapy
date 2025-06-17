@@ -33,11 +33,16 @@ def check_project(
             assert file.path is not None
             file_path = Path(dir) / file.path
             file_path.parent.mkdir(parents=True, exist_ok=True)
-            file_path.write_text(file.text)
+            if isinstance(file.text, bytes):
+                file_path.write_bytes(file.text)
+            else:
+                file_path.write_text(file.text)
         with chdir(dir):
             issues = []
             for file in input:
                 assert file.path is not None
+                if isinstance(file.text, bytes):
+                    continue  # flake8 does not support binary files
                 issue_tuples = run_checker(file.text, file.path)
                 issues.extend(
                     [Issue.from_tuple(issue, path=file.path) for issue in issue_tuples]

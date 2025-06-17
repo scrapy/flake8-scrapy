@@ -1,23 +1,10 @@
 from __future__ import annotations
 
-import ast
 from collections.abc import Sequence
 
 from tests.helpers import check_project
 
 from . import NO_ISSUE, File, Issue, cases
-
-
-def supports_alias_col_offset():
-    code = "import foo"
-    tree = ast.parse(code)
-    assert isinstance(tree.body[0], ast.Import)
-    alias = tree.body[0].names[0]
-    return hasattr(alias, "col_offset")
-
-
-# Python 3.10+
-ALIAS_HAS_COL_OFFSET = supports_alias_col_offset()
 
 FALSE_BOOLS = ("False", "'false'", "0")
 TRUE_UNKNOWN_OR_INVALID_BOOLS = ("True", "'true'", "1", "foo", "'foo'")
@@ -80,56 +67,163 @@ CASES = [
                 'if a:\n    BOT_NAME = "a"\nelse:\n    BOT_NAME = "b"',
                 NO_ISSUE,
             ),
-            # SCP12 imported setting
+            # SCP17 redundant setting value
             *(
                 (
-                    code,
+                    f"{name} = {value}",
                     Issue(
-                        "SCP12 imported setting",
-                        column=column if ALIAS_HAS_COL_OFFSET else 0,
+                        "SCP17 redundant setting value",
+                        line=1,
+                        column=len(name) + 3,
                         path=path,
                     ),
                 )
-                for code, column in (
-                    ("from foo import FOO", 16),
-                    ("from foo import bar as BAR", 23),
-                    ("import FOO", 7),
-                    ("import foo as BAR", 14),
+                for name, value in (
+                    ("BOT_NAME", "'scrapybot'"),
+                    ("CONCURRENT_REQUESTS", "16"),
+                    ("COOKIES_ENABLED", "True"),
+                    ("DOWNLOAD_DELAY", "0"),
+                    ("DOWNLOAD_DELAY", "0.0"),
+                    ("COOKIES_ENABLED", '"true"'),
+                    ("COOKIES_ENABLED", '"True"'),
+                    ("COOKIES_ENABLED", "1"),
+                    ("AUTOTHROTTLE_DEBUG", '"false"'),
+                    ("AUTOTHROTTLE_DEBUG", '"False"'),
+                    ("AUTOTHROTTLE_DEBUG", "0"),
+                    ("AUTOTHROTTLE_DEBUG", "False"),
+                    ("ADDONS", "{}"),
+                    ("SPIDER_MODULES", "[]"),
+                    ("HTTPCACHE_IGNORE_SCHEMES", '["file"]'),
+                    ("TELNETCONSOLE_PORT", "[6023, 6073]"),
+                    (
+                        "DEFAULT_REQUEST_HEADERS",
+                        '{"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en"}',
+                    ),
+                    ("ASYNCIO_EVENT_LOOP", "None"),
                 )
-            ),
-            (
-                "from foo import FOO, BAR",
-                [
-                    Issue(
-                        "SCP12 imported setting",
-                        column=16 if ALIAS_HAS_COL_OFFSET else 0,
-                        path=path,
-                    ),
-                    Issue(
-                        "SCP12 imported setting",
-                        column=21 if ALIAS_HAS_COL_OFFSET else 0,
-                        path=path,
-                    ),
-                ],
-            ),
-            (
-                "import foo, BAR",
-                Issue(
-                    "SCP12 imported setting",
-                    column=12 if ALIAS_HAS_COL_OFFSET else 0,
-                    path=path,
-                ),
             ),
             *(
                 (code, NO_ISSUE)
                 for code in (
-                    "from foo import bar",
-                    "from foo import Bar",
-                    "import foo",
-                    "from foo import FOO as bar",
-                    "import FOO as bar",
+                    # Literals
+                    'BOT_NAME = "myproject"',
+                    "CONCURRENT_REQUESTS = 32",
+                    "COOKIES_ENABLED = False",
+                    "DOWNLOAD_DELAY = 1.5",
+                    "AUTOTHROTTLE_DEBUG = True",
+                    "UNKNOWN_SETTING = 'value'",
+                    'ADDONS = {"addon1": True}',
+                    'SPIDER_MODULES = ["myproject.spiders"]',
+                    "RETRY_HTTP_CODES = [500, 502]",
+                    # Unparseable values
+                    "BOT_NAME = get_bot_name()",
+                    "SPIDER_MODULES = [module]",
+                    "SPIDER_MODULES = [module for module in modules]",
+                    'DEFAULT_REQUEST_HEADERS = {"User-Agent": get_user_agent()}',
+                    "LOG_FILE = None if debug else 'app.log'",
+                    # Settings with default_value=UNKNOWN_SETTING_VALUE
+                    "EDITOR = 'vi'",
+                    # Versioned settings (SCP17 is not triggered without requirements.txt)
+                    "TWISTED_REACTOR = None",
+                    'TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"',
                 )
             ),
+        )
+    ),
+    # Versioned settings
+    *(
+        (
+            [
+                File("[settings]\na=a", path="scrapy.cfg"),
+                File(f"scrapy=={version}", path="requirements.txt"),
+                File(f"{name} = {value}", path=path),
+            ],
+            (
+                *default_issues(path),
+                *(
+                    (
+                        Issue(
+                            "SCP17 redundant setting value",
+                            column=len(name) + 3,
+                            path=path,
+                        ),
+                    )
+                    if should_trigger
+                    else ()
+                ),
+            ),
+        )
+        for path in ["a.py"]
+        for version, name, value, should_trigger in (
+            (
+                "2.13.0",
+                "TWISTED_REACTOR",
+                '"twisted.internet.asyncioreactor.AsyncioSelectorReactor"',
+                True,
+            ),
+            ("2.13.0", "TWISTED_REACTOR", "None", False),
+            ("2.12.0", "TWISTED_REACTOR", "None", True),
+            (
+                "2.12.0",
+                "TWISTED_REACTOR",
+                '"twisted.internet.asyncioreactor.AsyncioSelectorReactor"',
+                False,
+            ),
+            # Unsupported Scrapy version. SCP17 does not trigger for any value
+            # because the default value of the setting at that version of
+            # Scrapy is considered unknown.
+            ("2.0.0", "TWISTED_REACTOR", "None", False),
+            (
+                "2.0.0",
+                "TWISTED_REACTOR",
+                '"twisted.internet.asyncioreactor.AsyncioSelectorReactor"',
+                False,
+            ),
+            # If a Scrapy version is known, SCP17 is still triggered or not as
+            # usual for settings for which we do not know a history of default
+            # value changes, but we do know their default value.
+            (
+                "2.13.0",
+                "TELNETCONSOLE_USERNAME",
+                '"scrapy"',
+                True,
+            ),
+            (
+                "2.13.0",
+                "TELNETCONSOLE_USERNAME",
+                '"username"',
+                False,
+            ),
+        )
+    ),
+    *(
+        (
+            [
+                File("[settings]\na=a", path="scrapy.cfg"),
+                File(requirements, path="requirements.txt"),
+                File("TELNETCONSOLE_USERNAME = 'scrapy'", path=path),
+            ],
+            (
+                *default_issues(path),
+                Issue(
+                    "SCP17 redundant setting value",
+                    column=len("TELNETCONSOLE_USERNAME") + 3,
+                    path=path,
+                ),
+            ),
+        )
+        for path in ["a.py"]
+        for requirements in (
+            # Invalid or non-frozen requirements do not prevent SCP17 for
+            # settings for which SCP17 reporting does not depend on the version
+            # of Scrapy.
+            "",
+            "# scrapy==2.13.0",
+            "scrapy>=2.13.0",
+            "scrapy>=2.13.0,<2.14.0",
+            "scrapy!",
+            "scrapy!=2.13.0  # foo",
+            b"\xff\xfe\x00\x00",
         )
     ),
     # Setting module detection and checking
@@ -243,6 +337,7 @@ CASES = [
                         Issue(
                             "SCP09 robots.txt ignored by default", column=17, path=path
                         ),
+                        Issue("SCP17 redundant setting value", column=17, path=path),
                     ),
                 )
                 for value in FALSE_BOOLS
@@ -260,6 +355,7 @@ CASES = [
                         Issue(
                             "SCP10 incomplete project throttling", column=0, path=path
                         ),
+                        Issue("SCP17 redundant setting value", column=23, path=path),
                     ),
                 )
                 for value in FALSE_BOOLS
