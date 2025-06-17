@@ -10,6 +10,7 @@ from .finders.oldstyle import (
     OldSelectorIssueFinder,
     UrlJoinIssueFinder,
 )
+from .finders.unsupported import LambdaCallbackIssueFinder
 
 __version__ = "0.0.2"
 
@@ -18,15 +19,18 @@ class ScrapyStyleIssueFinder(ast.NodeVisitor):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.issues = []
+        lambda_callback_issue_finder = LambdaCallbackIssueFinder()
         self.finders = {
             "Assign": [
                 UnreachableDomainIssueFinder(),
                 UrlInAllowedDomainsIssueFinder(),
                 OldSelectorIssueFinder(),
+                lambda_callback_issue_finder,
             ],
             "Call": [
                 GetFirstByIndexIssueFinder(),
                 UrlJoinIssueFinder(),
+                lambda_callback_issue_finder,
             ],
             "Subscript": [
                 ExtractThenIndexIssueFinder(),
