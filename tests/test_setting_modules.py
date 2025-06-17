@@ -67,6 +67,27 @@ CASES = [
                 'if a:\n    BOT_NAME = "a"\nelse:\n    BOT_NAME = "b"',
                 NO_ISSUE,
             ),
+            # SCP11 improper setting definition
+            *(
+                (
+                    code,
+                    Issue(
+                        "SCP11 improper setting definition",
+                        path=path,
+                    ),
+                )
+                for code in (
+                    "class SCHEDULER:\n    pass",
+                    "def FEED_URI_PARAMS(params, spider):\n    return params",
+                )
+            ),
+            *(
+                (code, NO_ISSUE)
+                for code in (
+                    "class CustomScheduler:\n    pass\n\nSCHEDULER = CustomScheduler",
+                    "def feed_uri_params(params, spider):\n    return params\n\nFEED_URI_PARAMS = feed_uri_params",
+                )
+            ),
         )
     ),
     # Setting module detection and checking
