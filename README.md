@@ -1,10 +1,12 @@
 # scrapy-flake8
+
 ![](https://github.com/stummjr/flake8-scrapy/workflows/CI/badge.svg)
-[![Downloads](https://pepy.tech/badge/flake8-scrapy)](https://pepy.tech/project/scrapy-fieldstats)
+![](https://pepy.tech/badge/flake8-scrapy)
 
-A Flake8 plugin to catch common issues on Scrapy spiders.
+A [Flake8](https://flake8.pycqa.org/en/latest/) plugin to catch common issues
+on Scrapy projects.
 
-## Issue types
+## Error codes
 
 | Code  | Meaning |
 | ---   | --- |
@@ -13,27 +15,31 @@ A Flake8 plugin to catch common issues on Scrapy spiders.
 | SCP03 | Usage of `urljoin(response.url, '/foo')` instead of `response.urljoin('/foo')` |
 | SCP04 | Usage of `Selector(response)` in callback |
 
-This is a work in progress, so new issues will be added to this list.
-
 
 ## Installation
 
-To run this in your project, please make sure you have flake8 installed first:
-
 ```
-$ pip install flake8
+pip install flake8-scrapy
 ```
 
-And then install flake8-scrapy:
+
+## Usage
+
+Once installed, flake8-scrapy checks are run automatically when running
+[Flake8](https://flake8.pycqa.org/en/latest/):
 
 ```
-$ pip install flake8-scrapy
+flake8
 ```
 
-Now, all you have to do is run it on your project:
+When using [pre-commit](https://pre-commit.com/), configure Flake8 and list
+flake8-scrapy in `additional_dependencies`. For example:
 
+```yaml
+- repo: https://github.com/pycqa/flake8
+  rev: "7.2.0"
+  hooks:
+  - id: flake8
+    additional_dependencies:
+    - flake8-scrapy
 ```
-$ flake8
-```
-
-And Flake8 will run the checks defined in this plugin.

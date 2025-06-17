@@ -2,17 +2,18 @@ import scrapy
 
 
 class AllowedDomainsSpider(scrapy.Spider):
-    """ Sample that demonstrates the issue of having start_urls
-        for domains out of allowed_domains.
+    """Sample that demonstrates the issue of having start_urls
+    for domains out of allowed_domains.
     """
+
     # name = 'allowed_domains'
-    allowed_domains = [
-        'example.com',
-        'scrapy.org',
-    ]
-    start_urls = [
-        'http://quotes.toscrape.com',
-        'http://httpbin.org',
+    allowed_domains = (
+        "example.com",
+        "scrapy.org",
+    )
+    start_urls = [  # noqa: RUF012
+        "http://quotes.toscrape.com",
+        "http://httpbin.org",
     ]
 
     def parse(self, response):

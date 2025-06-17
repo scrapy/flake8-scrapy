@@ -1,16 +1,11 @@
 import ast
-import os
+from pathlib import Path
 
 from flake8_scrapy import ScrapyStyleChecker
 
 
 def load_sample_file(filename):
-    path = os.path.join(
-        os.path.dirname(__file__),
-        'samples',
-        filename
-    )
-    return open(path).read()
+    return (Path(__file__).parent / "samples" / filename).read_text()
 
 
 def run_checker(code):
