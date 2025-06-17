@@ -14,4 +14,4 @@ Earlier releases
 ================
 
 Find the earlier commit history `at GitHub
-<https://github.com/stummjr/flake8-scrapy/commits/4be77a75b5a88f58f20b49067afda8e7e7a9bf6d>`_.
+<https://github.com/scrapy/flake8-scrapy/commits/4be77a75b5a88f58f20b49067afda8e7e7a9bf6d>`_.
