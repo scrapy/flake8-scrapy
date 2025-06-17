@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from collections.abc import Sequence
 
 from tests.helpers import check_project
@@ -8,6 +9,18 @@ from . import NO_ISSUE, File, Issue, cases
 
 FALSE_BOOLS = ("False", "'false'", "0")
 TRUE_UNKNOWN_OR_INVALID_BOOLS = ("True", "'true'", "1", "foo", "'foo'")
+
+
+def supports_alias_col_offset():
+    code = "import foo"
+    tree = ast.parse(code)
+    assert isinstance(tree.body[0], ast.Import)
+    alias = tree.body[0].names[0]
+    return hasattr(alias, "col_offset")
+
+
+# Python 3.10+
+ALIAS_HAS_COL_OFFSET = supports_alias_col_offset()
 
 
 def default_issues(
@@ -66,6 +79,56 @@ CASES = [
             (
                 'if a:\n    BOT_NAME = "a"\nelse:\n    BOT_NAME = "b"',
                 NO_ISSUE,
+            ),
+            # SCP12 imported setting
+            *(
+                (
+                    code,
+                    Issue(
+                        "SCP12 imported setting",
+                        column=column if ALIAS_HAS_COL_OFFSET else 0,
+                        path=path,
+                    ),
+                )
+                for code, column in (
+                    ("from foo import FOO", 16),
+                    ("from foo import bar as BAR", 23),
+                    ("import FOO", 7),
+                    ("import foo as BAR", 14),
+                )
+            ),
+            (
+                "from foo import FOO, BAR",
+                [
+                    Issue(
+                        "SCP12 imported setting",
+                        column=16 if ALIAS_HAS_COL_OFFSET else 0,
+                        path=path,
+                    ),
+                    Issue(
+                        "SCP12 imported setting",
+                        column=21 if ALIAS_HAS_COL_OFFSET else 0,
+                        path=path,
+                    ),
+                ],
+            ),
+            (
+                "import foo, BAR",
+                Issue(
+                    "SCP12 imported setting",
+                    column=12 if ALIAS_HAS_COL_OFFSET else 0,
+                    path=path,
+                ),
+            ),
+            *(
+                (code, NO_ISSUE)
+                for code in (
+                    "from foo import bar",
+                    "from foo import Bar",
+                    "import foo",
+                    "from foo import FOO as bar",
+                    "import FOO as bar",
+                )
             ),
             # SCP17 redundant setting value
             *(
