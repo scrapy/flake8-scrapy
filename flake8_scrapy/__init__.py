@@ -14,6 +14,7 @@ from .finders.oldstyle import (
     OldSelectorIssueFinder,
     UrlJoinIssueFinder,
 )
+from .finders.requirements import RequirementsIssueFinder
 from .finders.setting_modules import SettingModuleIssueFinder
 from .finders.unsupported import LambdaCallbackIssueFinder
 
@@ -73,6 +74,7 @@ class ScrapyStyleChecker:
     ):
         self.tree = tree
         context = Context.from_flake8_params(tree, filename, lines)
+        self.requirements_finder = RequirementsIssueFinder(context)
         self.setting_module_finder = SettingModuleIssueFinder(context)
 
     def run(self):
@@ -84,6 +86,8 @@ class ScrapyStyleChecker:
             yield from self.setting_module_finder.check()
         elif self.tree:
             yield from self.check_code()
+        elif self.requirements_finder.in_requirements_file():
+            yield from self.requirements_finder.check()
 
     def check_code(self) -> Generator[tuple[str, int, int], None, None]:
         finder = ScrapyStyleIssueFinder()

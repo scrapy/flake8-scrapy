@@ -3,6 +3,8 @@ from __future__ import annotations
 import ast
 from collections.abc import Sequence
 
+from packaging.version import Version
+
 from tests.helpers import check_project
 
 from . import NO_ISSUE, File, Issue, cases
@@ -203,6 +205,21 @@ CASES = [
             ],
             (
                 *default_issues(path),
+                Issue("SCP13 incomplete requirements freeze", path="requirements.txt"),
+                *(
+                    Issue(message, path="requirements.txt")
+                    for message, min_version in (
+                        (
+                            "SCP14 unsupported requirement: scrapy-flake8 only supports scrapy>=2.0.1+",
+                            "2.0.1",
+                        ),
+                        (
+                            "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
+                            "2.11.2 ",
+                        ),
+                    )
+                    if Version(version) < Version(min_version)
+                ),
                 *(
                     (
                         Issue(
@@ -268,6 +285,13 @@ CASES = [
             ],
             (
                 *default_issues(path),
+                *(
+                    Issue(
+                        "SCP13 incomplete requirements freeze", path="requirements.txt"
+                    )
+                    for _ in range(1)
+                    if not isinstance(requirements, bytes)
+                ),
                 Issue(
                     "SCP17 redundant setting value",
                     column=len("TELNETCONSOLE_USERNAME") + 3,
