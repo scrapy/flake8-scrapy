@@ -4,7 +4,7 @@ from packaging.version import Version
 from flake8_scrapy.data.packages import PACKAGES
 from flake8_scrapy.finders.requirements import RequirementsIssueFinder
 
-from . import NO_ISSUE, File, Issue, cases
+from . import NO_ISSUE, Cases, File, Issue, cases
 from .helpers import check_project
 
 SCRAPY_FUTURE_VERSION = Version("3.0.0")
@@ -14,14 +14,18 @@ SCRAPY_INSECURE_VERSION = Version("2.11.1")
 SCRAPY_LOWEST_SUPPORTED = PACKAGES["scrapy"].lowest_supported_version
 SCRAPY_ANCIENT_VERSION = Version("2.0.0")
 
-CASES = (
+CASES: Cases = (
     # No scrapy.cfg file
-    ((File("", path="requirements.txt"),), NO_ISSUE),
+    ((File("", path="requirements.txt"),), NO_ISSUE, {}),
     # Non-standard requirements file name
-    ((File("", path="scrapy.cfg"), File("", path="requirements-dev.txt")), NO_ISSUE),
+    (
+        (File("", path="scrapy.cfg"), File("", path="requirements-dev.txt")),
+        NO_ISSUE,
+        {},
+    ),
     # SCP13 incomplete requirement freeze
     *(
-        ((File("", path="scrapy.cfg"), File(requirements, path=path)), issues)
+        ((File("", path="scrapy.cfg"), File(requirements, path=path)), issues, {})
         for path in ("requirements.txt",)
         for requirements, issues in (
             *(
@@ -116,6 +120,7 @@ CASES = (
                 File(requirements, path=path),
             ),
             issues,
+            {},
         )
         for path in ("requirements.txt",)
         for requirements, issues in (
@@ -200,7 +205,7 @@ CASES = (
     ),
     # SCP27 should not trigger without scrapinghub.yml
     *(
-        ((File("", path="scrapy.cfg"), File(requirements, path=path)), issues)
+        ((File("", path="scrapy.cfg"), File(requirements, path=path)), issues, {})
         for path in ("requirements.txt",)
         for requirements, issues in (
             # Missing stack dependencies but no scrapinghub.yml
@@ -220,6 +225,7 @@ CASES = (
         (
             (File("", path="scrapy.cfg"), File(requirements, path=path)),
             (Issue("SCP13 incomplete requirements freeze", path=path), *issues),
+            {},
         )
         for path in ("requirements.txt",)
         for requirements, issues in (
@@ -331,8 +337,8 @@ CASES = (
 
 
 @cases(CASES)
-def test(input, expected):
-    check_project(input, expected)
+def test(input, expected, flake8_options):
+    check_project(input, expected, flake8_options)
 
 
 def test_required_dependencies_are_canonical():

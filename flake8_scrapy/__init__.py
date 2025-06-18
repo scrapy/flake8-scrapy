@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ast import AST, NodeVisitor
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from .context import Context
 from .finders.domains import (
@@ -15,6 +15,7 @@ from .finders.oldstyle import (
     UrlJoinIssueFinder,
 )
 from .finders.requirements import RequirementsIssueFinder
+from .finders.scrapinghub import ScrapinghubIssueFinder
 from .finders.setting_modules import SettingModuleIssueFinder
 from .finders.unsupported import LambdaCallbackIssueFinder
 
@@ -68,13 +69,32 @@ class ScrapyStyleChecker:
     options = None
     name = "flake8-scrapy"
     version = __version__
+    requirements_file_path: ClassVar[str] = ""
+
+    @classmethod
+    def add_options(cls, parser):
+        parser.add_option(
+            "--scrapy-requirements-file",
+            default="",
+            help="Path of the project requirements file",
+            parse_from_config=True,
+        )
+
+    @classmethod
+    def parse_options(cls, options):
+        cls.requirements_file_path = options.scrapy_requirements_file or getattr(
+            options, "requirements_file", ""
+        )
 
     def __init__(
         self, tree: AST | None, filename: str, lines: Sequence[str] | None = None
     ):
         self.tree = tree
-        context = Context.from_flake8_params(tree, filename, lines)
+        context = Context.from_flake8_params(
+            tree, filename, lines, self.requirements_file_path
+        )
         self.requirements_finder = RequirementsIssueFinder(context)
+        self.scrapinghub_finder = ScrapinghubIssueFinder(context)
         self.setting_module_finder = SettingModuleIssueFinder(context)
 
     def run(self):
@@ -88,6 +108,8 @@ class ScrapyStyleChecker:
             yield from self.check_code()
         elif self.requirements_finder.in_requirements_file():
             yield from self.requirements_finder.check()
+        elif self.scrapinghub_finder.in_scrapinghub_file():
+            yield from self.scrapinghub_finder.check()
 
     def check_code(self) -> Generator[tuple[str, int, int], None, None]:
         finder = ScrapyStyleIssueFinder()

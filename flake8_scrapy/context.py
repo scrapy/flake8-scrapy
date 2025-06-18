@@ -6,6 +6,7 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+import yaml
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 from packaging.version import Version
@@ -35,12 +36,12 @@ class Project:
     requirements_file_path: Path | None = None
 
     @classmethod
-    def from_file(cls, file: Flake8File):
+    def from_file(cls, file: Flake8File, requirements_file_path: str):
         root = cls.root_from_file(file)
         return cls(
             root,
             cls.setting_module_import_paths_from_root(root),
-            cls.find_requirements_file_path(root),
+            cls.find_requirements_file_path(root, requirements_file_path),
         )
 
     @staticmethod
@@ -62,9 +63,35 @@ class Project:
         return tuple(config["settings"].values())
 
     @staticmethod
-    def find_requirements_file_path(root: Path | None) -> Path | None:
+    def find_requirements_file_path(
+        root: Path | None, requirements_file_path: str | None
+    ) -> Path | None:
+        if requirements_file_path:
+            return Path(requirements_file_path).resolve()
         if not root:
             return None
+
+        # Check scrapinghub.yml for requirements file
+        scrapinghub_file = root / "scrapinghub.yml"
+        if scrapinghub_file.exists():
+            try:
+                with scrapinghub_file.open() as f:
+                    data = yaml.safe_load(f)
+                if (
+                    isinstance(data, dict)
+                    and "requirements" in data
+                    and isinstance(data["requirements"], dict)
+                    and "file" in data["requirements"]
+                    and isinstance(data["requirements"]["file"], str)
+                    and data["requirements"]["file"].strip()
+                ):
+                    scrapinghub_requirements_file = root / data["requirements"]["file"]
+                    if scrapinghub_requirements_file.exists():
+                        return scrapinghub_requirements_file.resolve()
+            except yaml.YAMLError:
+                pass
+
+        # Fall back to requirements.txt
         requirements_file = root / "requirements.txt"
         if requirements_file.exists():
             return requirements_file.resolve()
@@ -113,7 +140,8 @@ class Context:
         tree: AST | None,
         file_path: str,
         lines: Sequence[str] | None = None,
+        requirements_file_path: str = "",
     ):
         file = Flake8File.from_params(tree, file_path, lines)
-        project = Project.from_file(file)
+        project = Project.from_file(file, requirements_file_path)
         return cls(file, project)

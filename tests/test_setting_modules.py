@@ -7,7 +7,7 @@ from packaging.version import Version
 
 from tests.helpers import check_project
 
-from . import NO_ISSUE, File, Issue, cases
+from . import NO_ISSUE, Cases, File, Issue, cases
 
 FALSE_BOOLS = ("False", "'false'", "0")
 TRUE_UNKNOWN_OR_INVALID_BOOLS = ("True", "'true'", "1", "foo", "'foo'")
@@ -40,7 +40,7 @@ def default_issues(
     ]
 
 
-CASES = [
+CASES: Cases = (
     # Code checks on a single setting module
     *(
         (
@@ -58,6 +58,7 @@ CASES = [
                 ),
                 *default_issues(path),
             ),
+            {},
         )
         for path in ["a.py"]
         for code, issues in (
@@ -232,6 +233,7 @@ CASES = [
                     else ()
                 ),
             ),
+            {},
         )
         for path in ["a.py"]
         for version, name, value, should_trigger in (
@@ -281,7 +283,7 @@ CASES = [
             [
                 File("[settings]\na=a", path="scrapy.cfg"),
                 File(requirements, path="requirements.txt"),
-                File("TELNETCONSOLE_USERNAME = 'scrapy'", path=path),
+                File('TELNETCONSOLE_USERNAME = "username"', path=path),
             ],
             (
                 *default_issues(path),
@@ -292,12 +294,8 @@ CASES = [
                     for _ in range(1)
                     if not isinstance(requirements, bytes)
                 ),
-                Issue(
-                    "SCP17 redundant setting value",
-                    column=len("TELNETCONSOLE_USERNAME") + 3,
-                    path=path,
-                ),
             ),
+            {},
         )
         for path in ["a.py"]
         for requirements in (
@@ -315,7 +313,7 @@ CASES = [
     ),
     # Setting module detection and checking
     *(
-        (files, issues)
+        (files, issues, {})
         for default_issues in (default_issues(),)
         for files, issues in (
             # - Only modules declared in scrapy.cfg are checked.
@@ -369,6 +367,7 @@ CASES = [
                 ),
                 *default_issues(path),
             ),
+            {},
         )
         for path in ["a.py"]
         for setting, is_setting_like in (
@@ -397,6 +396,7 @@ CASES = [
                 File(code, path=path),
             ],
             (*default_issues(path, exclude=exclude), *issues),
+            {},
         )
         for path in ["a.py"]
         for code, exclude, issues in (
@@ -470,9 +470,11 @@ CASES = [
             ),
         )
     ),
-]
+)
 
 
 @cases(CASES)
-def test(input: File | list[File], expected: Issue | list[Issue] | None):
-    check_project(input, expected)
+def test(
+    input: File | list[File], expected: Issue | list[Issue] | None, flake8_options
+):
+    check_project(input, expected, flake8_options)

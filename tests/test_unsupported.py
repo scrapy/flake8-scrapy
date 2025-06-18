@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from . import NO_ISSUE, File, Issue, cases
+from . import NO_ISSUE, Cases, File, Issue, cases
 from .helpers import check_project
 
 if TYPE_CHECKING:
@@ -50,9 +50,9 @@ ALL_NON_REQUEST_CLASSES = (
     "a.b.c.d.e.f.g.Request",
 )
 
-CASES = (
+CASES: Cases = (
     *(
-        (File(code, path=path), issues)
+        (File(code, path=path), issues, {})
         for path in ("a.py",)
         for code, issues in (
             # All possible request classes are taken into account. Other
@@ -345,5 +345,9 @@ CASES = (
 
 
 @cases(CASES)
-def test(input: File | Sequence[File], expected: Issue | Sequence[Issue] | None):
-    check_project(input, expected)
+def test(
+    input: File | Sequence[File],
+    expected: Issue | Sequence[Issue] | None,
+    flake8_options,
+):
+    check_project(input, expected, flake8_options)
