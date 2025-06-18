@@ -109,7 +109,7 @@ class Issue:
         )
 
 
-# TODO: Use contextlib.chdir when Python 3.11 is the minimum version("Cases",
+# TODO: Use contextlib.chdir when Python 3.11 is the minimum version
 @contextmanager
 def chdir(path: str | Path):
     old_cwd = Path.cwd()
