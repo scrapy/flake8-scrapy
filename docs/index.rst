@@ -8,6 +8,17 @@ flake8-scrapy documentation
 
 .. toctree::
     :maxdepth: 1
+    :caption: Configuration
+    :hidden:
+
+    pre-commit
+    tools
+    requirements
+    zyte
+    options
+
+.. toctree::
+    :maxdepth: 1
     :caption: Rules
     :hidden:
     :glob:

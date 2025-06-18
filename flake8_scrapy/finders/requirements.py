@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
-from packaging.version import Version
+from packaging.version import InvalidVersion, Version
 
 from flake8_scrapy.data.packages import PACKAGES
 from flake8_scrapy.issues import Issue
@@ -96,7 +96,10 @@ class RequirementsIssueFinder:
         spec = next(iter(requirement.specifier))
         if spec.operator != "==":
             return None
-        return Version(spec.version)
+        try:
+            return Version(spec.version)
+        except InvalidVersion:
+            return None
 
     def check_package_name(self, name: str, line: int) -> Generator[Issue, None, None]:
         package = PACKAGES[name]
