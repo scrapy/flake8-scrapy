@@ -283,7 +283,7 @@ CASES: Cases = (
             [
                 File("[settings]\na=a", path="scrapy.cfg"),
                 File(requirements, path="requirements.txt"),
-                File('TELNETCONSOLE_USERNAME = "username"', path=path),
+                File('TELNETCONSOLE_USERNAME = "scrapy"', path=path),
             ],
             (
                 *default_issues(path),
@@ -293,6 +293,11 @@ CASES: Cases = (
                     )
                     for _ in range(1)
                     if not isinstance(requirements, bytes)
+                ),
+                Issue(
+                    "SCP17 redundant setting value",
+                    column=len("TELNETCONSOLE_USERNAME") + 3,
+                    path=path,
                 ),
             ),
             {},
