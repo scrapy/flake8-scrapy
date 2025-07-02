@@ -1,39 +1,29 @@
 .. _scp24:
 
-================================
-SCP24: Invalid requirements.file
-================================
+=================================
+SCP24: Missing stack requirements
+=================================
 
 What it does
 ============
 
-Finds ``requirements.file`` values in the ``scrapinghub.yml`` :ref:`shub
-configuration file <shub:configuration>` that are not valid non-empty strings.
+Finds out if your :ref:`requirements file <requirements>` is missing packages
+that are pre-installed in your Scrapy Cloud stack.
 
 
 Why is this bad?
 ================
 
-The ``file`` key under ``requirements`` must contain a valid file path as a
-non-empty string. Invalid values like empty strings, null values, numbers, or
-other data types will cause deployment failures or unexpected behavior.
+When deploying to Scrapy Cloud, your project's requirements should include all
+packages that may be pre-installed in the cloud environment to avoid dependency
+conflicts.
 
-A valid requirements file path should point to an actual requirements file
-(typically ``requirements.txt``) that contains the Python package dependencies
-for your project.
+For example, if your requirements.txt installs ``packageA==1.0`` and Scrapy
+Cloud has ``packageB==1.0`` pre-installed, you could end up with conflicting
+dependencies if ``packageA==1.0`` depends on ``packageC>=2.0`` while
+``packageB==1.0`` depends on ``packageC<2.0``. This results in a broken
+installation.
 
-
-Example
-=======
-
-.. code-block:: yaml
-
-    requirements:
-      file: ""
-
-Instead use:
-
-.. code-block:: yaml
-
-    requirements:
-      file: requirements.txt
+By including all stack packages in your requirements file, along with a
+:ref:`complete freeze <scp13>`, you ensure that dependency resolution accounts
+for all packages and their version constraints, preventing conflicts.

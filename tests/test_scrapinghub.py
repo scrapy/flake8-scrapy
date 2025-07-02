@@ -18,7 +18,7 @@ def default_issues(path: str = "requirements.txt") -> Sequence[Issue]:
             path=path,
         ),
         Issue(
-            message="SCP27 missing stack requirements: missing packages: aiohttp, "
+            message="SCP24 missing stack requirements: missing packages: aiohttp, "
             "awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, "
             "requests, scrapinghub, scrapinghub-entrypoint-scrapy, "
             "scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, "
@@ -230,12 +230,12 @@ CASES = [
                             f"  file: {value}",
                         ]
                     ),
-                    issue("SCP24 invalid requirements.file", line=3, column=8),
+                    issue(f"SCP23 invalid scrapinghub.yml: {detail}", line=3, column=8),
                 )
-                for value in (
-                    "",
-                    '""',
-                    "123",
+                for value, detail in (
+                    ("", "non-str requirements.file"),
+                    ("123", "non-str requirements.file"),
+                    ('""', "empty requirements.file"),
                 )
             ),
             # SCP25 unexisting requirements.file

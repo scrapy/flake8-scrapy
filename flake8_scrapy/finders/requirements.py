@@ -147,4 +147,4 @@ class RequirementsIssueFinder:
         if not missing:
             return
         detail = f"missing packages: {', '.join(sorted(missing))}"
-        yield Issue(27, "missing stack requirements", detail)
+        yield Issue(24, "missing stack requirements", detail)
