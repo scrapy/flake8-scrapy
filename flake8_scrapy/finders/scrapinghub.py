@@ -30,6 +30,7 @@ class ScrapinghubIssueFinder:
         try:
             data = yaml_parser.load(content)
         except YAMLError:
+            yield Issue(28, "invalid scrapinghub.yml")
             return
         if not isinstance(data, dict):
             return

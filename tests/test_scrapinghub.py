@@ -62,7 +62,6 @@ CASES = [
                             f"stack: {LATEST_KNOWN_STACK}",
                         ]
                     ),
-                    "invalid: yaml: content:",
                     "- not a dict",
                     "image: custom:latest",
                     "\n".join(
@@ -262,7 +261,11 @@ CASES = [
                     issue("SCP23 no requirements.file"),
                 ),
             ),
-            # Invalid requirements
+            # SCP28 invalid scrapinghub.yml
+            (
+                "invalid: yaml: content:",
+                issue("SCP28 invalid scrapinghub.yml"),
+            ),
             (
                 "\n".join(
                     [

@@ -7,9 +7,11 @@ SCP28: Invalid scrapinghub.yml
 What it does
 ============
 
-Finds configuration keys in the ``scrapinghub.yml`` :ref:`shub configuration
-file <shub:configuration>` that have invalid data types. Currently checks:
+Finds invalid data in the ``scrapinghub.yml`` :ref:`shub configuration
+file <shub:configuration>`, from plain syntax errors to incorrect data types.
+Currently checks:
 
+- That the file is a valid YAML file
 - ``requirements`` keys that are not mappings_
 - ``stacks`` keys that are not mappings_
 
@@ -19,16 +21,8 @@ file <shub:configuration>` that have invalid data types. Currently checks:
 Why is this bad?
 ================
 
-Certain configuration keys in ``scrapinghub.yml`` must have specific data types
-to be valid:
-
-- The ``requirements`` configuration must be a mapping to properly specify
-  package installation options
-- The ``stacks`` configuration must be a mapping to define named stack
-  configurations
-
-Using incorrect data types will cause deployment failures or unexpected
-behavior. See :ref:`shub:configuration`.
+Using an invalid ``scrapinghub.yml`` file will cause deployment failures or
+unexpected behavior. See :ref:`shub:configuration`.
 
 
 Examples
