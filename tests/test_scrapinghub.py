@@ -223,7 +223,7 @@ CASES = [
                             f"  file: {value}",
                         ]
                     ),
-                    issue("SCP24 invalid requirements.file"),
+                    issue("SCP24 invalid requirements.file", line=3, column=8),
                 )
                 for value in (
                     "",

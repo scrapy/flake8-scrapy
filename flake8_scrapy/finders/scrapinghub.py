@@ -97,9 +97,9 @@ class ScrapinghubIssueFinder:
             return
 
         file_value = requirements_value["file"]
-
         if not isinstance(file_value, str) or not file_value.strip():
-            yield Issue(24, "invalid requirements.file")
+            line, column = self._get_value_position(requirements_value, "file")
+            yield Issue(24, "invalid requirements.file", line=line, column=column)
             return
 
         if self.context.project.root:
