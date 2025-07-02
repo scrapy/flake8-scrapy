@@ -33,7 +33,7 @@ class ScrapinghubIssueFinder:
             return
         if self._has_image_key(data):
             return
-        if "stack" not in data:
+        if "stack" not in data and not self._has_stacks_default(data):
             yield Issue(18, "no root stack")
         if "requirements" not in data:
             yield Issue(21, "no root requirements")
@@ -95,3 +95,10 @@ class ScrapinghubIssueFinder:
             if isinstance(value, dict) and self._has_image_key(value):
                 return True
         return False
+
+    def _has_stacks_default(self, data: dict) -> bool:
+        return (
+            "stacks" in data
+            and isinstance(data["stacks"], dict)
+            and "default" in data["stacks"]
+        )
