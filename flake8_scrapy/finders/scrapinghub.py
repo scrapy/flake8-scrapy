@@ -86,9 +86,6 @@ class ScrapinghubIssueFinder:
         line_info = data.lc.value(key)
         return line_info[0] + 1, line_info[1]
 
-    def _is_frozen_stack(self, stack: str) -> bool:
-        return isinstance(stack, str) and bool(re.search(r"-\d{8}$", stack))
-
     def _check_stack_value(
         self, data: CommentedMap, key: str
     ) -> Generator[Issue, None, None]:
