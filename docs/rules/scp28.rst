@@ -13,10 +13,10 @@ Currently checks:
 
 - That the file is a valid YAML file
 - That the root structure is a mapping_
-- ``requirements`` keys that are not mappings_
-- ``stacks`` keys that are not mappings_
+- ``requirements`` keys that are not a mapping_
+- ``stacks`` keys that are not a mapping_
 
-.. _mappings: https://yaml.org/spec/1.2.2/#mapping
+.. _mapping: https://yaml.org/spec/1.2.2/#mapping
 
 
 Why is this bad?
