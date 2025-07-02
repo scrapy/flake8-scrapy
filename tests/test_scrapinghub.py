@@ -139,14 +139,24 @@ CASES = [
             *(
                 (
                     (f"{config}\nrequirements:\n  file: requirements.txt"),
-                    issue("SCP20 stack not frozen"),
+                    issue("SCP20 stack not frozen", column=7),
                 )
                 for config in (
                     "stack: scrapy:2.12",
                     "stack: scrapy:latest",
                     "stack: scrapy:2.12-rc1",
-                    "\n".join(["project: 12345", "stack:"]),
                 )
+            ),
+            (
+                "\n".join(
+                    [
+                        "project: 12345",
+                        "stack: foo",
+                        "requirements:",
+                        "  file: requirements.txt",
+                    ]
+                ),
+                issue("SCP20 stack not frozen", line=2, column=7),
             ),
             (
                 "\n".join(
@@ -161,8 +171,8 @@ CASES = [
                 (
                     issue("SCP19 non-root stack", line=4, column=2),
                     issue("SCP19 non-root stack", line=5, column=2),
-                    issue("SCP20 stack not frozen"),
-                    issue("SCP20 stack not frozen"),
+                    issue("SCP20 stack not frozen", line=4, column=11),
+                    issue("SCP20 stack not frozen", line=5, column=8),
                 ),
             ),
             # SCP21 no root requirements
@@ -254,7 +264,7 @@ CASES = [
                 (
                     issue("SCP18 no root stack"),
                     issue("SCP19 non-root stack", line=4, column=4),
-                    issue("SCP20 stack not frozen"),
+                    issue("SCP20 stack not frozen", line=4, column=11),
                     issue("SCP21 no root requirements"),
                     issue("SCP22 non-root requirements"),
                     issue("SCP23 no requirements.file"),

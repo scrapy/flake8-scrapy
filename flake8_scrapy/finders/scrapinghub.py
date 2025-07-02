@@ -52,7 +52,8 @@ class ScrapinghubIssueFinder:
                     line, column = self._get_key_position(data, key)
                     yield Issue(19, "non-root stack", line=line, column=column)
                 if not self._is_frozen_stack(value):
-                    yield Issue(20, "stack not frozen")
+                    line, column = self._get_value_position(data, key)
+                    yield Issue(20, "stack not frozen", line=line, column=column)
             elif key == "requirements":
                 if not is_root:
                     yield Issue(22, "non-root requirements")
@@ -65,12 +66,19 @@ class ScrapinghubIssueFinder:
                         line, column = self._get_key_position(value, stack_key)
                         yield Issue(19, "non-root stack", line=line, column=column)
                         if not self._is_frozen_stack(stack_value):
-                            yield Issue(20, "stack not frozen")
+                            line, column = self._get_value_position(value, stack_key)
+                            yield Issue(
+                                20, "stack not frozen", line=line, column=column
+                            )
             if isinstance(value, CommentedMap):
                 yield from self.check_keys(value, is_root=False)
 
     def _get_key_position(self, data: CommentedMap, key: str) -> tuple[int, int]:
         line_info = data.lc.key(key)
+        return line_info[0] + 1, line_info[1]
+
+    def _get_value_position(self, data: CommentedMap, key: str) -> tuple[int, int]:
+        line_info = data.lc.value(key)
         return line_info[0] + 1, line_info[1]
 
     def _is_frozen_stack(self, stack: str) -> bool:
