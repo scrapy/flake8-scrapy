@@ -255,7 +255,7 @@ CASES = [
                         "projects:",
                         "  default:",
                         "    id: 12345",
-                        "    stack: 2.12",
+                        "    stack: '2.12'",
                         "    requirements:",
                         "      eggs:",
                         "      - a.egg:",
@@ -327,6 +327,29 @@ CASES = [
                         "SCP28 invalid scrapinghub.yml: non-mapping stacks",
                         line=3,
                         column=8,
+                    ),
+                ],
+            ),
+            (
+                "\n".join(
+                    [
+                        "stack: 2.8",
+                        "projects:",
+                        "  default:",
+                        "    stack: 3",
+                        "requirements:",
+                        "  file: requirements.txt",
+                    ]
+                ),
+                [
+                    issue("SCP19 non-root stack", line=4, column=4),
+                    issue(
+                        "SCP28 invalid scrapinghub.yml: non-str stack", line=1, column=7
+                    ),
+                    issue(
+                        "SCP28 invalid scrapinghub.yml: non-str stack",
+                        line=4,
+                        column=11,
                     ),
                 ],
             ),

@@ -53,9 +53,7 @@ class ScrapinghubIssueFinder:
                 if not is_root:
                     line, column = self._get_key_position(data, key)
                     yield Issue(19, "non-root stack", line=line, column=column)
-                if not self._is_frozen_stack(value):
-                    line, column = self._get_value_position(data, key)
-                    yield Issue(20, "stack not frozen", line=line, column=column)
+                yield from self._check_stack_value(data, key)
             elif key == "requirements":
                 if not is_root:
                     line, column = self._get_key_position(data, key)
@@ -73,14 +71,10 @@ class ScrapinghubIssueFinder:
                         column=column,
                     )
                 else:
-                    for stack_key, stack_value in value.items():
+                    for stack_key in value:
                         line, column = self._get_key_position(value, stack_key)
                         yield Issue(19, "non-root stack", line=line, column=column)
-                        if not self._is_frozen_stack(stack_value):
-                            line, column = self._get_value_position(value, stack_key)
-                            yield Issue(
-                                20, "stack not frozen", line=line, column=column
-                            )
+                        yield from self._check_stack_value(value, stack_key)
             if isinstance(value, CommentedMap):
                 yield from self.check_keys(value, is_root=False)
 
@@ -94,6 +88,23 @@ class ScrapinghubIssueFinder:
 
     def _is_frozen_stack(self, stack: str) -> bool:
         return isinstance(stack, str) and bool(re.search(r"-\d{8}$", stack))
+
+    def _check_stack_value(
+        self, data: CommentedMap, key: str
+    ) -> Generator[Issue, None, None]:
+        value = data[key]
+        line, column = self._get_value_position(data, key)
+        if not isinstance(value, str):
+            yield Issue(
+                28,
+                "invalid scrapinghub.yml",
+                detail="non-str stack",
+                line=line,
+                column=column,
+            )
+            return
+        if not re.search(r"-\d{8}$", value):
+            yield Issue(20, "stack not frozen", line=line, column=column)
 
     def _check_requirements_value(
         self, requirements_value: Any, line: int, column: int
