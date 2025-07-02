@@ -96,16 +96,29 @@ CASES = [
             ),
             # SCP19 non-root stack
             *(
-                (config, issue("SCP19 non-root stack"))
+                (
+                    config,
+                    (
+                        issue("SCP18 no root stack"),
+                        issue("SCP19 non-root stack"),
+                    ),
+                )
                 for config in (
                     "\n".join(
                         [
-                            f"stack: {LATEST_KNOWN_STACK}",
                             "requirements:",
                             "  file: requirements.txt",
                             "projects:",
                             "  default:",
                             f"    stack: {LATEST_KNOWN_STACK}",
+                        ]
+                    ),
+                    "\n".join(
+                        [
+                            "requirements:",
+                            "  file: requirements.txt",
+                            "stacks:",
+                            f"  default: {LATEST_KNOWN_STACK}",
                         ]
                     ),
                 )
