@@ -1,33 +1,32 @@
 .. _scp23:
 
-===========================
-SCP23: No requirements.file
-===========================
+==============================
+SCP23: Invalid scrapinghub.yml
+==============================
 
 What it does
 ============
 
-Finds ``requirements`` keys in the ``scrapinghub.yml`` :ref:`shub configuration
-file <shub:configuration>` that do not contain a nested ``file`` key.
+Finds invalid data in the ``scrapinghub.yml`` :ref:`shub configuration
+file <shub:configuration>`, from plain syntax errors to incorrect data types
+and values.
 
 
 Why is this bad?
 ================
 
-The ``requirements`` configuration in ``scrapinghub.yml`` must specify how to
-install Python packages. The most common way to do this is by referencing a
-requirements file using the ``file`` key.
-
-Without the ``file`` key, the requirements configuration is incomplete and
-won't actually install any packages when deployed to Scrapy Cloud.
+Using an invalid ``scrapinghub.yml`` file will cause deployment failures or
+unexpected behavior.
 
 
-Example
-=======
+Examples
+========
+
+Invalid requirements type:
 
 .. code-block:: yaml
 
-    requirements:
+    requirements: yes
 
 Instead use:
 
@@ -35,3 +34,15 @@ Instead use:
 
     requirements:
       file: requirements.txt
+
+Non-string stack:
+
+.. code-block:: yaml
+
+    stack: 2.13
+
+Instead use:
+
+.. code-block:: yaml
+
+    stack: scrapy:2.13

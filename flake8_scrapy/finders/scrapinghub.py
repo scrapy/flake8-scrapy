@@ -30,11 +30,11 @@ class ScrapinghubIssueFinder:
         try:
             data = yaml_parser.load(content)
         except YAMLError as e:
-            yield Issue(28, "invalid scrapinghub.yml", detail=str(e))
+            yield Issue(23, "invalid scrapinghub.yml", detail=str(e))
             return
         if not isinstance(data, CommentedMap):
             yield Issue(
-                28, "invalid scrapinghub.yml", detail="non-mapping root data structure"
+                23, "invalid scrapinghub.yml", detail="non-mapping root data structure"
             )
             return
         if self._has_image_key(data):
@@ -64,7 +64,7 @@ class ScrapinghubIssueFinder:
                 if not isinstance(value, CommentedMap):
                     line, column = self._get_value_position(data, key)
                     yield Issue(
-                        28,
+                        23,
                         "invalid scrapinghub.yml",
                         detail="non-mapping stacks",
                         line=line,
@@ -96,7 +96,7 @@ class ScrapinghubIssueFinder:
         line, column = self._get_value_position(data, key)
         if not isinstance(value, str):
             yield Issue(
-                28,
+                23,
                 "invalid scrapinghub.yml",
                 detail="non-str stack",
                 line=line,
@@ -111,7 +111,7 @@ class ScrapinghubIssueFinder:
     ) -> Generator[Issue, None, None]:
         if not isinstance(requirements_value, CommentedMap):
             yield Issue(
-                28,
+                23,
                 "invalid scrapinghub.yml",
                 detail="non-mapping requirements",
                 line=line,
@@ -120,7 +120,13 @@ class ScrapinghubIssueFinder:
             return
 
         if "file" not in requirements_value:
-            yield Issue(23, "no requirements.file", line=line, column=column)
+            yield Issue(
+                23,
+                "invalid scrapinghub.yml",
+                detail="no requirements.file key",
+                line=line,
+                column=column,
+            )
             return
 
         file_value = requirements_value["file"]
