@@ -54,8 +54,10 @@ class ScrapinghubIssueFinder:
                 yield from self._check_requirements_structure(value)
             elif key == "stacks" and is_root:
                 if isinstance(value, dict):
-                    for _ in value:
+                    for stack_value in value.values():
                         yield Issue(19, "non-root stack")
+                        if not self._is_frozen_stack(stack_value):
+                            yield Issue(20, "stack not frozen")
             if isinstance(value, dict):
                 yield from self.check_keys(value, is_root=False)
 

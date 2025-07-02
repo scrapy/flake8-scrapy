@@ -150,6 +150,23 @@ CASES = [
                     "\n".join(["project: 12345", "stack:"]),
                 )
             ),
+            (
+                "\n".join(
+                    [
+                        "requirements:",
+                        "  file: requirements.txt",
+                        "stacks:",
+                        "  default: scrapy:2.12",
+                        "  prod: scrapy:2.11",
+                    ]
+                ),
+                (
+                    issue("SCP19 non-root stack"),
+                    issue("SCP19 non-root stack"),
+                    issue("SCP20 stack not frozen"),
+                    issue("SCP20 stack not frozen"),
+                ),
+            ),
             # SCP21 no root requirements
             *(
                 (config, issue("SCP21 no root requirements"))
