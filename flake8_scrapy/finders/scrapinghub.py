@@ -3,7 +3,8 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-import yaml
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
 from flake8_scrapy.issues import Issue
 
@@ -25,9 +26,10 @@ class ScrapinghubIssueFinder:
     def check(self) -> Generator[Issue, None, None]:
         assert self.context.file.lines is not None
         content = "\n".join(self.context.file.lines)
+        yaml_parser = YAML(typ="safe")
         try:
-            data = yaml.safe_load(content)
-        except yaml.YAMLError:
+            data = yaml_parser.load(content)
+        except YAMLError:
             return
         if not isinstance(data, dict):
             return

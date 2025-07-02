@@ -6,10 +6,11 @@ from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-import yaml
 from packaging.requirements import InvalidRequirement, Requirement
 from packaging.utils import canonicalize_name
 from packaging.version import Version
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
 if TYPE_CHECKING:
     from ast import AST
@@ -73,10 +74,14 @@ class Project:
 
         # Check scrapinghub.yml for requirements file
         scrapinghub_file = root / "scrapinghub.yml"
+        yaml_parser = YAML(typ="safe")
         if scrapinghub_file.exists():
             try:
                 with scrapinghub_file.open() as f:
-                    data = yaml.safe_load(f)
+                    data = yaml_parser.load(f)
+            except YAMLError:
+                pass
+            else:
                 if (
                     isinstance(data, dict)
                     and "requirements" in data
@@ -88,8 +93,6 @@ class Project:
                     scrapinghub_requirements_file = root / data["requirements"]["file"]
                     if scrapinghub_requirements_file.exists():
                         return scrapinghub_requirements_file.resolve()
-            except yaml.YAMLError:
-                pass
 
         # Fall back to requirements.txt
         requirements_file = root / "requirements.txt"
