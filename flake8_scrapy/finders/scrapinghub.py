@@ -97,20 +97,22 @@ class ScrapinghubIssueFinder:
             return
 
         file_value = requirements_value["file"]
+        line, column = self._get_value_position(requirements_value, "file")
         if not isinstance(file_value, str) or not file_value.strip():
-            line, column = self._get_value_position(requirements_value, "file")
             yield Issue(24, "invalid requirements.file", line=line, column=column)
             return
 
         if self.context.project.root:
             requirements_path = self.context.project.root / file_value
             if not requirements_path.exists():
-                yield Issue(25, "unexisting requirements.file")
+                yield Issue(
+                    25, "unexisting requirements.file", line=line, column=column
+                )
             elif (
                 self.context.project.requirements_file_path
                 and requirements_path != self.context.project.requirements_file_path
             ):
-                yield Issue(26, "requirements.file mismatch")
+                yield Issue(26, "requirements.file mismatch", line=line, column=column)
 
     def _has_image_key(self, data: CommentedMap) -> bool:
         for key, value in data.items():

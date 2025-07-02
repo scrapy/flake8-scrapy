@@ -241,7 +241,7 @@ CASES = [
                             f"  file: {path}",
                         ]
                     ),
-                    issue("SCP25 unexisting requirements.file"),
+                    issue("SCP25 unexisting requirements.file", line=3, column=8),
                 )
                 for path in (
                     "missing-requirements.txt",
@@ -338,7 +338,7 @@ CASES = [
                         "  file: requirements.txt",
                     ]
                 ),
-                issue("SCP25 unexisting requirements.file"),
+                issue("SCP25 unexisting requirements.file", line=3, column=8),
             ),
         )
     ),
@@ -382,7 +382,7 @@ CASES = [
         ),
         (
             *default_issues("requirements-dev.txt"),
-            issue("SCP26 requirements.file mismatch"),
+            issue("SCP26 requirements.file mismatch", line=3, column=8),
         ),
         {"scrapy_requirements_file": "requirements-dev.txt"},
     ),
