@@ -18,7 +18,7 @@ def default_issues(path: str = "requirements.txt") -> Sequence[Issue]:
             path=path,
         ),
         Issue(
-            message="SCP27 missing stack requirements: missing packages: aiohttp, "
+            message="SCP24 missing stack requirements: missing packages: aiohttp, "
             "awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, "
             "requests, scrapinghub, scrapinghub-entrypoint-scrapy, "
             "scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, "
@@ -62,8 +62,6 @@ CASES = [
                             f"stack: {LATEST_KNOWN_STACK}",
                         ]
                     ),
-                    "invalid: yaml: content:",
-                    "- not a dict",
                     "image: custom:latest",
                     "\n".join(
                         [
@@ -95,33 +93,87 @@ CASES = [
                 )
             ),
             # SCP19 non-root stack
-            *(
-                (config, issue("SCP19 non-root stack"))
-                for config in (
-                    "\n".join(
-                        [
-                            f"stack: {LATEST_KNOWN_STACK}",
-                            "requirements:",
-                            "  file: requirements.txt",
-                            "projects:",
-                            "  default:",
-                            f"    stack: {LATEST_KNOWN_STACK}",
-                        ]
-                    ),
-                )
+            (
+                "\n".join(
+                    [
+                        "requirements:",
+                        "  file: requirements.txt",
+                        "projects:",
+                        "  default:",
+                        f"    stack: {LATEST_KNOWN_STACK}",
+                    ]
+                ),
+                (
+                    issue("SCP18 no root stack"),
+                    issue("SCP19 non-root stack", line=5, column=4),
+                ),
+            ),
+            (
+                "\n".join(
+                    [
+                        "requirements:",
+                        "  file: requirements.txt",
+                        "stacks:",
+                        f"  default: {LATEST_KNOWN_STACK}",
+                    ]
+                ),
+                issue("SCP19 non-root stack", line=4, column=2),
+            ),
+            (
+                "\n".join(
+                    [
+                        "requirements:",
+                        "  file: requirements.txt",
+                        "stacks:",
+                        f"  prod: {LATEST_KNOWN_STACK}",
+                        f"  dev: {LATEST_KNOWN_STACK}",
+                    ]
+                ),
+                (
+                    issue("SCP18 no root stack"),
+                    issue("SCP19 non-root stack", line=4, column=2),
+                    issue("SCP19 non-root stack", line=5, column=2),
+                ),
             ),
             # SCP20 stack not frozen
             *(
                 (
                     (f"{config}\nrequirements:\n  file: requirements.txt"),
-                    issue("SCP20 stack not frozen"),
+                    issue("SCP20 stack not frozen", column=7),
                 )
                 for config in (
                     "stack: scrapy:2.12",
                     "stack: scrapy:latest",
                     "stack: scrapy:2.12-rc1",
-                    "\n".join(["project: 12345", "stack:"]),
                 )
+            ),
+            (
+                "\n".join(
+                    [
+                        "project: 12345",
+                        "stack: foo",
+                        "requirements:",
+                        "  file: requirements.txt",
+                    ]
+                ),
+                issue("SCP20 stack not frozen", line=2, column=7),
+            ),
+            (
+                "\n".join(
+                    [
+                        "requirements:",
+                        "  file: requirements.txt",
+                        "stacks:",
+                        "  default: scrapy:2.12",
+                        "  prod: scrapy:2.11",
+                    ]
+                ),
+                (
+                    issue("SCP19 non-root stack", line=4, column=2),
+                    issue("SCP19 non-root stack", line=5, column=2),
+                    issue("SCP20 stack not frozen", line=4, column=11),
+                    issue("SCP20 stack not frozen", line=5, column=8),
+                ),
             ),
             # SCP21 no root requirements
             *(
@@ -132,7 +184,7 @@ CASES = [
             ),
             # SCP22 non-root requirements
             *(
-                (config, issue("SCP22 non-root requirements"))
+                (config, issue("SCP22 non-root requirements", line=6, column=4))
                 for config in (
                     "\n".join(
                         [
@@ -149,7 +201,14 @@ CASES = [
             ),
             # SCP23 no requirements.file
             *(
-                (config, issue("SCP23 no requirements.file"))
+                (
+                    config,
+                    issue(
+                        "SCP23 invalid scrapinghub.yml: no requirements.file key",
+                        line=3,
+                        column=2,
+                    ),
+                )
                 for config in (
                     "\n".join(
                         [
@@ -171,12 +230,12 @@ CASES = [
                             f"  file: {value}",
                         ]
                     ),
-                    issue("SCP24 invalid requirements.file"),
+                    issue(f"SCP23 invalid scrapinghub.yml: {detail}", line=3, column=8),
                 )
-                for value in (
-                    "",
-                    '""',
-                    "123",
+                for value, detail in (
+                    ("", "non-str requirements.file"),
+                    ("123", "non-str requirements.file"),
+                    ('""', "empty requirements.file"),
                 )
             ),
             # SCP25 unexisting requirements.file
@@ -189,7 +248,7 @@ CASES = [
                             f"  file: {path}",
                         ]
                     ),
-                    issue("SCP25 unexisting requirements.file"),
+                    issue("SCP25 unexisting requirements.file", line=3, column=8),
                 )
                 for path in (
                     "missing-requirements.txt",
@@ -203,7 +262,7 @@ CASES = [
                         "projects:",
                         "  default:",
                         "    id: 12345",
-                        "    stack: 2.12",
+                        "    stack: '2.12'",
                         "    requirements:",
                         "      eggs:",
                         "      - a.egg:",
@@ -211,14 +270,47 @@ CASES = [
                 ),
                 (
                     issue("SCP18 no root stack"),
-                    issue("SCP19 non-root stack"),
-                    issue("SCP20 stack not frozen"),
+                    issue("SCP19 non-root stack", line=4, column=4),
+                    issue("SCP20 stack not frozen", line=4, column=11),
                     issue("SCP21 no root requirements"),
-                    issue("SCP22 non-root requirements"),
-                    issue("SCP23 no requirements.file"),
+                    issue("SCP22 non-root requirements", line=5, column=4),
+                    issue(
+                        "SCP23 invalid scrapinghub.yml: no requirements.file key",
+                        line=6,
+                        column=6,
+                    ),
                 ),
             ),
-            # Invalid requirements
+            # SCP23 invalid scrapinghub.yml
+            (
+                "invalid: yaml: content:",
+                issue(
+                    "SCP23 invalid scrapinghub.yml: mapping values are not allowed here\n"
+                    '  in "<unicode string>", line 1, column 14:\n'
+                    "    invalid: yaml: content:\n"
+                    "                 ^ (line: 1)"
+                ),
+            ),
+            (
+                "- not a dict",
+                issue("SCP23 invalid scrapinghub.yml: non-mapping root data structure"),
+            ),
+            (
+                "just a string",
+                issue("SCP23 invalid scrapinghub.yml: non-mapping root data structure"),
+            ),
+            (
+                "123",
+                issue("SCP23 invalid scrapinghub.yml: non-mapping root data structure"),
+            ),
+            (
+                "true",
+                issue("SCP23 invalid scrapinghub.yml: non-mapping root data structure"),
+            ),
+            (
+                "null",
+                issue("SCP23 invalid scrapinghub.yml: non-mapping root data structure"),
+            ),
             (
                 "\n".join(
                     [
@@ -226,7 +318,51 @@ CASES = [
                         "requirements: yes",
                     ]
                 ),
-                issue("SCP28 non-mapping requirements"),
+                issue(
+                    "SCP23 invalid scrapinghub.yml: non-mapping requirements",
+                    line=2,
+                    column=14,
+                ),
+            ),
+            (
+                "\n".join(
+                    [
+                        "requirements:",
+                        "  file: requirements.txt",
+                        f"stacks: {LATEST_KNOWN_STACK}",
+                    ]
+                ),
+                [
+                    issue("SCP18 no root stack"),
+                    issue(
+                        "SCP23 invalid scrapinghub.yml: non-mapping stacks",
+                        line=3,
+                        column=8,
+                    ),
+                ],
+            ),
+            (
+                "\n".join(
+                    [
+                        "stack: 2.8",
+                        "projects:",
+                        "  default:",
+                        "    stack: 3",
+                        "requirements:",
+                        "  file: requirements.txt",
+                    ]
+                ),
+                [
+                    issue("SCP19 non-root stack", line=4, column=4),
+                    issue(
+                        "SCP23 invalid scrapinghub.yml: non-str stack", line=1, column=7
+                    ),
+                    issue(
+                        "SCP23 invalid scrapinghub.yml: non-str stack",
+                        line=4,
+                        column=11,
+                    ),
+                ],
             ),
         )
     ),
@@ -249,7 +385,7 @@ CASES = [
                         "  file: requirements.txt",
                     ]
                 ),
-                issue("SCP25 unexisting requirements.file"),
+                issue("SCP25 unexisting requirements.file", line=3, column=8),
             ),
         )
     ),
@@ -293,7 +429,7 @@ CASES = [
         ),
         (
             *default_issues("requirements-dev.txt"),
-            issue("SCP26 requirements.file mismatch"),
+            issue("SCP26 requirements.file mismatch", line=3, column=8),
         ),
         {"scrapy_requirements_file": "requirements-dev.txt"},
     ),

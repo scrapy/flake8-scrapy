@@ -111,12 +111,12 @@ CASES: Cases = (
             ),
         )
     ),
-    # SCP27 missing stack requirements
+    # SCP24 missing stack requirements
     *(
         (
             (
                 File("", path="scrapy.cfg"),
-                File("", path="scrapinghub.yml"),
+                File("image: custom:latest", path="scrapinghub.yml"),
                 File(requirements, path=path),
             ),
             issues,
@@ -185,7 +185,7 @@ CASES: Cases = (
                 ),
                 (
                     Issue(
-                        "SCP27 missing stack requirements: missing packages: aiohttp, awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, scrapinghub, scrapinghub-entrypoint-scrapy, scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, scrapy-pagestorage, scrapy-querycleaner, scrapy-splitvariants, scrapy-zyte-smartproxy, spidermon, urllib3",
+                        "SCP24 missing stack requirements: missing packages: aiohttp, awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, scrapinghub, scrapinghub-entrypoint-scrapy, scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, scrapy-pagestorage, scrapy-querycleaner, scrapy-splitvariants, scrapy-zyte-smartproxy, spidermon, urllib3",
                         path=path,
                     ),
                 ),
@@ -196,14 +196,14 @@ CASES: Cases = (
                 (
                     Issue("SCP13 incomplete requirements freeze", path=path),
                     Issue(
-                        "SCP27 missing stack requirements: missing packages: aiohttp, awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, requests, scrapinghub, scrapinghub-entrypoint-scrapy, scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, scrapy-pagestorage, scrapy-querycleaner, scrapy-splitvariants, scrapy-zyte-smartproxy, spidermon, urllib3",
+                        "SCP24 missing stack requirements: missing packages: aiohttp, awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, requests, scrapinghub, scrapinghub-entrypoint-scrapy, scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, scrapy-pagestorage, scrapy-querycleaner, scrapy-splitvariants, scrapy-zyte-smartproxy, spidermon, urllib3",
                         path=path,
                     ),
                 ),
             ),
         )
     ),
-    # SCP27 should not trigger without scrapinghub.yml
+    # SCP24 should not trigger without scrapinghub.yml
     *(
         ((File("", path="scrapy.cfg"), File(requirements, path=path)), issues, {})
         for path in ("requirements.txt",)
