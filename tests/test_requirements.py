@@ -116,7 +116,7 @@ CASES: Cases = (
         (
             (
                 File("", path="scrapy.cfg"),
-                File("", path="scrapinghub.yml"),
+                File("image: custom:latest", path="scrapinghub.yml"),
                 File(requirements, path=path),
             ),
             issues,

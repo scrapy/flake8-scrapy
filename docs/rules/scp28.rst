@@ -12,6 +12,7 @@ file <shub:configuration>`, from plain syntax errors to incorrect data types.
 Currently checks:
 
 - That the file is a valid YAML file
+- That the root structure is a mapping_
 - ``requirements`` keys that are not mappings_
 - ``stacks`` keys that are not mappings_
 

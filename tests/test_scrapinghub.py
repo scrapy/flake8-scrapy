@@ -62,7 +62,6 @@ CASES = [
                             f"stack: {LATEST_KNOWN_STACK}",
                         ]
                     ),
-                    "- not a dict",
                     "image: custom:latest",
                     "\n".join(
                         [
@@ -264,6 +263,26 @@ CASES = [
             # SCP28 invalid scrapinghub.yml
             (
                 "invalid: yaml: content:",
+                issue("SCP28 invalid scrapinghub.yml"),
+            ),
+            (
+                "- not a dict",
+                issue("SCP28 invalid scrapinghub.yml"),
+            ),
+            (
+                "just a string",
+                issue("SCP28 invalid scrapinghub.yml"),
+            ),
+            (
+                "123",
+                issue("SCP28 invalid scrapinghub.yml"),
+            ),
+            (
+                "true",
+                issue("SCP28 invalid scrapinghub.yml"),
+            ),
+            (
+                "null",
                 issue("SCP28 invalid scrapinghub.yml"),
             ),
             (

@@ -33,6 +33,7 @@ class ScrapinghubIssueFinder:
             yield Issue(28, "invalid scrapinghub.yml")
             return
         if not isinstance(data, dict):
+            yield Issue(28, "invalid scrapinghub.yml")
             return
         if self._has_image_key(data):
             return
