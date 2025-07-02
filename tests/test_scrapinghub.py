@@ -121,6 +121,22 @@ CASES = [
                 ),
                 issue("SCP19 non-root stack"),
             ),
+            (
+                "\n".join(
+                    [
+                        "requirements:",
+                        "  file: requirements.txt",
+                        "stacks:",
+                        f"  prod: {LATEST_KNOWN_STACK}",
+                        f"  dev: {LATEST_KNOWN_STACK}",
+                    ]
+                ),
+                (
+                    issue("SCP18 no root stack"),
+                    issue("SCP19 non-root stack"),
+                    issue("SCP19 non-root stack"),
+                ),
+            ),
             # SCP20 stack not frozen
             *(
                 (
