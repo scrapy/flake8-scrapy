@@ -53,7 +53,9 @@ class ScrapinghubIssueFinder:
                     yield Issue(22, "non-root requirements")
                 yield from self._check_requirements_structure(value)
             elif key == "stacks" and is_root:
-                if isinstance(value, dict):
+                if not isinstance(value, dict):
+                    yield Issue(28, "invalid scrapinghub.yml")
+                else:
                     for stack_value in value.values():
                         yield Issue(19, "non-root stack")
                         if not self._is_frozen_stack(stack_value):
@@ -68,7 +70,7 @@ class ScrapinghubIssueFinder:
         self, requirements_value
     ) -> Generator[Issue, None, None]:
         if not isinstance(requirements_value, dict):
-            yield Issue(28, "non-mapping requirements")
+            yield Issue(28, "invalid scrapinghub.yml")
             return
 
         if "file" not in requirements_value:

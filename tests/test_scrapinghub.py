@@ -270,7 +270,20 @@ CASES = [
                         "requirements: yes",
                     ]
                 ),
-                issue("SCP28 non-mapping requirements"),
+                issue("SCP28 invalid scrapinghub.yml"),
+            ),
+            (
+                "\n".join(
+                    [
+                        "requirements:",
+                        "  file: requirements.txt",
+                        f"stacks: {LATEST_KNOWN_STACK}",
+                    ]
+                ),
+                [
+                    issue("SCP18 no root stack"),
+                    issue("SCP28 invalid scrapinghub.yml"),
+                ],
             ),
         )
     ),
