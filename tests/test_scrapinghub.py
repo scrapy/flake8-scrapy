@@ -105,7 +105,7 @@ CASES = [
                 ),
                 (
                     issue("SCP18 no root stack"),
-                    issue("SCP19 non-root stack"),
+                    issue("SCP19 non-root stack", line=5, column=4),
                 ),
             ),
             (
@@ -117,7 +117,7 @@ CASES = [
                         f"  default: {LATEST_KNOWN_STACK}",
                     ]
                 ),
-                issue("SCP19 non-root stack"),
+                issue("SCP19 non-root stack", line=4, column=2),
             ),
             (
                 "\n".join(
@@ -131,8 +131,8 @@ CASES = [
                 ),
                 (
                     issue("SCP18 no root stack"),
-                    issue("SCP19 non-root stack"),
-                    issue("SCP19 non-root stack"),
+                    issue("SCP19 non-root stack", line=4, column=2),
+                    issue("SCP19 non-root stack", line=5, column=2),
                 ),
             ),
             # SCP20 stack not frozen
@@ -159,8 +159,8 @@ CASES = [
                     ]
                 ),
                 (
-                    issue("SCP19 non-root stack"),
-                    issue("SCP19 non-root stack"),
+                    issue("SCP19 non-root stack", line=4, column=2),
+                    issue("SCP19 non-root stack", line=5, column=2),
                     issue("SCP20 stack not frozen"),
                     issue("SCP20 stack not frozen"),
                 ),
@@ -253,7 +253,7 @@ CASES = [
                 ),
                 (
                     issue("SCP18 no root stack"),
-                    issue("SCP19 non-root stack"),
+                    issue("SCP19 non-root stack", line=4, column=4),
                     issue("SCP20 stack not frozen"),
                     issue("SCP21 no root requirements"),
                     issue("SCP22 non-root requirements"),

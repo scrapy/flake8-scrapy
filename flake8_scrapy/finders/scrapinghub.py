@@ -26,7 +26,7 @@ class ScrapinghubIssueFinder:
     def check(self) -> Generator[Issue, None, None]:
         assert self.context.file.lines is not None
         content = "\n".join(self.context.file.lines)
-        yaml_parser = YAML(typ="safe")
+        yaml_parser = YAML(typ="rt")
         try:
             data = yaml_parser.load(content)
         except YAMLError:
@@ -49,7 +49,8 @@ class ScrapinghubIssueFinder:
         for key, value in data.items():
             if key == "stack":
                 if not is_root:
-                    yield Issue(19, "non-root stack")
+                    line, column = self._get_key_position(data, key)
+                    yield Issue(19, "non-root stack", line=line, column=column)
                 if not self._is_frozen_stack(value):
                     yield Issue(20, "stack not frozen")
             elif key == "requirements":
@@ -60,12 +61,17 @@ class ScrapinghubIssueFinder:
                 if not isinstance(value, dict):
                     yield Issue(28, "invalid scrapinghub.yml")
                 else:
-                    for stack_value in value.values():
-                        yield Issue(19, "non-root stack")
+                    for stack_key, stack_value in value.items():
+                        line, column = self._get_key_position(value, stack_key)
+                        yield Issue(19, "non-root stack", line=line, column=column)
                         if not self._is_frozen_stack(stack_value):
                             yield Issue(20, "stack not frozen")
             if isinstance(value, dict):
                 yield from self.check_keys(value, is_root=False)
+
+    def _get_key_position(self, data: dict, key: str) -> tuple[int, int]:
+        line_info = data.lc.key(key)
+        return line_info[0] + 1, line_info[1]
 
     def _is_frozen_stack(self, stack: str) -> bool:
         return isinstance(stack, str) and bool(re.search(r"-\d{8}$", stack))
