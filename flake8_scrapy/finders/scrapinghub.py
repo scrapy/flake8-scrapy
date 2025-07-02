@@ -56,7 +56,8 @@ class ScrapinghubIssueFinder:
                     yield Issue(20, "stack not frozen", line=line, column=column)
             elif key == "requirements":
                 if not is_root:
-                    yield Issue(22, "non-root requirements")
+                    line, column = self._get_key_position(data, key)
+                    yield Issue(22, "non-root requirements", line=line, column=column)
                 yield from self._check_requirements_structure(value)
             elif key == "stacks" and is_root:
                 if not isinstance(value, CommentedMap):

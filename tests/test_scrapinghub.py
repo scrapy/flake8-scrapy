@@ -184,7 +184,7 @@ CASES = [
             ),
             # SCP22 non-root requirements
             *(
-                (config, issue("SCP22 non-root requirements"))
+                (config, issue("SCP22 non-root requirements", line=6, column=4))
                 for config in (
                     "\n".join(
                         [
@@ -266,7 +266,7 @@ CASES = [
                     issue("SCP19 non-root stack", line=4, column=4),
                     issue("SCP20 stack not frozen", line=4, column=11),
                     issue("SCP21 no root requirements"),
-                    issue("SCP22 non-root requirements"),
+                    issue("SCP22 non-root requirements", line=5, column=4),
                     issue("SCP23 no requirements.file"),
                 ),
             ),
