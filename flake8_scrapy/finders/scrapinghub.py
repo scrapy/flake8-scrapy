@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from ruamel.yaml import YAML, CommentedMap
 from ruamel.yaml.error import YAMLError
@@ -29,11 +29,13 @@ class ScrapinghubIssueFinder:
         yaml_parser = YAML(typ="rt")
         try:
             data = yaml_parser.load(content)
-        except YAMLError:
-            yield Issue(28, "invalid scrapinghub.yml")
+        except YAMLError as e:
+            yield Issue(28, "invalid scrapinghub.yml", detail=str(e))
             return
         if not isinstance(data, CommentedMap):
-            yield Issue(28, "invalid scrapinghub.yml")
+            yield Issue(
+                28, "invalid scrapinghub.yml", detail="non-mapping root data structure"
+            )
             return
         if self._has_image_key(data):
             return
@@ -58,10 +60,18 @@ class ScrapinghubIssueFinder:
                 if not is_root:
                     line, column = self._get_key_position(data, key)
                     yield Issue(22, "non-root requirements", line=line, column=column)
-                yield from self._check_requirements_structure(value)
+                line, column = self._get_value_position(data, key)
+                yield from self._check_requirements_value(value, line, column)
             elif key == "stacks" and is_root:
                 if not isinstance(value, CommentedMap):
-                    yield Issue(28, "invalid scrapinghub.yml")
+                    line, column = self._get_value_position(data, key)
+                    yield Issue(
+                        28,
+                        "invalid scrapinghub.yml",
+                        detail="non-mapping stacks",
+                        line=line,
+                        column=column,
+                    )
                 else:
                     for stack_key, stack_value in value.items():
                         line, column = self._get_key_position(value, stack_key)
@@ -85,15 +95,21 @@ class ScrapinghubIssueFinder:
     def _is_frozen_stack(self, stack: str) -> bool:
         return isinstance(stack, str) and bool(re.search(r"-\d{8}$", stack))
 
-    def _check_requirements_structure(
-        self, requirements_value
+    def _check_requirements_value(
+        self, requirements_value: Any, line: int, column: int
     ) -> Generator[Issue, None, None]:
         if not isinstance(requirements_value, CommentedMap):
-            yield Issue(28, "invalid scrapinghub.yml")
+            yield Issue(
+                28,
+                "invalid scrapinghub.yml",
+                detail="non-mapping requirements",
+                line=line,
+                column=column,
+            )
             return
 
         if "file" not in requirements_value:
-            yield Issue(23, "no requirements.file")
+            yield Issue(23, "no requirements.file", line=line, column=column)
             return
 
         file_value = requirements_value["file"]

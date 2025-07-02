@@ -201,7 +201,7 @@ CASES = [
             ),
             # SCP23 no requirements.file
             *(
-                (config, issue("SCP23 no requirements.file"))
+                (config, issue("SCP23 no requirements.file", line=3, column=2))
                 for config in (
                     "\n".join(
                         [
@@ -267,33 +267,38 @@ CASES = [
                     issue("SCP20 stack not frozen", line=4, column=11),
                     issue("SCP21 no root requirements"),
                     issue("SCP22 non-root requirements", line=5, column=4),
-                    issue("SCP23 no requirements.file"),
+                    issue("SCP23 no requirements.file", line=6, column=6),
                 ),
             ),
             # SCP28 invalid scrapinghub.yml
             (
                 "invalid: yaml: content:",
-                issue("SCP28 invalid scrapinghub.yml"),
+                issue(
+                    "SCP28 invalid scrapinghub.yml: mapping values are not allowed here\n"
+                    '  in "<unicode string>", line 1, column 14:\n'
+                    "    invalid: yaml: content:\n"
+                    "                 ^ (line: 1)"
+                ),
             ),
             (
                 "- not a dict",
-                issue("SCP28 invalid scrapinghub.yml"),
+                issue("SCP28 invalid scrapinghub.yml: non-mapping root data structure"),
             ),
             (
                 "just a string",
-                issue("SCP28 invalid scrapinghub.yml"),
+                issue("SCP28 invalid scrapinghub.yml: non-mapping root data structure"),
             ),
             (
                 "123",
-                issue("SCP28 invalid scrapinghub.yml"),
+                issue("SCP28 invalid scrapinghub.yml: non-mapping root data structure"),
             ),
             (
                 "true",
-                issue("SCP28 invalid scrapinghub.yml"),
+                issue("SCP28 invalid scrapinghub.yml: non-mapping root data structure"),
             ),
             (
                 "null",
-                issue("SCP28 invalid scrapinghub.yml"),
+                issue("SCP28 invalid scrapinghub.yml: non-mapping root data structure"),
             ),
             (
                 "\n".join(
@@ -302,7 +307,11 @@ CASES = [
                         "requirements: yes",
                     ]
                 ),
-                issue("SCP28 invalid scrapinghub.yml"),
+                issue(
+                    "SCP28 invalid scrapinghub.yml: non-mapping requirements",
+                    line=2,
+                    column=14,
+                ),
             ),
             (
                 "\n".join(
@@ -314,7 +323,11 @@ CASES = [
                 ),
                 [
                     issue("SCP18 no root stack"),
-                    issue("SCP28 invalid scrapinghub.yml"),
+                    issue(
+                        "SCP28 invalid scrapinghub.yml: non-mapping stacks",
+                        line=3,
+                        column=8,
+                    ),
                 ],
             ),
         )
