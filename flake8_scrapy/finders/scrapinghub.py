@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from ruamel.yaml import YAML
+from ruamel.yaml import YAML, CommentedMap
 from ruamel.yaml.error import YAMLError
 
 from flake8_scrapy.issues import Issue
@@ -32,7 +32,7 @@ class ScrapinghubIssueFinder:
         except YAMLError:
             yield Issue(28, "invalid scrapinghub.yml")
             return
-        if not isinstance(data, dict):
+        if not isinstance(data, CommentedMap):
             yield Issue(28, "invalid scrapinghub.yml")
             return
         if self._has_image_key(data):
@@ -44,7 +44,7 @@ class ScrapinghubIssueFinder:
         yield from self.check_keys(data)
 
     def check_keys(
-        self, data: dict, is_root: bool = True
+        self, data: CommentedMap, is_root: bool = True
     ) -> Generator[Issue, None, None]:
         for key, value in data.items():
             if key == "stack":
@@ -58,7 +58,7 @@ class ScrapinghubIssueFinder:
                     yield Issue(22, "non-root requirements")
                 yield from self._check_requirements_structure(value)
             elif key == "stacks" and is_root:
-                if not isinstance(value, dict):
+                if not isinstance(value, CommentedMap):
                     yield Issue(28, "invalid scrapinghub.yml")
                 else:
                     for stack_key, stack_value in value.items():
@@ -66,10 +66,10 @@ class ScrapinghubIssueFinder:
                         yield Issue(19, "non-root stack", line=line, column=column)
                         if not self._is_frozen_stack(stack_value):
                             yield Issue(20, "stack not frozen")
-            if isinstance(value, dict):
+            if isinstance(value, CommentedMap):
                 yield from self.check_keys(value, is_root=False)
 
-    def _get_key_position(self, data: dict, key: str) -> tuple[int, int]:
+    def _get_key_position(self, data: CommentedMap, key: str) -> tuple[int, int]:
         line_info = data.lc.key(key)
         return line_info[0] + 1, line_info[1]
 
@@ -79,7 +79,7 @@ class ScrapinghubIssueFinder:
     def _check_requirements_structure(
         self, requirements_value
     ) -> Generator[Issue, None, None]:
-        if not isinstance(requirements_value, dict):
+        if not isinstance(requirements_value, CommentedMap):
             yield Issue(28, "invalid scrapinghub.yml")
             return
 
@@ -103,17 +103,17 @@ class ScrapinghubIssueFinder:
             ):
                 yield Issue(26, "requirements.file mismatch")
 
-    def _has_image_key(self, data: dict) -> bool:
+    def _has_image_key(self, data: CommentedMap) -> bool:
         for key, value in data.items():
             if key == "image":
                 return True
-            if isinstance(value, dict) and self._has_image_key(value):
+            if isinstance(value, CommentedMap) and self._has_image_key(value):
                 return True
         return False
 
-    def _has_stacks_default(self, data: dict) -> bool:
+    def _has_stacks_default(self, data: CommentedMap) -> bool:
         return (
             "stacks" in data
-            and isinstance(data["stacks"], dict)
+            and isinstance(data["stacks"], CommentedMap)
             and "default" in data["stacks"]
         )
