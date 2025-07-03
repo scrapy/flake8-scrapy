@@ -16,20 +16,28 @@ from .finders.oldstyle import (
 )
 from .finders.requirements import RequirementsIssueFinder
 from .finders.scrapinghub import ScrapinghubIssueFinder
-from .finders.setting_modules import SettingModuleIssueFinder
+from .finders.settings import (
+    SettingChecker,
+    SettingIssueFinder,
+    SettingModuleIssueFinder,
+)
 from .finders.unsupported import LambdaCallbackIssueFinder
 
 __version__ = "0.0.2"
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Sequence
+    from collections.abc import Sequence
+
+    from flake8_scrapy.issues import Issue
 
 
 class ScrapyStyleIssueFinder(NodeVisitor):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.issues = []
+    def __init__(self, setting_checker: SettingChecker):
+        super().__init__()
+        self.issues: list[Issue] = []
         lambda_callback_issue_finder = LambdaCallbackIssueFinder()
+        setting_issue_finder = SettingIssueFinder(setting_checker)
+
         self.finders: dict[str, Sequence] = {
             "Assign": [
                 lambda_callback_issue_finder,
@@ -40,10 +48,12 @@ class ScrapyStyleIssueFinder(NodeVisitor):
             "Call": [
                 GetFirstByIndexIssueFinder(),
                 lambda_callback_issue_finder,
+                setting_issue_finder,
                 UrlJoinIssueFinder(),
             ],
             "Subscript": [
                 ExtractThenIndexIssueFinder(),
+                setting_issue_finder,
             ],
         }
 
@@ -90,29 +100,33 @@ class ScrapyStyleChecker:
         self, tree: AST | None, filename: str, lines: Sequence[str] | None = None
     ):
         self.tree = tree
-        context = Context.from_flake8_params(
+        self.context = Context.from_flake8_params(
             tree, filename, lines, self.requirements_file_path
         )
-        self.requirements_finder = RequirementsIssueFinder(context)
-        self.scrapinghub_finder = ScrapinghubIssueFinder(context)
-        self.setting_module_finder = SettingModuleIssueFinder(context)
 
     def run(self):
         for issue in self.run_checks():
             yield (*issue, self.__class__)
 
     def run_checks(self):
-        if self.setting_module_finder.in_setting_module():
-            yield from self.setting_module_finder.check()
-        elif self.tree:
-            yield from self.check_code()
-        elif self.requirements_finder.in_requirements_file():
-            yield from self.requirements_finder.check()
-        elif self.scrapinghub_finder.in_scrapinghub_file():
-            yield from self.scrapinghub_finder.check()
+        if self.tree:
+            setting_checker = SettingChecker()
+            setting_module_finder = SettingModuleIssueFinder(
+                self.context, setting_checker
+            )
+            if setting_module_finder.in_setting_module():
+                yield from setting_module_finder.check()
+            finder = ScrapyStyleIssueFinder(setting_checker)
+            finder.visit(self.tree)
+            yield from finder.issues
+            return
 
-    def check_code(self) -> Generator[tuple[str, int, int], None, None]:
-        finder = ScrapyStyleIssueFinder()
-        assert self.tree is not None
-        finder.visit(self.tree)
-        yield from finder.issues
+        requirements_finder = RequirementsIssueFinder(self.context)
+        if requirements_finder.in_requirements_file():
+            yield from requirements_finder.check()
+            return
+
+        scrapinghub_finder = ScrapinghubIssueFinder(self.context)
+        if scrapinghub_finder.in_scrapinghub_file():
+            yield from scrapinghub_finder.check()
+            return

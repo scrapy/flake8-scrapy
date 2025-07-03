@@ -1,7 +1,20 @@
 from __future__ import annotations
 
-from ast import Assign, Constant, Import, ImportFrom, Module, Name, NodeVisitor
+from ast import (
+    Assign,
+    Attribute,
+    Call,
+    Constant,
+    Import,
+    ImportFrom,
+    Module,
+    Name,
+    NodeVisitor,
+    Subscript,
+    expr,
+)
 from ast import walk as iter_nodes
+from collections.abc import Generator
 from contextlib import suppress
 from importlib.util import find_spec
 from pathlib import Path
@@ -20,11 +33,46 @@ if TYPE_CHECKING:
     from flake8_scrapy.typing import LineNumber
 
 
+class SettingChecker:
+    def check_name(self, node: Constant | Name) -> Generator[Issue, None, None]:
+        name = node.value if isinstance(node, Constant) else node.id
+        if name not in SETTINGS:
+            yield Issue(27, "unknown setting", line=node.lineno, column=node.col_offset)
+
+
+class SettingIssueFinder:
+    def __init__(self, setting_checker: SettingChecker):
+        self.setting_checker = setting_checker
+
+    def find_issues(self, node: Call | Subscript) -> Generator[Issue, None, None]:
+        if isinstance(node, Subscript):
+            yield from self.find_subscript_issues(node)
+
+    def find_subscript_issues(self, node: Subscript) -> Generator[Issue, None, None]:
+        if not self.looks_like_settings_variable(
+            node.value
+        ) or not self.looks_like_setting_constant(node.slice):
+            return
+        assert isinstance(node.slice, Constant)
+        yield from self.setting_checker.check_name(node.slice)
+
+    def looks_like_settings_variable(self, value: expr) -> bool:
+        while isinstance(value, Attribute):
+            if value.attr == "settings":
+                return True
+            value = value.value
+        return isinstance(value, Name) and value.id == "settings"
+
+    def looks_like_setting_constant(self, value: expr) -> bool:
+        return isinstance(value, Constant) and isinstance(value.value, str)
+
+
 class SettingModuleIssueFinder(NodeVisitor):
-    def __init__(self, context: Context):
+    def __init__(self, context: Context, setting_checker: SettingChecker):
         super().__init__()
         self.context = context
         self.issues: list[Issue] = []
+        self.setting_checker = setting_checker
 
     def in_setting_module(self) -> bool:
         for import_path in self.context.project.setting_module_import_paths:
@@ -105,26 +153,29 @@ class SettingModuleIssueFinder(NodeVisitor):
             )
 
     def check_all_nodes_issues(self, node: Module) -> None:
-        processor = SettingsProcessor(self.context)
+        processor = SettingsModuleSettingsProcessor(self.context, self.setting_checker)
         for child in iter_nodes(node):
             if isinstance(child, Assign):
                 processor.process_assignment(child)
         self.issues.extend(processor.get_issues())
 
 
-class SettingsProcessor:
-    def __init__(self, context: Context):
+class SettingsModuleSettingsProcessor:
+    def __init__(self, context: Context, setting_checker: SettingChecker):
         self.context = context
         self.seen_settings: set[str] = set()
         self.autothrottle_enabled = False
         self.robotstxt_obey_values: list[tuple[bool, int, int]] = []
         self.redundant_values: list[tuple[int, int]] = []
         self.issues: list[Issue] = []
+        self.setting_checker = setting_checker
 
     def process_assignment(self, assignment: Assign) -> None:
         for target in assignment.targets:
             if not (isinstance(target, Name) and target.id.isupper()):
                 continue
+            for issue in self.setting_checker.check_name(target):
+                self.issues.append(issue)
             name = target.id
             self.seen_settings.add(name)
             self.process_setting(name, assignment)

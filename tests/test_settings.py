@@ -41,7 +41,35 @@ def default_issues(
 
 
 CASES: Cases = (
-    # Code checks on a single setting module
+    # Non-settings module Python file
+    *(
+        (
+            [File(code, path=path)],
+            issues,
+            {},
+        )
+        for path in ["a.py"]
+        for code, issues in (
+            # Objects considered Settings objects
+            ("settings['FOO']", Issue("SCP27 unknown setting", column=9, path=path)),
+            (
+                "self.settings['FOO']",
+                Issue("SCP27 unknown setting", column=14, path=path),
+            ),
+            (
+                "crawler.settings['FOO']",
+                Issue("SCP27 unknown setting", column=17, path=path),
+            ),
+            # Objects not considered Settings objects
+            ("setting['FOO']", NO_ISSUE),
+            ("foo['FOO']", NO_ISSUE),
+            ("foo.bar['FOO']", NO_ISSUE),
+            # Outside setting modules, module variables are not considered
+            # settings.
+            ("FOO = 'bar'", NO_ISSUE),
+        )
+    ),
+    # Single setting module
     *(
         (
             [
@@ -177,7 +205,7 @@ CASES: Cases = (
                     "COOKIES_ENABLED = False",
                     "DOWNLOAD_DELAY = 1.5",
                     "AUTOTHROTTLE_DEBUG = True",
-                    "UNKNOWN_SETTING = 'value'",
+                    "JOBDIR = 'value'",
                     'ADDONS = {"addon1": True}',
                     'SPIDER_MODULES = ["myproject.spiders"]',
                     "RETRY_HTTP_CODES = [500, 502]",
@@ -193,6 +221,11 @@ CASES: Cases = (
                     "TWISTED_REACTOR = None",
                     'TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"',
                 )
+            ),
+            # SCP27 unknown setting
+            (
+                "FOO = 'bar'",
+                Issue("SCP27 unknown setting", path=path),
             ),
         )
     ),
@@ -371,6 +404,15 @@ CASES: Cases = (
                     else ()
                 ),
                 *default_issues(path),
+                *(
+                    Issue(
+                        "SCP27 unknown setting",
+                        line=line,
+                        path=path,
+                    )
+                    for line in range(1, 3)
+                    if is_setting_like
+                ),
             ),
             {},
         )
