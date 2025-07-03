@@ -50,7 +50,8 @@ CASES: Cases = (
         )
         for path in ["a.py"]
         for code, issues in (
-            # Objects considered Settings objects
+            # Any object or attribute named “settings” used as a Settings
+            # object (subscript, Settings getters) is assumed to be one.
             ("settings['FOO']", Issue("SCP27 unknown setting", column=9, path=path)),
             (
                 "self.settings['FOO']",
@@ -60,13 +61,71 @@ CASES: Cases = (
                 "crawler.settings['FOO']",
                 Issue("SCP27 unknown setting", column=17, path=path),
             ),
-            # Objects not considered Settings objects
+            # Anything else is not considered a Settings object and thus
+            # ignored.
             ("setting['FOO']", NO_ISSUE),
             ("foo['FOO']", NO_ISSUE),
             ("foo.bar['FOO']", NO_ISSUE),
             # Outside setting modules, module variables are not considered
-            # settings.
+            # settings. (separate test cases later verify that they are
+            # interpreted as settings in setting modules)
             ("FOO = 'bar'", NO_ISSUE),
+            # SCP27 unknown setting
+            *(
+                (
+                    f"settings['{name}']",
+                    (
+                        Issue("SCP27 unknown setting", column=9, path=path)
+                        if issue is True
+                        else Issue(
+                            f"SCP27 unknown setting: did you mean: {issue}?",
+                            column=9,
+                            path=path,
+                        )
+                        if isinstance(issue, str)
+                        else Issue(
+                            f"SCP27 unknown setting: did you mean: {', '.join(issue)}?",
+                            column=9,
+                            path=path,
+                        )
+                        if isinstance(issue, Sequence)
+                        else NO_ISSUE
+                    ),
+                )
+                for name, issue in (
+                    # Known setting
+                    ("BOT_NAME", False),
+                    # No suggestions
+                    ("FOO", True),
+                    # Predefined suggestions
+                    (
+                        "CONCURRENCY",
+                        ("CONCURRENT_REQUESTS", "CONCURRENT_REQUESTS_PER_DOMAIN"),
+                    ),
+                    ("DELAY", "DOWNLOAD_DELAY"),
+                    # Automatic suggestions
+                    ("ADD_ONS", "ADDONS"),
+                    ("DEFAULT_ITEM_CLS", "DEFAULT_ITEM_CLASS"),
+                    ("REQUEST_HEADERS", "DEFAULT_REQUEST_HEADERS"),
+                    (
+                        "DOWNLOAD_MIDDLEWARES",
+                        (
+                            "DOWNLOADER_MIDDLEWARES",
+                            "DOWNLOAD_HANDLERS",
+                            "DOWNLOAD_DELAY",
+                        ),
+                    ),
+                    (
+                        "DOWNLOADER_HANDLERS",
+                        (
+                            "DOWNLOAD_HANDLERS",
+                            "DOWNLOADER_MIDDLEWARES",
+                            "DOWNLOADER_STATS",
+                        ),
+                    ),
+                    ("TIMEOUT", ("DNS_TIMEOUT", "TIMEOUT_LIMIT")),
+                )
+            ),
         )
     ),
     # Single setting module

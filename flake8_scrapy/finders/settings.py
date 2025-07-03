@@ -16,12 +16,18 @@ from ast import (
 from ast import walk as iter_nodes
 from collections.abc import Generator
 from contextlib import suppress
+from difflib import SequenceMatcher
 from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flake8_scrapy.ast import extract_literal_value
-from flake8_scrapy.data.settings import SETTINGS
+from flake8_scrapy.data.settings import (
+    MAX_AUTOMATIC_SUGGESTIONS,
+    MIN_AUTOMATIC_SUGGESTION_SCORE,
+    PREDEFINED_SUGGESTIONS,
+    SETTINGS,
+)
 from flake8_scrapy.issues import Issue
 from flake8_scrapy.settings import UNKNOWN_SETTING_VALUE, getbool
 from flake8_scrapy.utils import extend_sys_path
@@ -34,10 +40,35 @@ if TYPE_CHECKING:
 
 
 class SettingChecker:
+    @staticmethod
+    def suggest_names(unknown_name: str) -> list[str]:
+        if unknown_name in PREDEFINED_SUGGESTIONS:
+            return PREDEFINED_SUGGESTIONS[unknown_name]
+        matches = []
+        for candidate in SETTINGS:
+            if candidate.endswith("_BASE") and not unknown_name.endswith("_BASE"):
+                continue
+            ratio = SequenceMatcher(None, unknown_name, candidate).ratio()
+            if ratio >= MIN_AUTOMATIC_SUGGESTION_SCORE:
+                matches.append((candidate, ratio))
+        matches.sort(key=lambda x: (-x[1], x[0]))
+        return [m[0] for m in matches[:MAX_AUTOMATIC_SUGGESTIONS]]
+
     def check_name(self, node: Constant | Name) -> Generator[Issue, None, None]:
         name = node.value if isinstance(node, Constant) else node.id
+        if not isinstance(name, str):
+            return  # Not a string, so not a setting name
         if name not in SETTINGS:
-            yield Issue(27, "unknown setting", line=node.lineno, column=node.col_offset)
+            detail = None
+            if suggestions := self.suggest_names(name):
+                detail = f"did you mean: {', '.join(suggestions)}?"
+            yield Issue(
+                27,
+                "unknown setting",
+                detail=detail,
+                line=node.lineno,
+                column=node.col_offset,
+            )
 
 
 class SettingIssueFinder:
