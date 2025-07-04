@@ -311,6 +311,11 @@ CASES: Cases = (
         for code, issues in (
             # Baseline
             ("BOT_NAME = 'a'", NO_ISSUE),
+            # Non-setting-module specific checks for Python files also apply
+            (
+                "settings.get('FOO')",
+                Issue("SCP27 unknown setting", column=13, path=path),
+            ),
             # SCP07 redefined setting
             *(
                 (
