@@ -17,6 +17,7 @@ from ast import (
     NodeVisitor,
     NotIn,
     Subscript,
+    alias,
     expr,
     keyword,
     stmt,
@@ -52,6 +53,21 @@ def definition_column(node: ClassDef | FunctionDef) -> int:
     return node.col_offset + offset
 
 
+def import_column(node: Import | ImportFrom, alias: alias) -> int:
+    if alias.asname:
+        # For "from foo import BAR as BAZ" or "import foo as BAR", point to "BAZ"/"BAR"
+        # Need to find position of alias name after " as "
+        if hasattr(alias, "col_offset"):
+            return alias.col_offset + len(alias.name) + 4  # " as " is 4 chars
+        # Python 3.9 compatibility: alias objects don't have col_offset
+        return node.col_offset
+    # For "from foo import FOO" or "import FOO", point to "FOO"
+    if hasattr(alias, "col_offset"):
+        return alias.col_offset
+    # Python 3.9 compatibility: alias objects don't have col_offset
+    return node.col_offset
+
+
 class SettingChecker:
     @staticmethod
     def suggest_names(unknown_name: str) -> list[str]:
@@ -81,9 +97,15 @@ class SettingChecker:
             if isinstance(key, Constant):
                 yield from self.check_name(key)
 
-    def check_name(self, node: expr | keyword | stmt) -> Generator[Issue, None, None]:
-        if not isinstance(node, (Constant, Name, keyword, stmt)):
+    def check_name(
+        self, node: expr | keyword | stmt | tuple[Import | ImportFrom, alias]
+    ) -> Generator[Issue, None, None]:
+        if not isinstance(node, (Constant, Name, keyword, stmt, tuple)):
             return
+        if isinstance(node, tuple):
+            node, alias = node
+        else:
+            alias = None
         name = (
             node.value
             if isinstance(node, Constant)
@@ -91,6 +113,10 @@ class SettingChecker:
             if isinstance(node, Name)
             else node.arg
             if isinstance(node, keyword)
+            else alias.asname
+            if alias is not None and alias.asname
+            else alias.name
+            if alias is not None
             else node.name
         )
         if not isinstance(name, str):
@@ -99,7 +125,9 @@ class SettingChecker:
             detail = None
             if suggestions := self.suggest_names(name):
                 detail = f"did you mean: {', '.join(suggestions)}?"
-            if isinstance(node, stmt):
+            if alias is not None:
+                column = import_column(node, alias)
+            elif isinstance(node, stmt):
                 column = definition_column(node)
             else:
                 column = node.col_offset
@@ -281,32 +309,20 @@ class SettingModuleIssueFinder(NodeVisitor):
         return seen
 
     def check_import_statement(self, node: Import | ImportFrom) -> None:
-        for alias in node.names:
-            name = alias.asname if alias.asname else alias.name
+        for import_alias in node.names:
+            name = import_alias.asname if import_alias.asname else import_alias.name
             if not (name and name.isupper()):
                 continue
-            if alias.asname:
-                # For "from foo import BAR as BAZ" or "import foo as BAR", point to "BAZ"/"BAR"
-                # Need to find position of alias name after " as "
-                if hasattr(alias, "col_offset"):
-                    column = alias.col_offset + len(alias.name) + 4  # " as " is 4 chars
-                else:
-                    # Python 3.9 compatibility: alias objects don't have col_offset
-                    column = node.col_offset
-            # For "from foo import FOO" or "import FOO", point to "FOO"
-            elif hasattr(alias, "col_offset"):
-                column = alias.col_offset
-            else:
-                # Python 3.9 compatibility: alias objects don't have col_offset
-                column = node.col_offset
             self.issues.append(
                 Issue(
                     12,
                     "imported setting",
                     line=node.lineno,
-                    column=column,
+                    column=import_column(node, import_alias),
                 )
             )
+            for issue in self.setting_checker.check_name((node, import_alias)):
+                self.issues.append(issue)
 
     def check_all_nodes_issues(self, node: Module) -> None:
         processor = SettingsModuleSettingsProcessor(self.context, self.setting_checker)

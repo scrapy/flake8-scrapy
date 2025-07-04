@@ -75,6 +75,7 @@ CASES: Cases = (
                     "FOO = 'bar'",
                     "class FOO:\n    pass",
                     "def FOO():\n    pass",
+                    "import FOO",
                 )
             ),
             # Subscript assignment also triggers setting name checks,
@@ -352,6 +353,11 @@ CASES: Cases = (
                             ),
                         ),
                     ),
+                    (
+                        "import FOO",
+                        7,
+                        (Issue("SCP12 imported setting", column=7, path=path),),
+                    ),
                 )
             ),
             # SCP07 redefined setting
@@ -425,14 +431,14 @@ CASES: Cases = (
                     ),
                 )
                 for code, column in (
-                    ("from foo import FOO", 16),
-                    ("from foo import bar as BAR", 23),
-                    ("import FOO", 7),
-                    ("import foo as BAR", 14),
+                    ("from foo import BOT_NAME", 16),
+                    ("from foo import bar as BOT_NAME", 23),
+                    ("import BOT_NAME", 7),
+                    ("import foo as BOT_NAME", 14),
                 )
             ),
             (
-                "from foo import FOO, BAR",
+                "from foo import BOT_NAME, SPIDER_MODULES",
                 [
                     Issue(
                         "SCP12 imported setting",
@@ -441,13 +447,13 @@ CASES: Cases = (
                     ),
                     Issue(
                         "SCP12 imported setting",
-                        column=21 if ALIAS_HAS_COL_OFFSET else 0,
+                        column=26 if ALIAS_HAS_COL_OFFSET else 0,
                         path=path,
                     ),
                 ],
             ),
             (
-                "import foo, BAR",
+                "import foo, BOT_NAME",
                 Issue(
                     "SCP12 imported setting",
                     column=12 if ALIAS_HAS_COL_OFFSET else 0,
