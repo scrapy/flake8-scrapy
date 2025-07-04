@@ -15,14 +15,18 @@ assert PACKAGES["scrapy"].lowest_supported_version is not None
 
 PREDEFINED_SUGGESTIONS = {
     # NOTE: Somewhat arbitrary for the sake of having a few suggestions to
-    # check in tests (1 with 1 suggestion, 1 with 2+ suggestions). Going
-    # forward, as we add new suggestions based on actual wrong setting names
-    # seen in the wild (due to human or AI error), we can remove these as we
-    # add those, i.e. remove DELAY once we have a real recommendation with 1
-    # suggestion, and CONCURRENCY once we have a real recommendation with 2+
-    # suggestions.
+    # check in tests:
+    #
+    # - 1 with 1 suggestion
+    # - 1 with 2+ suggestions
+    # - 1 with a non-Scrapy suggestion
+    #
+    # Going forward, as we add new suggestions based on actual wrong setting
+    # names seen in the wild (due to human or AI error), we can remove these
+    # as the scenarios above get covered by real suggestions.
     "CONCURRENCY": ["CONCURRENT_REQUESTS", "CONCURRENT_REQUESTS_PER_DOMAIN"],
     "DELAY": ["DOWNLOAD_DELAY"],
+    "TIMEOUT": ["DOWNLOAD_TIMEOUT", "TIMEOUT_LIMIT"],
 }
 MAX_AUTOMATIC_SUGGESTIONS = 3
 MIN_AUTOMATIC_SUGGESTION_SCORE = 0.7

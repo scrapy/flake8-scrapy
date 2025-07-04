@@ -68,13 +68,21 @@ def import_column(node: Import | ImportFrom, alias: alias) -> int:
 
 
 class SettingChecker:
-    @staticmethod
-    def suggest_names(unknown_name: str) -> list[str]:
+    def __init__(self, context: Context):
+        self.supports_setting = context.project.supports_setting
+
+    def suggest_names(self, unknown_name: str) -> list[str]:
         if unknown_name in PREDEFINED_SUGGESTIONS:
-            return PREDEFINED_SUGGESTIONS[unknown_name]
+            return [
+                setting
+                for setting in PREDEFINED_SUGGESTIONS[unknown_name]
+                if self.supports_setting(setting)
+            ]
         matches = []
         for candidate in SETTINGS:
-            if candidate.endswith("_BASE") and not unknown_name.endswith("_BASE"):
+            if (
+                candidate.endswith("_BASE") and not unknown_name.endswith("_BASE")
+            ) or not self.supports_setting(candidate):
                 continue
             ratio = SequenceMatcher(None, unknown_name, candidate).ratio()
             if ratio >= MIN_AUTOMATIC_SUGGESTION_SCORE:

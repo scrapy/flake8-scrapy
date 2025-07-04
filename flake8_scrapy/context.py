@@ -12,6 +12,8 @@ from packaging.version import Version
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from flake8_scrapy.data.settings import SETTINGS
+
 if TYPE_CHECKING:
     from ast import AST
     from collections.abc import Sequence
@@ -44,6 +46,13 @@ class Project:
             cls.setting_module_import_paths_from_root(root),
             cls.find_requirements_file_path(root, requirements_file_path),
         )
+
+    def supports_setting(self, setting: str) -> bool:
+        if not self.requirements:
+            return True
+        assert setting in SETTINGS
+        setting_info = SETTINGS[setting]
+        return setting_info.package in self.requirements
 
     @staticmethod
     def root_from_file(file: Flake8File) -> Path | None:
@@ -101,15 +110,10 @@ class Project:
         return None
 
     @cached_property
-    def requirements(self) -> dict[str, Version]:
-        if not self.requirements_file_path or not self.requirements_file_path.exists():
+    def frozen_requirements(self) -> dict[str, Version]:
+        content = self.requirements_text
+        if content is None:
             return {}
-
-        try:
-            content = self.requirements_file_path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
-            return {}
-
         versions = {}
         for line in content.splitlines():
             line = line.strip()  # noqa: PLW2901
@@ -129,6 +133,36 @@ class Project:
                 continue
             canonical_name = cast("str", canonicalize_name(requirement.name))
             versions[canonical_name] = Version(spec.version)
+        return versions
+
+    @cached_property
+    def requirements_text(self) -> str | None:
+        if not self.requirements_file_path or not self.requirements_file_path.exists():
+            return None
+
+        try:
+            return self.requirements_file_path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            return None
+
+    @cached_property
+    def requirements(self) -> set[str]:
+        content = self.requirements_text
+        if content is None:
+            return set()
+        versions = set()
+        for line in content.splitlines():
+            line = line.strip()  # noqa: PLW2901
+            if not line or line.startswith("#"):
+                continue
+            if "#" in line:
+                line = line.split("#", 1)[0].strip()  # noqa: PLW2901
+            try:
+                requirement = Requirement(line)
+            except InvalidRequirement:
+                continue
+            canonical_name = cast("str", canonicalize_name(requirement.name))
+            versions.add(canonical_name)
         return versions
 
 

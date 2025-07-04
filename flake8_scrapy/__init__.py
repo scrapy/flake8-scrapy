@@ -111,7 +111,7 @@ class ScrapyStyleChecker:
 
     def run_checks(self):
         if self.tree:
-            setting_checker = SettingChecker()
+            setting_checker = SettingChecker(self.context)
             setting_module_finder = SettingModuleIssueFinder(
                 self.context, setting_checker
             )

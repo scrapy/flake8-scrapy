@@ -310,7 +310,7 @@ CASES: Cases = (
                             "DOWNLOADER_STATS",
                         ),
                     ),
-                    ("TIMEOUT", ("DNS_TIMEOUT", "TIMEOUT_LIMIT")),
+                    ("TIMEOUT", ("DOWNLOAD_TIMEOUT", "TIMEOUT_LIMIT")),
                 )
             ),
         )
@@ -848,6 +848,92 @@ CASES: Cases = (
                     "CONCURRENT_REQUESTS = 1\nDOWNLOAD_DELAY = 5.0",
                     "CONCURRENT_REQUESTS_PER_DOMAIN = 1\nDOWNLOAD_DELAY = 5.0",
                 )
+            ),
+        )
+    ),
+    # SCP27 unknown setting: suggestions based on requirements, predefined and
+    # automatic.
+    *(
+        (
+            (
+                *(
+                    File("\n".join(requirements), path="requirements.txt")
+                    for _ in range(1)
+                    if requirements
+                ),
+                File(f"settings[{setting!r}]", path="a.py"),
+                File("", path="scrapy.cfg"),
+            ),
+            (
+                *(
+                    Issue(
+                        "SCP13 incomplete requirements freeze",
+                        path="requirements.txt",
+                    )
+                    for _ in range(1)
+                    if requirements
+                ),
+                Issue(
+                    f"SCP27 unknown setting: did you mean: {', '.join(suggestions)}?",
+                    column=9,
+                    path="a.py",
+                ),
+            ),
+            {},
+        )
+        for requirements, setting, suggestions in (
+            # Predefined suggestions
+            (
+                (),
+                "TIMEOUT",
+                (
+                    "DOWNLOAD_TIMEOUT",
+                    "TIMEOUT_LIMIT",
+                ),
+            ),
+            (
+                ("scrapy",),
+                "TIMEOUT",
+                ("DOWNLOAD_TIMEOUT",),
+            ),
+            (
+                ("scrapy", "scrapyrt"),
+                "TIMEOUT",
+                (
+                    "DOWNLOAD_TIMEOUT",
+                    "TIMEOUT_LIMIT",
+                ),
+            ),
+            # Automatic suggestions
+            (
+                (),
+                "MAX_REQUESTS",
+                (
+                    "MAX_NEXT_REQUESTS",
+                    "ZYTE_API_MAX_REQUESTS",
+                ),
+            ),
+            (
+                ("scrapy", "scrapy-zyte-api"),
+                "MAX_REQUESTS",
+                ("ZYTE_API_MAX_REQUESTS",),
+            ),
+            (
+                ("hcf-backend", "scrapy", "scrapy-zyte-api"),
+                "MAX_REQUESTS",
+                (
+                    "MAX_NEXT_REQUESTS",
+                    "ZYTE_API_MAX_REQUESTS",
+                ),
+            ),
+            # Invalid requirements, comments, etc.
+            (
+                ("scrapy! #foo", "#scrapy"),
+                "TIMEOUT",
+                (
+                    "DOWNLOAD_TIMEOUT",
+                    "TIMEOUT_LIMIT",
+                ),
             ),
         )
     ),

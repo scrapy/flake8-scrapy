@@ -88,9 +88,9 @@ class Setting:
             return self.default_value
         assert isinstance(self.default_value, VersionedValue)
         versioned_value = self.default_value
-        if self.package not in project.requirements:
+        if self.package not in project.frozen_requirements:
             return versioned_value.all_time_value
-        version = project.requirements[self.package]
+        version = project.frozen_requirements[self.package]
         return versioned_value[version]
 
     def parse(self, value: Any) -> Any:
