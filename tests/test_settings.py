@@ -335,6 +335,47 @@ CASES: Cases = (
                 'if a:\n    BOT_NAME = "a"\nelse:\n    BOT_NAME = "b"',
                 NO_ISSUE,
             ),
+            # SCP11 improper setting definition
+            *(
+                (
+                    "\n".join(lines),
+                    Issue(
+                        "SCP11 improper setting definition", column=column, path=path
+                    ),
+                )
+                for lines, column in (
+                    (
+                        (
+                            "class DEFAULT_ITEM_CLASS:",
+                            "    pass",
+                        ),
+                        6,
+                    ),
+                    (
+                        (
+                            "def FEED_URI_PARAMS(params, spider):",
+                            "    return params",
+                        ),
+                        4,
+                    ),
+                )
+            ),
+            *(
+                (
+                    "\n".join(lines),
+                    NO_ISSUE,
+                )
+                for lines in (
+                    (
+                        "class DefaultItemClass:",
+                        "    pass",
+                    ),
+                    (
+                        "def feed_uri_params(params, spider):",
+                        "    return params",
+                    ),
+                )
+            ),
             # SCP12 imported setting
             *(
                 (

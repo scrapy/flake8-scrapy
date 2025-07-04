@@ -4,9 +4,11 @@ from ast import (
     Assign,
     Attribute,
     Call,
+    ClassDef,
     Compare,
     Constant,
     Dict,
+    FunctionDef,
     Import,
     ImportFrom,
     In,
@@ -17,6 +19,7 @@ from ast import (
     Subscript,
     expr,
     keyword,
+    stmt,
 )
 from ast import walk as iter_nodes
 from collections.abc import Generator
@@ -42,6 +45,11 @@ if TYPE_CHECKING:
 
     from flake8_scrapy.context import Context
     from flake8_scrapy.typing import LineNumber
+
+
+def definition_column(node: ClassDef | FunctionDef) -> int:
+    offset = len("class ") if isinstance(node, ClassDef) else len("def ")
+    return node.col_offset + offset
 
 
 class SettingChecker:
@@ -73,8 +81,8 @@ class SettingChecker:
             if isinstance(key, Constant):
                 yield from self.check_name(key)
 
-    def check_name(self, node: expr | keyword) -> Generator[Issue, None, None]:
-        if not isinstance(node, (Constant, Name, keyword)):
+    def check_name(self, node: expr | keyword | stmt) -> Generator[Issue, None, None]:
+        if not isinstance(node, (Constant, Name, keyword, stmt)):
             return
         name = (
             node.value
@@ -82,6 +90,8 @@ class SettingChecker:
             else node.id
             if isinstance(node, Name)
             else node.arg
+            if isinstance(node, keyword)
+            else node.name
         )
         if not isinstance(name, str):
             return  # Not a string, so not a setting name
@@ -89,12 +99,16 @@ class SettingChecker:
             detail = None
             if suggestions := self.suggest_names(name):
                 detail = f"did you mean: {', '.join(suggestions)}?"
+            if isinstance(node, stmt):
+                column = definition_column(node)
+            else:
+                column = node.col_offset
             yield Issue(
                 27,
                 "unknown setting",
                 detail=detail,
                 line=node.lineno,
-                column=node.col_offset,
+                column=column,
             )
 
 
@@ -299,6 +313,20 @@ class SettingModuleIssueFinder(NodeVisitor):
         for child in iter_nodes(node):
             if isinstance(child, Assign):
                 processor.process_assignment(child)
+            elif isinstance(child, (ClassDef, FunctionDef)):
+                if not child.name.isupper():
+                    continue
+                self.issues.append(
+                    Issue(
+                        11,
+                        "improper setting definition",
+                        line=child.lineno,
+                        column=definition_column(child),
+                    )
+                )
+                for issue in self.setting_checker.check_name(child):
+                    self.issues.append(issue)
+
         self.issues.extend(processor.get_issues())
 
 
