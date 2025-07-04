@@ -154,7 +154,7 @@ class SettingChecker:
             27,
             "unknown setting",
             detail=detail,
-            line=resolved_node.lineno,
+            node=resolved_node,
             column=column,
         )
 
@@ -319,8 +319,7 @@ class SettingModuleIssueFinder(NodeVisitor):
                         7,
                         "redefined setting",
                         detail=f"seen first at line {seen[name]}",
-                        line=node.lineno,
-                        column=node.col_offset,
+                        node=node,
                     )
                 )
                 continue
@@ -336,7 +335,7 @@ class SettingModuleIssueFinder(NodeVisitor):
                 Issue(
                     12,
                     "imported setting",
-                    line=node.lineno,
+                    node=node,
                     column=import_column(node, import_alias),
                 )
             )
@@ -355,7 +354,7 @@ class SettingModuleIssueFinder(NodeVisitor):
                     Issue(
                         11,
                         "improper setting definition",
-                        line=child.lineno,
+                        node=child,
                         column=definition_column(child),
                     )
                 )
