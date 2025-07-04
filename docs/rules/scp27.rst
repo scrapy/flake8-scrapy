@@ -41,3 +41,8 @@ Instead, use only valid Scrapy settings, such as:
     :caption: ``settings.py``
 
     BOT_NAME = "mybot"
+
+.. note::
+
+   To silence false positives for custom or project-specific settings, use
+   :ref:`scrapy_known_settings <scrapy-known-settings>`.

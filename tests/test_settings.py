@@ -979,6 +979,22 @@ CASES: Cases = (
             ),
         )
     ),
+    # scrapy_known_settings silences SCP27
+    (
+        [File("settings['FOO']", path="a.py")],
+        NO_ISSUE,
+        {"scrapy_known_settings": "FOO,BAR"},
+    ),
+    # and extends automatic suggestions.
+    (
+        [File("settings['FOOBAR']", path="a.py")],
+        Issue(
+            "SCP27 unknown setting: did you mean: FOO_BAR?",
+            column=9,
+            path="a.py",
+        ),
+        {"scrapy_known_settings": "FOO_BAR"},
+    ),
 )
 
 

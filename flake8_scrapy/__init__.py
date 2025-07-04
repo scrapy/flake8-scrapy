@@ -81,6 +81,7 @@ class ScrapyStyleChecker:
     name = "flake8-scrapy"
     version = __version__
     requirements_file_path: ClassVar[str] = ""
+    known_settings: ClassVar[set[str]] = set()
 
     @classmethod
     def add_options(cls, parser):
@@ -90,12 +91,23 @@ class ScrapyStyleChecker:
             help="Path of the project requirements file",
             parse_from_config=True,
         )
+        parser.add_option(
+            "--scrapy-known-settings",
+            default="",
+            help="Comma-separated list of additional known settings (do not trigger SCP27)",
+            parse_from_config=True,
+        )
 
     @classmethod
     def parse_options(cls, options):
         cls.requirements_file_path = options.scrapy_requirements_file or getattr(
             options, "requirements_file", ""
         )
+        known = getattr(options, "scrapy_known_settings", "")
+        if known:
+            cls.known_settings = {s.strip() for s in known.split(",") if s.strip()}
+        else:
+            cls.known_settings = set()
 
     def __init__(
         self, tree: AST | None, filename: str, lines: Sequence[str] | None = None
@@ -111,7 +123,9 @@ class ScrapyStyleChecker:
 
     def run_checks(self):
         if self.tree:
-            setting_checker = SettingChecker(self.context)
+            setting_checker = SettingChecker(
+                self.context, additional_known_settings=self.known_settings
+            )
             setting_module_finder = SettingModuleIssueFinder(
                 self.context, setting_checker
             )

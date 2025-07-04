@@ -68,8 +68,12 @@ def import_column(node: Import | ImportFrom, alias: alias) -> int:
 
 
 class SettingChecker:
-    def __init__(self, context: Context):
+    def __init__(self, context: Context, additional_known_settings: set[str]):
         self.supports_setting = context.project.supports_setting
+        self.additional_known_settings = additional_known_settings
+
+    def is_known_setting(self, name: str) -> bool:
+        return name in SETTINGS or name in self.additional_known_settings
 
     def suggest_names(self, unknown_name: str) -> list[str]:
         if unknown_name in PREDEFINED_SUGGESTIONS:
@@ -79,7 +83,7 @@ class SettingChecker:
                 if self.supports_setting(setting)
             ]
         matches = []
-        for candidate in SETTINGS:
+        for candidate in self.additional_known_settings | set(SETTINGS):
             if (
                 candidate.endswith("_BASE") and not unknown_name.endswith("_BASE")
             ) or not self.supports_setting(candidate):
@@ -134,24 +138,25 @@ class SettingChecker:
             )
         if not isinstance(name, str):
             return  # Not a string, so not a setting name
-        if name not in SETTINGS:
-            detail = None
-            if suggestions := self.suggest_names(name):
-                detail = f"did you mean: {', '.join(suggestions)}?"
-            if isinstance(resolved_node, (Import, ImportFrom)):
-                assert import_alias is not None
-                column = import_column(resolved_node, import_alias)
-            elif isinstance(resolved_node, (ClassDef, FunctionDef)):
-                column = definition_column(resolved_node)
-            else:
-                column = resolved_node.col_offset
-            yield Issue(
-                27,
-                "unknown setting",
-                detail=detail,
-                line=resolved_node.lineno,
-                column=column,
-            )
+        if self.is_known_setting(name):
+            return
+        detail = None
+        if suggestions := self.suggest_names(name):
+            detail = f"did you mean: {', '.join(suggestions)}?"
+        if isinstance(resolved_node, (Import, ImportFrom)):
+            assert import_alias is not None
+            column = import_column(resolved_node, import_alias)
+        elif isinstance(resolved_node, (ClassDef, FunctionDef)):
+            column = definition_column(resolved_node)
+        else:
+            column = resolved_node.col_offset
+        yield Issue(
+            27,
+            "unknown setting",
+            detail=detail,
+            line=resolved_node.lineno,
+            column=column,
+        )
 
 
 class SettingIssueFinder:
