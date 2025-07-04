@@ -70,6 +70,16 @@ CASES: Cases = (
             # settings. (separate test cases later verify that they are
             # interpreted as settings in setting modules)
             ("FOO = 'bar'", NO_ISSUE),
+            # Subscript assignment also triggers setting name checks,
+            (
+                "settings['FOO'] = 'bar'",
+                Issue("SCP27 unknown setting", column=9, path=path),
+            ),
+            # even if the value is not supported for setting value checks.
+            (
+                "settings['FOO'] = bar",
+                Issue("SCP27 unknown setting", column=9, path=path),
+            ),
             # SCP27 unknown setting
             *(
                 (
