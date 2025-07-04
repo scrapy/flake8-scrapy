@@ -4,14 +4,19 @@ from ast import (
     Assign,
     Attribute,
     Call,
+    Compare,
     Constant,
+    Dict,
     Import,
     ImportFrom,
+    In,
     Module,
     Name,
     NodeVisitor,
+    NotIn,
     Subscript,
     expr,
+    keyword,
 )
 from ast import walk as iter_nodes
 from collections.abc import Generator
@@ -54,8 +59,30 @@ class SettingChecker:
         matches.sort(key=lambda x: (-x[1], x[0]))
         return [m[0] for m in matches[:MAX_AUTOMATIC_SUGGESTIONS]]
 
-    def check_name(self, node: Constant | Name) -> Generator[Issue, None, None]:
-        name = node.value if isinstance(node, Constant) else node.id
+    def check_dict(self, node: expr) -> Generator[Issue, None, None]:
+        if not isinstance(node, (Call, Dict)):
+            return
+        if isinstance(node, Call):
+            if not isinstance(node.func, Name) or node.func.id != "dict":
+                return
+            for keyword in node.keywords:
+                yield from self.check_name(keyword)
+            return
+        assert isinstance(node, Dict)
+        for key in node.keys:
+            if isinstance(key, Constant):
+                yield from self.check_name(key)
+
+    def check_name(self, node: expr | keyword) -> Generator[Issue, None, None]:
+        if not isinstance(node, (Constant, Name, keyword)):
+            return
+        name = (
+            node.value
+            if isinstance(node, Constant)
+            else node.id
+            if isinstance(node, Name)
+            else node.arg
+        )
         if not isinstance(name, str):
             return  # Not a string, so not a setting name
         if name not in SETTINGS:
@@ -72,20 +99,104 @@ class SettingChecker:
 
 
 class SettingIssueFinder:
+    NON_METHOD_SETTINGS_CALLABLES = ("BaseSettings", "Settings", "overridden_settings")
+
     def __init__(self, setting_checker: SettingChecker):
         self.setting_checker = setting_checker
 
-    def find_issues(self, node: Call | Subscript) -> Generator[Issue, None, None]:
+    def find_issues(
+        self, node: Call | Compare | Subscript
+    ) -> Generator[Issue, None, None]:
+        if isinstance(node, Call):
+            yield from self.find_call_issues(node)
+            return
         if isinstance(node, Subscript):
             yield from self.find_subscript_issues(node)
+            return
+        if isinstance(node, Compare):
+            yield from self.find_compare_issues(node)
+            return
+
+    def find_call_issues(self, node: Call) -> Generator[Issue, None, None]:
+        if self.looks_like_setting_method(node.func):
+            if node.args:
+                if isinstance(node.args[0], Constant):
+                    yield from self.setting_checker.check_name(node.args[0])
+                return
+            for keyword in node.keywords:
+                if keyword.arg == "name" and isinstance(keyword.value, Constant):
+                    yield from self.setting_checker.check_name(keyword.value)
+                    return
+            return
+
+        if self.looks_like_settings_callable(node.func):
+            if node.args:
+                yield from self.setting_checker.check_dict(node.args[0])
+                return
+            for keyword in node.keywords:
+                if keyword.arg in ("values", "settings"):
+                    yield from self.setting_checker.check_dict(keyword.value)
+                    return
+            return
+
+    def looks_like_setting_method(self, func: expr) -> bool:
+        if not isinstance(func, Attribute):
+            return False
+        if not self.looks_like_settings_variable(func.value):
+            return False
+        return func.attr in (
+            "__contains__",
+            "__delitem__",
+            "__getitem__",
+            "__init__",
+            "__setitem__",
+            "add_to_list",
+            "delete",
+            "get",
+            "getbool",
+            "getint",
+            "getfloat",
+            "getlist",
+            "getdict",
+            "getdictorlist",
+            "getpriority",
+            "getwithbase",
+            "pop",
+            "remove_from_list",
+            "replace_in_component_priority_dict",
+            "set",
+            "set_in_component_priority_dict",
+            "setdefault",
+            "setdefault_in_component_priority_dict",
+        )
+
+    def looks_like_settings_callable(self, func: expr) -> bool:
+        if not isinstance(func, (Attribute, Name)):
+            return False
+        if isinstance(func, Name):
+            return func.id in self.NON_METHOD_SETTINGS_CALLABLES
+        assert isinstance(func, Attribute)
+        return func.attr in self.NON_METHOD_SETTINGS_CALLABLES or (
+            func.attr in ("setdict", "update")
+            and self.looks_like_settings_variable(func.value)
+        )
+
+    def find_compare_issues(self, node: Compare) -> Generator[Issue, None, None]:
+        if (
+            node.ops
+            and isinstance(node.ops[0], (In, NotIn))
+            and isinstance(node.left, Constant)
+            and self.looks_like_settings_variable(node.comparators[0])
+        ):
+            yield from self.setting_checker.check_name(node.left)
 
     def find_subscript_issues(self, node: Subscript) -> Generator[Issue, None, None]:
         if not self.looks_like_settings_variable(
             node.value
         ) or not self.looks_like_setting_constant(node.slice):
             return
-        assert isinstance(node.slice, Constant)
-        yield from self.setting_checker.check_name(node.slice)
+        if isinstance(node.slice, Constant):
+            yield from self.setting_checker.check_name(node.slice)
 
     def looks_like_settings_variable(self, value: expr) -> bool:
         while isinstance(value, Attribute):

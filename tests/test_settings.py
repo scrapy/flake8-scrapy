@@ -75,10 +75,160 @@ CASES: Cases = (
                 "settings['FOO'] = 'bar'",
                 Issue("SCP27 unknown setting", column=9, path=path),
             ),
-            # even if the value is not supported for setting value checks.
+            # even if the value is not supported for setting value checks,
             (
                 "settings['FOO'] = bar",
                 Issue("SCP27 unknown setting", column=9, path=path),
+            ),
+            # and even on attributes.
+            (
+                "self.settings['FOO'] = 'bar'",
+                Issue("SCP27 unknown setting", column=14, path=path),
+            ),
+            # BaseSetting methods that have a setting name as a parameter
+            # trigger setting name checks,
+            *(
+                (
+                    f"settings.{method_name}('FOO')",
+                    Issue(
+                        "SCP27 unknown setting", column=len(method_name) + 10, path=path
+                    ),
+                )
+                for method_name in (
+                    "__contains__",
+                    "__delitem__",
+                    "__getitem__",
+                    "__init__",
+                    "__setitem__",
+                    "add_to_list",
+                    "delete",
+                    "get",
+                    "getbool",
+                    "getint",
+                    "getfloat",
+                    "getlist",
+                    "getdict",
+                    "getdictorlist",
+                    "getpriority",
+                    "getwithbase",
+                    "pop",
+                    "remove_from_list",
+                    "replace_in_component_priority_dict",
+                    "set",
+                    "set_in_component_priority_dict",
+                    "setdefault",
+                    "setdefault_in_component_priority_dict",
+                )
+            ),
+            # regardless of parameter syntax used,
+            *(
+                (
+                    f"settings.get({params})",
+                    Issue(
+                        "SCP27 unknown setting", column=13 + column_offset, path=path
+                    ),
+                )
+                for params, column_offset in (
+                    ("name='FOO'", 5),
+                    ("'FOO', foo", 0),
+                    ("'FOO', default=foo", 0),
+                    ("name='FOO', default=foo", 5),
+                    ("default=foo, name='FOO'", 18),
+                    # and even if parameters do not match the expected function
+                    # signature, since the similarities could suggest that it
+                    # is still about a setting name.
+                    ("'FOO', foo, bar", 0),
+                )
+            ),
+            # and not triggering issues with unparseable values.
+            *(
+                (
+                    f"settings.get({params})",
+                    NO_ISSUE,
+                )
+                for params in (
+                    "foo",
+                    "name=foo",
+                )
+            ),
+            # Callables that expect a setting dict also trigger setting name
+            # checks,
+            *(
+                (
+                    f"{callable}({{'FOO': 'bar'}})",
+                    Issue("SCP27 unknown setting", column=len(callable) + 2, path=path),
+                )
+                for callable in (
+                    "BaseSettings",
+                    "Settings",
+                    "overridden_settings",
+                    "settings.setdict",
+                    "settings.update",
+                    # even if they are attributes,
+                    "settings.BaseSettings",
+                    "settings.overridden_settings",
+                    "self.settings.setdict",
+                )
+            ),
+            # ignoring unparseable values,
+            *(
+                (
+                    f"Settings({params})",
+                    NO_ISSUE,
+                )
+                for params in (
+                    "foo",
+                    "values=foo",
+                    "settings=foo",
+                )
+            ),
+            # supporting different parameter syntaxes,
+            *(
+                (
+                    f"Settings({params})",
+                    Issue("SCP27 unknown setting", column=9 + column_offset, path=path),
+                )
+                for params, column_offset in (
+                    ('{"FOO": "bar"}, foo=bar', 1),
+                    ('settings={"FOO": "bar"}', 10),
+                    ('values={"FOO": "bar"}', 8),
+                    ('foo=bar, values={"FOO": "bar"}', 17),
+                    ('foo=bar, settings={"FOO": "bar"}', 19),
+                )
+            ),
+            # dict() syntax,
+            (
+                "Settings(dict(FOO='bar'))",
+                Issue("SCP27 unknown setting", column=14, path=path),
+            ),
+            # and checking all keys in the dict.
+            (
+                'Settings({"USER_AGENT": "foo", "BAR": "baz"})',
+                Issue("SCP27 unknown setting", column=31, path=path),
+            ),
+            (
+                "Settings(dict(USER_AGENT='foo', BAR='baz'))",
+                Issue("SCP27 unknown setting", column=32, path=path),
+            ),
+            # "`FOO" in settings` triggers setting name checks,
+            (
+                "'FOO' in settings",
+                Issue("SCP27 unknown setting", path=path),
+            ),
+            # also when not is involved,
+            (
+                "'FOO' not in settings",
+                Issue("SCP27 unknown setting", path=path),
+            ),
+            # even for attributes,
+            (
+                "'FOO' in self.settings",
+                Issue("SCP27 unknown setting", path=path),
+            ),
+            # but not for non-settings objects.
+            (
+                "'FOO' in foo",
+                NO_ISSUE,
             ),
             # SCP27 unknown setting
             *(

@@ -51,6 +51,9 @@ class ScrapyStyleIssueFinder(NodeVisitor):
                 setting_issue_finder,
                 UrlJoinIssueFinder(),
             ],
+            "Compare": [
+                setting_issue_finder,
+            ],
             "Subscript": [
                 ExtractThenIndexIssueFinder(),
                 setting_issue_finder,
@@ -65,14 +68,12 @@ class ScrapyStyleIssueFinder(NodeVisitor):
                 self.issues.extend(list(issues))
         self.generic_visit(node)
 
-    def visit_Assign(self, node):
-        self.find_issues_visitor("Assign", node)
-
-    def visit_Call(self, node):
-        self.find_issues_visitor("Call", node)
-
-    def visit_Subscript(self, node):
-        self.find_issues_visitor("Subscript", node)
+    def visit(self, node):
+        node_type = type(node).__name__
+        if node_type in self.finders:
+            self.find_issues_visitor(node_type, node)
+        else:
+            super().visit(node)
 
 
 class ScrapyStyleChecker:
