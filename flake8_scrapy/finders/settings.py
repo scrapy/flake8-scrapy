@@ -20,7 +20,6 @@ from ast import (
     alias,
     expr,
     keyword,
-    stmt,
 )
 from ast import walk as iter_nodes
 from collections.abc import Generator
@@ -28,7 +27,7 @@ from contextlib import suppress
 from difflib import SequenceMatcher
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from flake8_scrapy.ast import extract_literal_value
 from flake8_scrapy.data.settings import (
@@ -98,44 +97,51 @@ class SettingChecker:
                 yield from self.check_name(key)
 
     def check_name(
-        self, node: expr | keyword | stmt | tuple[Import | ImportFrom, alias]
+        self,
+        node: Constant
+        | Name
+        | keyword
+        | ClassDef
+        | FunctionDef
+        | tuple[Import | ImportFrom, alias],
     ) -> Generator[Issue, None, None]:
-        if not isinstance(node, (Constant, Name, keyword, stmt, tuple)):
-            return
-        if isinstance(node, tuple):
-            node, import_alias = node
-        else:
-            import_alias = None
-        name = (
-            node.value
-            if isinstance(node, Constant)
-            else node.id
-            if isinstance(node, Name)
-            else node.arg
-            if isinstance(node, keyword)
-            else import_alias.asname
-            if import_alias is not None and import_alias.asname
-            else import_alias.name
-            if import_alias is not None
-            else node.name
+        resolved_node: (
+            Constant | Name | keyword | ClassDef | FunctionDef | Import | ImportFrom
         )
+        name: Any
+        if isinstance(node, tuple):
+            resolved_node, import_alias = node
+            name = import_alias.asname if import_alias.asname else import_alias.name
+        else:
+            resolved_node = node
+            import_alias = None
+            name = (
+                resolved_node.value
+                if isinstance(resolved_node, Constant)
+                else resolved_node.id
+                if isinstance(resolved_node, Name)
+                else resolved_node.arg
+                if isinstance(resolved_node, keyword)
+                else resolved_node.name
+            )
         if not isinstance(name, str):
             return  # Not a string, so not a setting name
         if name not in SETTINGS:
             detail = None
             if suggestions := self.suggest_names(name):
                 detail = f"did you mean: {', '.join(suggestions)}?"
-            if import_alias is not None:
-                column = import_column(node, import_alias)
-            elif isinstance(node, stmt):
-                column = definition_column(node)
+            if isinstance(resolved_node, (Import, ImportFrom)):
+                assert import_alias is not None
+                column = import_column(resolved_node, import_alias)
+            elif isinstance(resolved_node, (ClassDef, FunctionDef)):
+                column = definition_column(resolved_node)
             else:
-                column = node.col_offset
+                column = resolved_node.col_offset
             yield Issue(
                 27,
                 "unknown setting",
                 detail=detail,
-                line=node.lineno,
+                line=resolved_node.lineno,
                 column=column,
             )
 

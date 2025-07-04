@@ -178,6 +178,11 @@ CASES: Cases = (
                     "self.settings.setdict",
                 )
             ),
+            # ignoring unparseable functions,
+            (
+                "foo()({'FOO': 'bar'})",
+                NO_ISSUE,
+            ),
             # ignoring unparseable values,
             *(
                 (
@@ -189,6 +194,16 @@ CASES: Cases = (
                     "values=foo",
                     "settings=foo",
                 )
+            ),
+            # ignoring unknown kwargs,
+            (
+                "Settings(foo={'FOO': 'bar'})",
+                NO_ISSUE,
+            ),
+            # ignoring non-str keys,
+            (
+                "Settings({1: 'bar'})",
+                NO_ISSUE,
             ),
             # supporting different parameter syntaxes,
             *(
@@ -208,6 +223,10 @@ CASES: Cases = (
             (
                 "Settings(dict(FOO='bar'))",
                 Issue("SCP27 unknown setting", column=14, path=path),
+            ),
+            (
+                "Settings(foo(FOO='bar'))",
+                NO_ISSUE,
             ),
             # and checking all keys in the dict.
             (
@@ -355,8 +374,14 @@ CASES: Cases = (
                     ),
                     (
                         "import FOO",
-                        7,
-                        (Issue("SCP12 imported setting", column=7, path=path),),
+                        7 if ALIAS_HAS_COL_OFFSET else 0,
+                        (
+                            Issue(
+                                "SCP12 imported setting",
+                                column=7 if ALIAS_HAS_COL_OFFSET else 0,
+                                path=path,
+                            ),
+                        ),
                     ),
                 )
             ),
