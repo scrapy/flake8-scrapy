@@ -69,7 +69,14 @@ CASES: Cases = (
             # Outside setting modules, module variables are not considered
             # settings. (separate test cases later verify that they are
             # interpreted as settings in setting modules)
-            ("FOO = 'bar'", NO_ISSUE),
+            *(
+                (code, NO_ISSUE)
+                for code in (
+                    "FOO = 'bar'",
+                    "class FOO:\n    pass",
+                    "def FOO():\n    pass",
+                )
+            ),
             # Subscript assignment also triggers setting name checks,
             (
                 "settings['FOO'] = 'bar'",
@@ -315,6 +322,37 @@ CASES: Cases = (
             (
                 "settings.get('FOO')",
                 Issue("SCP27 unknown setting", column=13, path=path),
+            ),
+            # Setting name checks work with module-specific setting syntax
+            *(
+                (
+                    code,
+                    (
+                        Issue("SCP27 unknown setting", column=column, path=path),
+                        *extra_issues,
+                    ),
+                )
+                for code, column, extra_issues in (
+                    ("FOO = 'bar'", 0, ()),
+                    (
+                        "class FOO:\n    pass",
+                        6,
+                        (
+                            Issue(
+                                "SCP11 improper setting definition", column=6, path=path
+                            ),
+                        ),
+                    ),
+                    (
+                        "def FOO():\n    pass",
+                        4,
+                        (
+                            Issue(
+                                "SCP11 improper setting definition", column=4, path=path
+                            ),
+                        ),
+                    ),
+                )
             ),
             # SCP07 redefined setting
             *(
