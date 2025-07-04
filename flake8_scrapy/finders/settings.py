@@ -103,9 +103,9 @@ class SettingChecker:
         if not isinstance(node, (Constant, Name, keyword, stmt, tuple)):
             return
         if isinstance(node, tuple):
-            node, alias = node
+            node, import_alias = node
         else:
-            alias = None
+            import_alias = None
         name = (
             node.value
             if isinstance(node, Constant)
@@ -113,10 +113,10 @@ class SettingChecker:
             if isinstance(node, Name)
             else node.arg
             if isinstance(node, keyword)
-            else alias.asname
-            if alias is not None and alias.asname
-            else alias.name
-            if alias is not None
+            else import_alias.asname
+            if import_alias is not None and import_alias.asname
+            else import_alias.name
+            if import_alias is not None
             else node.name
         )
         if not isinstance(name, str):
@@ -125,8 +125,8 @@ class SettingChecker:
             detail = None
             if suggestions := self.suggest_names(name):
                 detail = f"did you mean: {', '.join(suggestions)}?"
-            if alias is not None:
-                column = import_column(node, alias)
+            if import_alias is not None:
+                column = import_column(node, import_alias)
             elif isinstance(node, stmt):
                 column = definition_column(node)
             else:
