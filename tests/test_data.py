@@ -26,3 +26,13 @@ def test_enum_setting_values():
         if data.type != SettingType.ENUM_STR:
             continue
         assert data.values, f"Enum setting {name} has no values"
+
+
+def test_versions():
+    for data in SETTINGS.values():
+        if data.removed_in:
+            # Any setting with a removed_in version is expected to have a
+            # lower deprecated_in version as well. If that ever changes, we
+            # need to review any existing code that relies on this assumption.
+            assert data.deprecated_in
+            assert data.deprecated_in < data.removed_in

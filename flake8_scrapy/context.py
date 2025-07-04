@@ -52,7 +52,18 @@ class Project:
             return True
         assert setting in SETTINGS
         setting_info = SETTINGS[setting]
-        return setting_info.package in self.requirements
+        if setting_info.package not in self.frozen_requirements or (
+            not setting_info.added_in and not setting_info.deprecated_in
+        ):
+            return setting_info.package in self.requirements
+        return (
+            not setting_info.added_in
+            or self.frozen_requirements[setting_info.package] >= setting_info.added_in
+        ) and (
+            not setting_info.deprecated_in
+            or self.frozen_requirements[setting_info.package]
+            < setting_info.deprecated_in
+        )
 
     @staticmethod
     def root_from_file(file: Flake8File) -> Path | None:

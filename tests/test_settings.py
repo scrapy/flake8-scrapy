@@ -851,8 +851,7 @@ CASES: Cases = (
             ),
         )
     ),
-    # SCP27 unknown setting: suggestions based on requirements, predefined and
-    # automatic.
+    # SCP27 unknown setting (suggestions based on requirements)
     *(
         (
             (
@@ -874,65 +873,108 @@ CASES: Cases = (
                     if requirements
                 ),
                 Issue(
-                    f"SCP27 unknown setting: did you mean: {', '.join(suggestions)}?",
+                    f"SCP27 unknown setting: did you mean: {', '.join(suggestions)}?"
+                    if suggestions
+                    else "SCP27 unknown setting",
                     column=9,
                     path="a.py",
                 ),
+                *extra_issues,
             ),
             {},
         )
-        for requirements, setting, suggestions in (
-            # Predefined suggestions
+        for requirements, setting, suggestions, extra_issues in (
+            # No extra issues
+            *(
+                (requirements, setting, suggestions, ())
+                for requirements, setting, suggestions in (
+                    # Predefined suggestions
+                    (
+                        (),
+                        "TIMEOUT",
+                        (
+                            "DOWNLOAD_TIMEOUT",
+                            "TIMEOUT_LIMIT",
+                        ),
+                    ),
+                    (
+                        ("scrapy",),
+                        "TIMEOUT",
+                        ("DOWNLOAD_TIMEOUT",),
+                    ),
+                    (
+                        ("scrapy", "scrapyrt"),
+                        "TIMEOUT",
+                        (
+                            "DOWNLOAD_TIMEOUT",
+                            "TIMEOUT_LIMIT",
+                        ),
+                    ),
+                    # Automatic suggestions
+                    (
+                        (),
+                        "MAX_REQUESTS",
+                        (
+                            "MAX_NEXT_REQUESTS",
+                            "ZYTE_API_MAX_REQUESTS",
+                        ),
+                    ),
+                    (
+                        ("scrapy", "scrapy-zyte-api"),
+                        "MAX_REQUESTS",
+                        ("ZYTE_API_MAX_REQUESTS",),
+                    ),
+                    (
+                        ("hcf-backend", "scrapy", "scrapy-zyte-api"),
+                        "MAX_REQUESTS",
+                        (
+                            "MAX_NEXT_REQUESTS",
+                            "ZYTE_API_MAX_REQUESTS",
+                        ),
+                    ),
+                    # Invalid requirements, comments, etc.
+                    (
+                        ("scrapy! #foo", "#scrapy"),
+                        "TIMEOUT",
+                        (
+                            "DOWNLOAD_TIMEOUT",
+                            "TIMEOUT_LIMIT",
+                        ),
+                    ),
+                    # deprecated_in
+                    (
+                        ("scrapy==2.13.0",),
+                        "AJAXCRAWL_ENABLE",
+                        (),
+                    ),
+                    (
+                        ("scrapy==2.12.0",),
+                        "AJAXCRAWL_ENABLE",
+                        ("AJAXCRAWL_ENABLED",),
+                    ),
+                )
+            ),
+            # added_in
             (
+                ("scrapy==2.10.0",),
+                "ADD_ONS",
+                ("ADDONS",),
+                (
+                    Issue(
+                        "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
+                        path="requirements.txt",
+                    ),
+                ),
+            ),
+            (
+                ("scrapy==2.9.0",),
+                "ADD_ONS",
                 (),
-                "TIMEOUT",
                 (
-                    "DOWNLOAD_TIMEOUT",
-                    "TIMEOUT_LIMIT",
-                ),
-            ),
-            (
-                ("scrapy",),
-                "TIMEOUT",
-                ("DOWNLOAD_TIMEOUT",),
-            ),
-            (
-                ("scrapy", "scrapyrt"),
-                "TIMEOUT",
-                (
-                    "DOWNLOAD_TIMEOUT",
-                    "TIMEOUT_LIMIT",
-                ),
-            ),
-            # Automatic suggestions
-            (
-                (),
-                "MAX_REQUESTS",
-                (
-                    "MAX_NEXT_REQUESTS",
-                    "ZYTE_API_MAX_REQUESTS",
-                ),
-            ),
-            (
-                ("scrapy", "scrapy-zyte-api"),
-                "MAX_REQUESTS",
-                ("ZYTE_API_MAX_REQUESTS",),
-            ),
-            (
-                ("hcf-backend", "scrapy", "scrapy-zyte-api"),
-                "MAX_REQUESTS",
-                (
-                    "MAX_NEXT_REQUESTS",
-                    "ZYTE_API_MAX_REQUESTS",
-                ),
-            ),
-            # Invalid requirements, comments, etc.
-            (
-                ("scrapy! #foo", "#scrapy"),
-                "TIMEOUT",
-                (
-                    "DOWNLOAD_TIMEOUT",
-                    "TIMEOUT_LIMIT",
+                    Issue(
+                        "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
+                        path="requirements.txt",
+                    ),
                 ),
             ),
         )
