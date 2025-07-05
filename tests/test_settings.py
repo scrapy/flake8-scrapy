@@ -1133,6 +1133,23 @@ CASES: Cases = (
                     ),
                 ),
             ),
+            # SCP30 removed setting
+            (
+                ("scrapy==2.1.0",),
+                "LOG_UNSERIALIZABLE_REQUESTS",
+                (
+                    Issue(
+                        "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
+                        path="requirements.txt",
+                    ),
+                    Issue(
+                        "SCP30 removed setting: deprecated in scrapy 2.0.1 or "
+                        "lower, removed in 2.1.0; use SCHEDULER_DEBUG instead",
+                        path=path,
+                        column=column,
+                    ),
+                ),
+            ),
         )
     ),
     # scrapy_known_settings silences SCP27
