@@ -60,7 +60,7 @@ def test_versions():
             assert data.deprecated_in
             if isinstance(data.deprecated_in, UnknownUnsupportedVersion):
                 assert data.deprecated_in is UNKNOWN_UNSUPPORTED_VERSION
-                assert PACKAGES[data.package].lowest_supported_version is not None
+                assert PACKAGES[data.package].lowest_supported_version
                 assert PACKAGES[data.package].lowest_supported_version < data.removed_in  # type: ignore[operator]
             else:
                 assert isinstance(data.deprecated_in, Version)

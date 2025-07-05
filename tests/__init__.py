@@ -102,10 +102,10 @@ class Issue:
         path: str | None = None,
     ) -> Issue:
         return Issue(
-            message=message if message is not None else self.message,
-            line=line if line is not None else self.line,
+            message=message if message else self.message,
+            line=line if line else self.line,
             column=column if column is not None else self.column,
-            path=path if path is not None else self.path,
+            path=path if path else self.path,
         )
 
 

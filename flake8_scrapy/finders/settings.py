@@ -94,7 +94,7 @@ class SettingChecker:
         deprecated_in = setting_info.deprecated_in
         if isinstance(deprecated_in, UnknownUnsupportedVersion):
             deprecated_in = PACKAGES[setting_info.package].lowest_supported_version
-            assert deprecated_in is not None
+            assert deprecated_in
         package_version = self.project.frozen_requirements[setting_info.package]
         return (
             not setting_info.added_in or package_version >= setting_info.added_in
@@ -119,22 +119,34 @@ class SettingChecker:
         matches.sort(key=lambda x: (-x[1], x[0]))
         return [m[0] for m in matches[:MAX_AUTOMATIC_SUGGESTIONS]]
 
-    def check_setting_deprecation(
+    def check_known_name(
         self, name: str, resolved_node: IssueNode, column: int
     ) -> Generator[Issue, None, None]:
         if name not in SETTINGS:
             return
         setting = SETTINGS[name]
         deprecated_in = setting.deprecated_in
-        if not deprecated_in:
+        added_in = setting.added_in
+        if not deprecated_in and not added_in:
             return
         package = setting.package
         if package not in self.project.frozen_requirements:
             return
         version = self.project.frozen_requirements[package]
+        if added_in and version < added_in:
+            detail = f"added in {package} {added_in}"
+            yield Issue(
+                29,
+                "setting needs upgrade",
+                detail=detail,
+                node=resolved_node,
+                column=column,
+            )
+            return
+        assert deprecated_in
         if isinstance(deprecated_in, UnknownUnsupportedVersion):
             deprecated_in = PACKAGES[package].lowest_supported_version
-            assert deprecated_in is not None
+            assert deprecated_in
             if version < deprecated_in:
                 return
             detail = f"deprecated in {package} {deprecated_in} or lower"
@@ -195,7 +207,7 @@ class SettingChecker:
         if not isinstance(name, str):
             return  # Not a string, so not a setting name
         if isinstance(resolved_node, (Import, ImportFrom)):
-            assert import_alias is not None
+            assert import_alias
             column = import_column(resolved_node, import_alias)
         elif isinstance(resolved_node, (ClassDef, FunctionDef)):
             column = definition_column(resolved_node)
@@ -213,7 +225,7 @@ class SettingChecker:
                 column=column,
             )
             return
-        yield from self.check_setting_deprecation(name, resolved_node, column)
+        yield from self.check_known_name(name, resolved_node, column)
 
 
 class SettingIssueFinder:
