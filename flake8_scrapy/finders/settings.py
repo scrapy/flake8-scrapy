@@ -39,6 +39,9 @@ from flake8_scrapy.data.settings import (
 )
 from flake8_scrapy.issues import Issue
 from flake8_scrapy.settings import (
+    SETTING_GETTERS,
+    SETTING_METHODS,
+    SETTING_TYPE_GETTERS,
     UNKNOWN_SETTING_VALUE,
     UnknownUnsupportedVersion,
     getbool,
@@ -241,6 +244,57 @@ class SettingChecker:
             return
         yield from self.check_known_name(name, resolved_node, column)
 
+    def check_getter(self, name: str, func: Attribute) -> Generator[Issue, None, None]:
+        if name not in SETTINGS:
+            return
+        if func.attr not in SETTING_GETTERS:
+            return
+        setting = SETTINGS[name]
+        if setting.type is None:
+            return
+        assert isinstance(func.value, Name)
+        column = func.col_offset + len(func.value.id) + 1  # +1 for the dot
+        if setting.type in SETTING_TYPE_GETTERS:
+            expected = SETTING_TYPE_GETTERS[setting.type]
+            if func.attr != expected:
+                yield Issue(
+                    32,
+                    "wrong setting getter",
+                    detail=f"use {expected}()",
+                    column=column,
+                    node=func,
+                )
+            return
+        if func.attr not in {"get", "__getitem__"}:
+            yield Issue(
+                32,
+                "wrong setting getter",
+                detail="use []",
+                column=column,
+                node=func,
+            )
+
+    def check_subscript(
+        self, name: str, node: Subscript
+    ) -> Generator[Issue, None, None]:
+        if name not in SETTINGS:
+            return
+        setting = SETTINGS[name]
+        if setting.type is None:
+            return
+        if setting.type not in SETTING_TYPE_GETTERS:
+            return
+        assert isinstance(node.value, Name)
+        column = node.value.col_offset + len(node.value.id)
+        expected = SETTING_TYPE_GETTERS[setting.type]
+        yield Issue(
+            32,
+            "wrong setting getter",
+            detail=f"use {expected}()",
+            column=column,
+            node=node,
+        )
+
 
 class SettingIssueFinder:
     NON_METHOD_SETTINGS_CALLABLES = ("BaseSettings", "Settings", "overridden_settings")
@@ -263,13 +317,22 @@ class SettingIssueFinder:
 
     def find_call_issues(self, node: Call) -> Generator[Issue, None, None]:
         if self.looks_like_setting_method(node.func):
+            assert isinstance(node.func, Attribute)
             if node.args:
                 if isinstance(node.args[0], Constant):
-                    yield from self.setting_checker.check_name(node.args[0])
+                    name_constant = node.args[0]
+                    yield from self.setting_checker.check_name(name_constant)
+                    yield from self.setting_checker.check_getter(
+                        name_constant.value, node.func
+                    )
                 return
             for keyword in node.keywords:
                 if keyword.arg == "name" and isinstance(keyword.value, Constant):
-                    yield from self.setting_checker.check_name(keyword.value)
+                    name_constant = keyword.value
+                    yield from self.setting_checker.check_name(name_constant)
+                    yield from self.setting_checker.check_getter(
+                        name_constant.value, node.func
+                    )
                     return
             return
 
@@ -288,31 +351,7 @@ class SettingIssueFinder:
             return False
         if not self.looks_like_settings_variable(func.value):
             return False
-        return func.attr in (
-            "__contains__",
-            "__delitem__",
-            "__getitem__",
-            "__init__",
-            "__setitem__",
-            "add_to_list",
-            "delete",
-            "get",
-            "getbool",
-            "getint",
-            "getfloat",
-            "getlist",
-            "getdict",
-            "getdictorlist",
-            "getpriority",
-            "getwithbase",
-            "pop",
-            "remove_from_list",
-            "replace_in_component_priority_dict",
-            "set",
-            "set_in_component_priority_dict",
-            "setdefault",
-            "setdefault_in_component_priority_dict",
-        )
+        return func.attr in SETTING_METHODS
 
     def looks_like_settings_callable(self, func: expr) -> bool:
         if not isinstance(func, (Attribute, Name)):
@@ -341,6 +380,7 @@ class SettingIssueFinder:
             return
         if isinstance(node.slice, Constant):
             yield from self.setting_checker.check_name(node.slice)
+            yield from self.setting_checker.check_subscript(node.slice.value, node)
 
     def looks_like_settings_variable(self, value: expr) -> bool:
         while isinstance(value, Attribute):
