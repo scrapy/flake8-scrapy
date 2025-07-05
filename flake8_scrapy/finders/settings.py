@@ -125,8 +125,9 @@ class SettingChecker:
         if name not in SETTINGS:
             return
         setting = SETTINGS[name]
-        deprecated_in = setting.deprecated_in
         added_in = setting.added_in
+        deprecated_in = setting.deprecated_in
+        removed_in = setting.removed_in
         if not deprecated_in and not added_in:
             return
         package = setting.package
@@ -154,11 +155,16 @@ class SettingChecker:
             if version < deprecated_in:
                 return
             detail = f"deprecated in {package} {deprecated_in}"
+        if removed_in and version >= removed_in:
+            detail += f", removed in {removed_in}"
+            code, message = 30, "removed setting"
+        else:
+            code, message = 28, "deprecated setting"
         if setting.sunset_guidance:
             detail += f"; {setting.sunset_guidance}"
         yield Issue(
-            28,
-            "deprecated setting",
+            code,
+            message,
             detail=detail,
             node=resolved_node,
             column=column,
