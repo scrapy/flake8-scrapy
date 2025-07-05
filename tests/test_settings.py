@@ -11,6 +11,7 @@ from . import NO_ISSUE, Cases, File, Issue, cases
 from .test_requirements import (
     SCRAPY_ANCIENT_VERSION,
     SCRAPY_FUTURE_VERSION,
+    SCRAPY_HIGHEST_KNOWN,
     SCRAPY_LOWEST_SUPPORTED,
 )
 
@@ -317,6 +318,12 @@ CASES: Cases = (
                     ),
                     ("TIMEOUT", ("DOWNLOAD_TIMEOUT", "TIMEOUT_LIMIT")),
                 )
+            ),
+            # SCP31 missing setting requirement: nothing is reported if there
+            # are no requirements.
+            (
+                "settings['SCRAPY_POET_CACHE']",
+                NO_ISSUE,
             ),
         )
     ),
@@ -1148,6 +1155,16 @@ CASES: Cases = (
                         path=path,
                         column=column,
                     ),
+                ),
+            ),
+            # SCP31 missing setting requirement
+            (
+                (f"scrapy=={SCRAPY_HIGHEST_KNOWN}",),
+                "SCRAPY_POET_CACHE",
+                Issue(
+                    "SCP31 missing setting requirement: scrapy-poet",
+                    path=path,
+                    column=column,
                 ),
             ),
         )

@@ -120,18 +120,26 @@ class SettingChecker:
         return [m[0] for m in matches[:MAX_AUTOMATIC_SUGGESTIONS]]
 
     def check_known_name(
-        self, name: str, resolved_node: IssueNode, column: int
+        self, name: str, node: IssueNode, column: int
     ) -> Generator[Issue, None, None]:
         if name not in SETTINGS:
             return
         setting = SETTINGS[name]
+        package = setting.package
+        if package not in self.project.frozen_requirements:
+            if self.project.frozen_requirements:
+                yield Issue(
+                    31,
+                    "missing setting requirement",
+                    detail=package,
+                    node=node,
+                    column=column,
+                )
+            return
         added_in = setting.added_in
         deprecated_in = setting.deprecated_in
         removed_in = setting.removed_in
         if not deprecated_in and not added_in:
-            return
-        package = setting.package
-        if package not in self.project.frozen_requirements:
             return
         version = self.project.frozen_requirements[package]
         if added_in and version < added_in:
@@ -140,7 +148,7 @@ class SettingChecker:
                 29,
                 "setting needs upgrade",
                 detail=detail,
-                node=resolved_node,
+                node=node,
                 column=column,
             )
             return
@@ -166,7 +174,7 @@ class SettingChecker:
             code,
             message,
             detail=detail,
-            node=resolved_node,
+            node=node,
             column=column,
         )
 
