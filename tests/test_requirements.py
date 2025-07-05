@@ -350,9 +350,9 @@ def test_required_dependencies_are_canonical():
 
 
 def test_version_constants():
-    assert SCRAPY_HIGHEST_KNOWN is not None
-    assert SCRAPY_LOWEST_SAFE is not None
-    assert SCRAPY_LOWEST_SUPPORTED is not None
+    assert SCRAPY_HIGHEST_KNOWN
+    assert SCRAPY_LOWEST_SAFE
+    assert SCRAPY_LOWEST_SUPPORTED
 
     assert SCRAPY_FUTURE_VERSION >= SCRAPY_HIGHEST_KNOWN
     assert SCRAPY_HIGHEST_KNOWN >= SCRAPY_LOWEST_SAFE

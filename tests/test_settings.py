@@ -1107,6 +1107,32 @@ CASES: Cases = (
                     ),
                 ),
             ),
+            # SCP29 setting needs upgrade
+            (
+                ("scrapy==2.7.0",),
+                "REQUEST_FINGERPRINTER_IMPLEMENTATION",
+                (
+                    Issue(
+                        "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
+                        path="requirements.txt",
+                    ),
+                ),
+            ),
+            (
+                ("scrapy==2.6.3",),
+                "REQUEST_FINGERPRINTER_IMPLEMENTATION",
+                (
+                    Issue(
+                        "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
+                        path="requirements.txt",
+                    ),
+                    Issue(
+                        "SCP29 setting needs upgrade: added in scrapy 2.7.0",
+                        column=column,
+                        path=path,
+                    ),
+                ),
+            ),
         )
     ),
     # scrapy_known_settings silences SCP27

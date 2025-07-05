@@ -32,7 +32,7 @@ def check_project(
         expected = []
     with TemporaryDirectory() as dir:
         for file in input:
-            assert file.path is not None
+            assert file.path
             file_path = Path(dir) / file.path
             file_path.parent.mkdir(parents=True, exist_ok=True)
             if isinstance(file.text, bytes):
@@ -42,7 +42,7 @@ def check_project(
         with chdir(dir):
             issues = []
             for file in input:
-                assert file.path is not None
+                assert file.path
                 if isinstance(file.text, bytes):
                     continue  # flake8 does not support binary files
                 issue_tuples = run_checker(file.text, file.path, flake8_options)
