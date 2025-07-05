@@ -124,7 +124,7 @@ class RequirementsIssueFinder:
             yield Issue(
                 14,
                 "unsupported requirement",
-                f"scrapy-flake8 only supports {name}>={package.lowest_supported_version}+",
+                f"flake8-scrapy only supports {name} {package.lowest_supported_version}+",
                 line=line,
             )
         if package.lowest_safe_version and version < package.lowest_safe_version:

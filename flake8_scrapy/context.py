@@ -12,8 +12,6 @@ from packaging.version import Version
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from flake8_scrapy.data.settings import SETTINGS
-
 if TYPE_CHECKING:
     from ast import AST
     from collections.abc import Sequence
@@ -45,24 +43,6 @@ class Project:
             root,
             cls.setting_module_import_paths_from_root(root),
             cls.find_requirements_file_path(root, requirements_file_path),
-        )
-
-    def supports_setting(self, setting: str) -> bool:
-        if not self.requirements:
-            return True
-        assert setting in SETTINGS
-        setting_info = SETTINGS[setting]
-        if setting_info.package not in self.frozen_requirements or (
-            not setting_info.added_in and not setting_info.deprecated_in
-        ):
-            return setting_info.package in self.requirements
-        return (
-            not setting_info.added_in
-            or self.frozen_requirements[setting_info.package] >= setting_info.added_in
-        ) and (
-            not setting_info.deprecated_in
-            or self.frozen_requirements[setting_info.package]
-            < setting_info.deprecated_in
         )
 
     @staticmethod

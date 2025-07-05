@@ -4,14 +4,11 @@ from packaging.version import Version
 
 from flake8_scrapy.settings import (
     UNKNOWN_SETTING_VALUE,
+    UNKNOWN_UNSUPPORTED_VERSION,
     Setting,
     SettingType,
     VersionedValue,
 )
-
-from .packages import PACKAGES
-
-assert PACKAGES["scrapy"].lowest_supported_version is not None
 
 PREDEFINED_SUGGESTIONS = {
     # NOTE: Somewhat arbitrary for the sake of having a few suggestions to
@@ -678,7 +675,7 @@ SETTINGS = {
                 Version(
                     "2.13.0"
                 ): "twisted.internet.asyncioreactor.AsyncioSelectorReactor",
-                PACKAGES["scrapy"].lowest_supported_version: None,
+                UNKNOWN_UNSUPPORTED_VERSION: None,
             },
         ),
     ),
@@ -783,10 +780,6 @@ SETTINGS = {
     "REQUEST_FINGERPRINTER_IMPLEMENTATION": Setting(
         added_in=Version("2.7.0"),
         deprecated_in=Version("2.12.0"),
-        sunset_guidance=(
-            "See https://flake8-scrapy.readthedocs.io/en/latest/rules/scp08.html"
-            "#request_fingerprinter_implementation"
-        ),
         default_value=VersionedValue("SENTINEL"),
     ),
     "FEED_FORMAT": Setting(
@@ -796,7 +789,7 @@ SETTINGS = {
     ),
     "FEED_URI": Setting(
         deprecated_in=Version("2.1.0"),
-        sunset_guidance="Use FEEDS instead",
+        sunset_guidance="use FEEDS instead",
     ),
     # Removed Scrapy built-in settings, in reverse removal order.
     "SPIDER_MANAGER_CLASS": Setting(
@@ -804,13 +797,13 @@ SETTINGS = {
     ),
     "LOG_UNSERIALIZABLE_REQUESTS": Setting(
         removed_in=Version("2.1.0"),
-        deprecated_in=PACKAGES["scrapy"].lowest_supported_version,
-        sunset_guidance="Use SCHEDULER_DEBUG instead.",
+        deprecated_in=UNKNOWN_UNSUPPORTED_VERSION,
+        sunset_guidance="use SCHEDULER_DEBUG instead",
     ),
     "REDIRECT_MAX_METAREFRESH_DELAY": Setting(
         removed_in=Version("2.1.0"),
-        deprecated_in=PACKAGES["scrapy"].lowest_supported_version,
-        sunset_guidance="Use METAREFRESH_MAXDELAY instead.",
+        deprecated_in=UNKNOWN_UNSUPPORTED_VERSION,
+        sunset_guidance="use METAREFRESH_MAXDELAY instead",
     ),
     # scrapy-feedexporter-azure-storage plugin settings, in order of appearance
     # in https://github.com/scrapy-plugins/scrapy-feedexporter-azure-storage
@@ -890,7 +883,7 @@ SETTINGS = {
     "SCRAPY_POET_DISCOVER": Setting(package="scrapy-poet"),
     "SCRAPY_POET_OVERRIDES": Setting(
         deprecated_in=Version("0.9.0"),
-        sunset_guidance="Use SCRAPY_POET_DISCOVER and/or SCRAPY_POET_RULES instead",
+        sunset_guidance="use SCRAPY_POET_DISCOVER and/or SCRAPY_POET_RULES instead",
         package="scrapy-poet",
     ),
     "SCRAPY_POET_PROVIDERS": Setting(package="scrapy-poet"),

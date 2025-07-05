@@ -1,5 +1,5 @@
 =============
-scrapy-flake8
+flake8-scrapy
 =============
 
 |version| |python_version| |ci|
