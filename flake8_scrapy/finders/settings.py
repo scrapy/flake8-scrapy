@@ -27,9 +27,10 @@ from contextlib import suppress
 from difflib import SequenceMatcher
 from importlib.util import find_spec
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Union
 
 from flake8_scrapy.ast import extract_literal_value
+from flake8_scrapy.data.packages import PACKAGES
 from flake8_scrapy.data.settings import (
     MAX_AUTOMATIC_SUGGESTIONS,
     MIN_AUTOMATIC_SUGGESTION_SCORE,
@@ -37,7 +38,11 @@ from flake8_scrapy.data.settings import (
     SETTINGS,
 )
 from flake8_scrapy.issues import Issue
-from flake8_scrapy.settings import UNKNOWN_SETTING_VALUE, getbool
+from flake8_scrapy.settings import (
+    UNKNOWN_SETTING_VALUE,
+    UnknownUnsupportedVersion,
+    getbool,
+)
 from flake8_scrapy.utils import extend_sys_path
 
 if TYPE_CHECKING:
@@ -45,6 +50,8 @@ if TYPE_CHECKING:
 
     from flake8_scrapy.context import Context
     from flake8_scrapy.typing import LineNumber
+
+IssueNode = Union[Constant, Name, keyword, ClassDef, FunctionDef, Import, ImportFrom]
 
 
 def definition_column(node: ClassDef | FunctionDef) -> int:
@@ -69,30 +76,81 @@ def import_column(node: Import | ImportFrom, alias: alias) -> int:
 
 class SettingChecker:
     def __init__(self, context: Context, additional_known_settings: set[str]):
-        self.supports_setting = context.project.supports_setting
+        self.project = context.project
         self.additional_known_settings = additional_known_settings
 
     def is_known_setting(self, name: str) -> bool:
         return name in SETTINGS or name in self.additional_known_settings
+
+    def is_supported_setting(self, setting: str) -> bool:
+        if not self.project.requirements:
+            return True
+        assert setting in SETTINGS
+        setting_info = SETTINGS[setting]
+        if setting_info.package not in self.project.frozen_requirements or (
+            not setting_info.added_in and not setting_info.deprecated_in
+        ):
+            return setting_info.package in self.project.requirements
+        deprecated_in = setting_info.deprecated_in
+        if isinstance(deprecated_in, UnknownUnsupportedVersion):
+            deprecated_in = PACKAGES[setting_info.package].lowest_supported_version
+            assert deprecated_in is not None
+        package_version = self.project.frozen_requirements[setting_info.package]
+        return (
+            not setting_info.added_in or package_version >= setting_info.added_in
+        ) and (not deprecated_in or package_version < deprecated_in)
 
     def suggest_names(self, unknown_name: str) -> list[str]:
         if unknown_name in PREDEFINED_SUGGESTIONS:
             return [
                 setting
                 for setting in PREDEFINED_SUGGESTIONS[unknown_name]
-                if self.supports_setting(setting)
+                if self.is_supported_setting(setting)
             ]
         matches = []
         for candidate in self.additional_known_settings | set(SETTINGS):
             if (
                 candidate.endswith("_BASE") and not unknown_name.endswith("_BASE")
-            ) or not self.supports_setting(candidate):
+            ) or not self.is_supported_setting(candidate):
                 continue
             ratio = SequenceMatcher(None, unknown_name, candidate).ratio()
             if ratio >= MIN_AUTOMATIC_SUGGESTION_SCORE:
                 matches.append((candidate, ratio))
         matches.sort(key=lambda x: (-x[1], x[0]))
         return [m[0] for m in matches[:MAX_AUTOMATIC_SUGGESTIONS]]
+
+    def check_setting_deprecation(
+        self, name: str, resolved_node: IssueNode, column: int
+    ) -> Generator[Issue, None, None]:
+        if name not in SETTINGS:
+            return
+        setting = SETTINGS[name]
+        deprecated_in = setting.deprecated_in
+        if not deprecated_in:
+            return
+        package = setting.package
+        if package not in self.project.frozen_requirements:
+            return
+        version = self.project.frozen_requirements[package]
+        if isinstance(deprecated_in, UnknownUnsupportedVersion):
+            deprecated_in = PACKAGES[package].lowest_supported_version
+            assert deprecated_in is not None
+            if version < deprecated_in:
+                return
+            detail = f"deprecated in {package} {deprecated_in} or lower"
+        else:
+            if version < deprecated_in:
+                return
+            detail = f"deprecated in {package} {deprecated_in}"
+        if setting.sunset_guidance:
+            detail += f"; {setting.sunset_guidance}"
+        yield Issue(
+            28,
+            "deprecated setting",
+            detail=detail,
+            node=resolved_node,
+            column=column,
+        )
 
     def check_dict(self, node: expr) -> Generator[Issue, None, None]:
         if not isinstance(node, (Call, Dict)):
@@ -117,9 +175,7 @@ class SettingChecker:
         | FunctionDef
         | tuple[Import | ImportFrom, alias],
     ) -> Generator[Issue, None, None]:
-        resolved_node: (
-            Constant | Name | keyword | ClassDef | FunctionDef | Import | ImportFrom
-        )
+        resolved_node: IssueNode
         name: Any
         if isinstance(node, tuple):
             resolved_node, import_alias = node
@@ -138,11 +194,6 @@ class SettingChecker:
             )
         if not isinstance(name, str):
             return  # Not a string, so not a setting name
-        if self.is_known_setting(name):
-            return
-        detail = None
-        if suggestions := self.suggest_names(name):
-            detail = f"did you mean: {', '.join(suggestions)}?"
         if isinstance(resolved_node, (Import, ImportFrom)):
             assert import_alias is not None
             column = import_column(resolved_node, import_alias)
@@ -150,13 +201,19 @@ class SettingChecker:
             column = definition_column(resolved_node)
         else:
             column = resolved_node.col_offset
-        yield Issue(
-            27,
-            "unknown setting",
-            detail=detail,
-            node=resolved_node,
-            column=column,
-        )
+        if not self.is_known_setting(name):
+            detail = None
+            if suggestions := self.suggest_names(name):
+                detail = f"did you mean: {', '.join(suggestions)}?"
+            yield Issue(
+                27,
+                "unknown setting",
+                detail=detail,
+                node=resolved_node,
+                column=column,
+            )
+            return
+        yield from self.check_setting_deprecation(name, resolved_node, column)
 
 
 class SettingIssueFinder:

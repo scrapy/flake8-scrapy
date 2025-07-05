@@ -8,6 +8,11 @@ from packaging.version import Version
 from tests.helpers import check_project
 
 from . import NO_ISSUE, Cases, File, Issue, cases
+from .test_requirements import (
+    SCRAPY_ANCIENT_VERSION,
+    SCRAPY_FUTURE_VERSION,
+    SCRAPY_LOWEST_SUPPORTED,
+)
 
 FALSE_BOOLS = ("False", "'false'", "0")
 TRUE_UNKNOWN_OR_INVALID_BOOLS = ("True", "'true'", "1", "foo", "'foo'")
@@ -578,7 +583,7 @@ CASES: Cases = (
                     Issue(message, path="requirements.txt")
                     for message, min_version in (
                         (
-                            "SCP14 unsupported requirement: scrapy-flake8 only supports scrapy>=2.0.1+",
+                            "SCP14 unsupported requirement: flake8-scrapy only supports scrapy 2.0.1+",
                             "2.0.1",
                         ),
                         (
@@ -857,11 +862,24 @@ CASES: Cases = (
             (
                 File("", path="scrapy.cfg"),
                 File("\n".join(requirements), path="requirements.txt"),
-                File(f"settings[{setting_name!r}]", path="a.py"),
+                File(f"settings[{setting_name!r}]", path=path),
             ),
-            issues,
+            (
+                Issue(
+                    "SCP13 incomplete requirements freeze",
+                    path="requirements.txt",
+                ),
+                *(
+                    (issues,)
+                    if isinstance(issues, Issue)
+                    else issues
+                    if isinstance(issues, Sequence)
+                    else ()
+                ),
+            ),
             {},
         )
+        for path, column in (("a.py", 9),)
         for requirements, setting_name, issues in (
             # SCP27 unknown setting (suggestions based on requirements)
             *(
@@ -870,15 +888,11 @@ CASES: Cases = (
                     setting_name,
                     (
                         Issue(
-                            "SCP13 incomplete requirements freeze",
-                            path="requirements.txt",
-                        ),
-                        Issue(
                             f"SCP27 unknown setting: did you mean: {', '.join(suggestions)}?"
                             if suggestions
                             else "SCP27 unknown setting",
-                            column=9,
-                            path="a.py",
+                            column=column,
+                            path=path,
                         ),
                         *extra_issues,
                     ),
@@ -978,6 +992,120 @@ CASES: Cases = (
                         ),
                     ),
                 )
+            ),
+            # SCP28 deprecated setting
+            (
+                ("scrapy==2.12.0",),
+                "REQUEST_FINGERPRINTER_IMPLEMENTATION",
+                Issue(
+                    "SCP28 deprecated setting: deprecated in scrapy 2.12.0",
+                    path=path,
+                    column=column,
+                ),
+            ),
+            (
+                ("scrapy==2.11.2",),
+                "REQUEST_FINGERPRINTER_IMPLEMENTATION",
+                NO_ISSUE,
+            ),
+            # SCP28 deprecated setting: sunset guidance
+            (
+                ("scrapy==2.1.0",),
+                "FEED_FORMAT",
+                (
+                    Issue(
+                        "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
+                        path="requirements.txt",
+                    ),
+                    Issue(
+                        "SCP28 deprecated setting: deprecated in scrapy 2.1.0; use FEEDS instead",
+                        path=path,
+                        column=column,
+                    ),
+                ),
+            ),
+            # SCP28 deprecated setting: no version in requirements.txt
+            (
+                (),
+                "REQUEST_FINGERPRINTER_IMPLEMENTATION",
+                NO_ISSUE,
+            ),
+            # SCP28 deprecated setting: deprecation extends to future versions
+            (
+                (f"scrapy=={SCRAPY_FUTURE_VERSION}",),
+                "REQUEST_FINGERPRINTER_IMPLEMENTATION",
+                Issue(
+                    "SCP28 deprecated setting: deprecated in scrapy 2.12.0",
+                    path=path,
+                    column=column,
+                ),
+            ),
+            # SCP28 deprecated setting: deprecations are supported in packages
+            # other than Scrapy.
+            (
+                ("scrapy-poet==0.9.0",),
+                "SCRAPY_POET_OVERRIDES",
+                Issue(
+                    "SCP28 deprecated setting: deprecated in scrapy-poet "
+                    "0.9.0; use SCRAPY_POET_DISCOVER and/or SCRAPY_POET_RULES "
+                    "instead",
+                    path=path,
+                    column=column,
+                ),
+            ),
+            # SCP28 deprecated setting: deprecations in unsupported Scrapy
+            # versions are also reported.
+            (
+                (f"scrapy=={SCRAPY_ANCIENT_VERSION}",),
+                "SPIDER_MANAGER_CLASS",
+                (
+                    Issue(
+                        "SCP14 unsupported requirement: flake8-scrapy only supports scrapy 2.0.1+",
+                        path="requirements.txt",
+                    ),
+                    Issue(
+                        "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
+                        path="requirements.txt",
+                    ),
+                    Issue(
+                        "SCP28 deprecated setting: deprecated in scrapy 1.0.0",
+                        path=path,
+                        column=column,
+                    ),
+                ),
+            ),
+            # SCP28 deprecated setting: for settings deprecated in an unknown,
+            # unsupported Scrapy version, deprecations are only reported if
+            # using a supported Scrapy version, because on unsupported Scrapy
+            # versions we cannot tell whether or not it is deprecated.
+            (
+                (f"scrapy=={SCRAPY_LOWEST_SUPPORTED}",),
+                "LOG_UNSERIALIZABLE_REQUESTS",
+                (
+                    Issue(
+                        "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
+                        path="requirements.txt",
+                    ),
+                    Issue(
+                        "SCP28 deprecated setting: deprecated in scrapy 2.0.1 or lower; use SCHEDULER_DEBUG instead",
+                        path=path,
+                        column=column,
+                    ),
+                ),
+            ),
+            (
+                (f"scrapy=={SCRAPY_ANCIENT_VERSION}",),
+                "LOG_UNSERIALIZABLE_REQUESTS",
+                (
+                    Issue(
+                        "SCP14 unsupported requirement: flake8-scrapy only supports scrapy 2.0.1+",
+                        path="requirements.txt",
+                    ),
+                    Issue(
+                        "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
+                        path="requirements.txt",
+                    ),
+                ),
             ),
         )
     ),

@@ -4,10 +4,24 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+from flake8_scrapy.data.packages import PACKAGES
+
 if TYPE_CHECKING:
     from packaging.version import Version
 
     from flake8_scrapy.context import Project
+
+
+class UnknownSettingValue:
+    pass
+
+
+class UnknownUnsupportedVersion:
+    pass
+
+
+UNKNOWN_SETTING_VALUE = UnknownSettingValue()
+UNKNOWN_UNSUPPORTED_VERSION = UnknownUnsupportedVersion()
 
 
 # https://github.com/scrapy/scrapy/blob/2.13.2/scrapy/settings/__init__.py#L152-L180
@@ -43,19 +57,12 @@ class SettingType(Enum):
     OPT_INT = "opt_int"
 
 
-class UnknownSettingValue:
-    pass
-
-
-UNKNOWN_SETTING_VALUE = UnknownSettingValue()
-
-
 @dataclass
 class VersionedValue:
     def __init__(
         self,
         value: Any = UNKNOWN_SETTING_VALUE,
-        history: dict[Version, Any] | None = None,
+        history: dict[Version | UnknownUnsupportedVersion, Any] | None = None,
     ):
         self.all_time_value = value
         self.value_history = history or {}
@@ -63,9 +70,14 @@ class VersionedValue:
     def __getitem__(self, version: Version) -> Any:
         if not self.value_history:
             return self.all_time_value
-        applicable_versions = [v for v in self.value_history if v <= version]
+        applicable_versions = [
+            v
+            for v in self.value_history
+            if not isinstance(v, UnknownUnsupportedVersion) and v <= version
+        ]
         if not applicable_versions:
-            return self.all_time_value
+            assert UNKNOWN_UNSUPPORTED_VERSION in self.value_history
+            return self.value_history[UNKNOWN_UNSUPPORTED_VERSION]
         latest_applicable = max(applicable_versions)
         return self.value_history[latest_applicable]
 
@@ -73,7 +85,7 @@ class VersionedValue:
 @dataclass
 class Setting:
     added_in: Version | None = None
-    deprecated_in: Version | None = None
+    deprecated_in: Version | UnknownUnsupportedVersion | None = None
     removed_in: Version | None = None
     type: SettingType | None = None
     package: str = "scrapy"
@@ -85,12 +97,15 @@ class Setting:
 
     def get_default_value(self, project: Project) -> Any:
         if self.default_value is UNKNOWN_SETTING_VALUE:
-            return self.default_value
+            return UNKNOWN_SETTING_VALUE
         assert isinstance(self.default_value, VersionedValue)
         versioned_value = self.default_value
         if self.package not in project.frozen_requirements:
             return versioned_value.all_time_value
         version = project.frozen_requirements[self.package]
+        lowest_supported_version = PACKAGES[self.package].lowest_supported_version
+        if lowest_supported_version is not None and version < lowest_supported_version:
+            return UNKNOWN_SETTING_VALUE
         return versioned_value[version]
 
     def parse(self, value: Any) -> Any:
