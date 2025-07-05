@@ -563,7 +563,7 @@ CASES: Cases = (
             ),
         )
     ),
-    # Versioned settings
+    # SCP17 redundant setting value
     *(
         (
             [
@@ -851,131 +851,133 @@ CASES: Cases = (
             ),
         )
     ),
-    # SCP27 unknown setting (suggestions based on requirements)
+    # Checks bassed on requirements and setting names
     *(
         (
             (
-                *(
-                    File("\n".join(requirements), path="requirements.txt")
-                    for _ in range(1)
-                    if requirements
-                ),
-                File(f"settings[{setting!r}]", path="a.py"),
                 File("", path="scrapy.cfg"),
+                File("\n".join(requirements), path="requirements.txt"),
+                File(f"settings[{setting_name!r}]", path="a.py"),
             ),
-            (
-                *(
-                    Issue(
-                        "SCP13 incomplete requirements freeze",
-                        path="requirements.txt",
-                    )
-                    for _ in range(1)
-                    if requirements
-                ),
-                Issue(
-                    f"SCP27 unknown setting: did you mean: {', '.join(suggestions)}?"
-                    if suggestions
-                    else "SCP27 unknown setting",
-                    column=9,
-                    path="a.py",
-                ),
-                *extra_issues,
-            ),
+            issues,
             {},
         )
-        for requirements, setting, suggestions, extra_issues in (
-            # No extra issues
+        for requirements, setting_name, issues in (
+            # SCP27 unknown setting (suggestions based on requirements)
             *(
-                (requirements, setting, suggestions, ())
-                for requirements, setting, suggestions in (
-                    # Predefined suggestions
+                (
+                    requirements,
+                    setting_name,
                     (
-                        (),
-                        "TIMEOUT",
-                        (
-                            "DOWNLOAD_TIMEOUT",
-                            "TIMEOUT_LIMIT",
+                        Issue(
+                            "SCP13 incomplete requirements freeze",
+                            path="requirements.txt",
                         ),
-                    ),
-                    (
-                        ("scrapy",),
-                        "TIMEOUT",
-                        ("DOWNLOAD_TIMEOUT",),
-                    ),
-                    (
-                        ("scrapy", "scrapyrt"),
-                        "TIMEOUT",
-                        (
-                            "DOWNLOAD_TIMEOUT",
-                            "TIMEOUT_LIMIT",
+                        Issue(
+                            f"SCP27 unknown setting: did you mean: {', '.join(suggestions)}?"
+                            if suggestions
+                            else "SCP27 unknown setting",
+                            column=9,
+                            path="a.py",
                         ),
-                    ),
-                    # Automatic suggestions
-                    (
-                        (),
-                        "MAX_REQUESTS",
-                        (
-                            "MAX_NEXT_REQUESTS",
-                            "ZYTE_API_MAX_REQUESTS",
-                        ),
-                    ),
-                    (
-                        ("scrapy", "scrapy-zyte-api"),
-                        "MAX_REQUESTS",
-                        ("ZYTE_API_MAX_REQUESTS",),
-                    ),
-                    (
-                        ("hcf-backend", "scrapy", "scrapy-zyte-api"),
-                        "MAX_REQUESTS",
-                        (
-                            "MAX_NEXT_REQUESTS",
-                            "ZYTE_API_MAX_REQUESTS",
-                        ),
-                    ),
-                    # Invalid requirements, comments, etc.
-                    (
-                        ("scrapy! #foo", "#scrapy"),
-                        "TIMEOUT",
-                        (
-                            "DOWNLOAD_TIMEOUT",
-                            "TIMEOUT_LIMIT",
-                        ),
-                    ),
-                    # deprecated_in
-                    (
-                        ("scrapy==2.13.0",),
-                        "AJAXCRAWL_ENABLE",
-                        (),
-                    ),
-                    (
-                        ("scrapy==2.12.0",),
-                        "AJAXCRAWL_ENABLE",
-                        ("AJAXCRAWL_ENABLED",),
+                        *extra_issues,
                     ),
                 )
-            ),
-            # added_in
-            (
-                ("scrapy==2.10.0",),
-                "ADD_ONS",
-                ("ADDONS",),
-                (
-                    Issue(
-                        "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
-                        path="requirements.txt",
+                for requirements, setting_name, suggestions, extra_issues in (
+                    # No extra issues
+                    *(
+                        (requirements, setting, suggestions, ())
+                        for requirements, setting, suggestions in (
+                            # Predefined suggestions
+                            (
+                                (),
+                                "TIMEOUT",
+                                (
+                                    "DOWNLOAD_TIMEOUT",
+                                    "TIMEOUT_LIMIT",
+                                ),
+                            ),
+                            (
+                                ("scrapy",),
+                                "TIMEOUT",
+                                ("DOWNLOAD_TIMEOUT",),
+                            ),
+                            (
+                                ("scrapy", "scrapyrt"),
+                                "TIMEOUT",
+                                (
+                                    "DOWNLOAD_TIMEOUT",
+                                    "TIMEOUT_LIMIT",
+                                ),
+                            ),
+                            # Automatic suggestions
+                            (
+                                (),
+                                "MAX_REQUESTS",
+                                (
+                                    "MAX_NEXT_REQUESTS",
+                                    "ZYTE_API_MAX_REQUESTS",
+                                ),
+                            ),
+                            (
+                                ("scrapy", "scrapy-zyte-api"),
+                                "MAX_REQUESTS",
+                                ("ZYTE_API_MAX_REQUESTS",),
+                            ),
+                            (
+                                ("hcf-backend", "scrapy", "scrapy-zyte-api"),
+                                "MAX_REQUESTS",
+                                (
+                                    "MAX_NEXT_REQUESTS",
+                                    "ZYTE_API_MAX_REQUESTS",
+                                ),
+                            ),
+                            # Invalid requirements, comments, etc.
+                            (
+                                ("scrapy! #foo", "#scrapy"),
+                                "TIMEOUT",
+                                (
+                                    "DOWNLOAD_TIMEOUT",
+                                    "TIMEOUT_LIMIT",
+                                ),
+                            ),
+                            # deprecated_in
+                            (
+                                ("scrapy==2.13.0",),
+                                "AJAXCRAWL_ENABLE",
+                                (),
+                            ),
+                            (
+                                ("scrapy==2.12.0",),
+                                "AJAXCRAWL_ENABLE",
+                                ("AJAXCRAWL_ENABLED",),
+                            ),
+                        )
                     ),
-                ),
-            ),
-            (
-                ("scrapy==2.9.0",),
-                "ADD_ONS",
-                (),
-                (
-                    Issue(
-                        "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
-                        path="requirements.txt",
+                    # added_in
+                    (
+                        ("scrapy==2.10.0",),
+                        "ADD_ONS",
+                        ("ADDONS",),
+                        (
+                            Issue(
+                                "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
+                                path="requirements.txt",
+                            ),
+                        ),
                     ),
-                ),
+                    (
+                        ("scrapy==2.9.0",),
+                        "ADD_ONS",
+                        (),
+                        (
+                            Issue(
+                                "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
+                                path="requirements.txt",
+                            ),
+                        ),
+                    ),
+                )
             ),
         )
     ),
