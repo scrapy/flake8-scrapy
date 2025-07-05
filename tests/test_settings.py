@@ -325,6 +325,25 @@ CASES: Cases = (
                 "settings['SCRAPY_POET_CACHE']",
                 NO_ISSUE,
             ),
+            # SCP32 wrong setting getter
+            (
+                "settings.getint('LOG_ENABLED')",
+                Issue("SCP32 wrong setting getter: use getbool()", column=9, path=path),
+            ),
+            (
+                "settings.get(name='RETRY_TIMES')",
+                Issue("SCP32 wrong setting getter: use getint()", column=9, path=path),
+            ),
+            (
+                "settings['DOWNLOAD_DELAY']",
+                Issue(
+                    "SCP32 wrong setting getter: use getfloat()", column=8, path=path
+                ),
+            ),
+            (
+                "settings.getint('DEFAULT_DROPITEM_LOG_LEVEL')",
+                Issue("SCP32 wrong setting getter: use []", column=9, path=path),
+            ),
         )
     ),
     # Single setting module

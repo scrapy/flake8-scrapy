@@ -23,6 +23,37 @@ class UnknownUnsupportedVersion:
 UNKNOWN_SETTING_VALUE = UnknownSettingValue()
 UNKNOWN_UNSUPPORTED_VERSION = UnknownUnsupportedVersion()
 
+# Methods of the Settings class that read a setting value.
+SETTING_GETTERS = {
+    "__getitem__",
+    "get",
+    "getbool",
+    "getint",
+    "getfloat",
+    "getlist",
+    "getdict",
+    "getdictorlist",
+    "getwithbase",
+}
+# Methods of the Settings class that get a setting name as parameter.
+SETTING_METHODS = {
+    "__contains__",
+    "__delitem__",
+    "__init__",
+    "__setitem__",
+    "add_to_list",
+    "delete",
+    *SETTING_GETTERS,
+    "getpriority",
+    "pop",
+    "remove_from_list",
+    "replace_in_component_priority_dict",
+    "set",
+    "set_in_component_priority_dict",
+    "setdefault",
+    "setdefault_in_component_priority_dict",
+}
+
 
 # https://github.com/scrapy/scrapy/blob/2.13.2/scrapy/settings/__init__.py#L152-L180
 def getbool(value: Any) -> bool:
@@ -55,6 +86,18 @@ class SettingType(Enum):
     PERIODIC_LOG_CONFIG = "periodic_log_config"
     OPT_CALLABLE = "opt_callable"
     OPT_INT = "opt_int"
+
+
+# Missing types use the `get` method.
+SETTING_TYPE_GETTERS = {
+    SettingType.BOOL: "getbool",
+    SettingType.INT: "getint",
+    SettingType.FLOAT: "getfloat",
+    SettingType.LIST: "getlist",
+    SettingType.DICT: "getdict",
+    SettingType.DICT_OR_LIST: "getdictorlist",
+    SettingType.BASED_DICT: "getwithbase",
+}
 
 
 @dataclass
