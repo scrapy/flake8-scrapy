@@ -38,16 +38,12 @@ SETTING_GETTERS = {
     "getdictorlist",
     "getwithbase",
 }
-# Methods of the Settings class that get a setting name as parameter.
-SETTING_METHODS = {
-    "__contains__",
+# Methods of the Settings class that delete or change a setting value.
+SETTING_UPDATERS = {
     "__delitem__",
-    "__init__",
     "__setitem__",
     "add_to_list",
     "delete",
-    *SETTING_GETTERS,
-    "getpriority",
     "pop",
     "remove_from_list",
     "replace_in_component_priority_dict",
@@ -55,6 +51,14 @@ SETTING_METHODS = {
     "set_in_component_priority_dict",
     "setdefault",
     "setdefault_in_component_priority_dict",
+}
+# Methods of the Settings class that get a setting name as parameter.
+SETTING_METHODS = {
+    "__contains__",
+    "__init__",
+    *SETTING_GETTERS,
+    *SETTING_UPDATERS,
+    "getpriority",
 }
 
 
@@ -143,6 +147,7 @@ class Setting:
     default_value: VersionedValue | UnknownSettingValue = field(
         default_factory=lambda: UNKNOWN_SETTING_VALUE
     )
+    is_pre_crawler: bool = False
 
     def get_default_value(self, project: Project) -> Any:
         if self.default_value is UNKNOWN_SETTING_VALUE:

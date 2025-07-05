@@ -46,11 +46,13 @@ SETTINGS = {
         added_in=Version("2.10.0"),
         type=SettingType.DICT,
         default_value=VersionedValue({}),
+        is_pre_crawler=True,
     ),
     "ASYNCIO_EVENT_LOOP": Setting(
         added_in=Version("2.4.0"),
         type=SettingType.CLS,
         default_value=VersionedValue(None),
+        is_pre_crawler=True,
     ),
     "AUTOTHROTTLE_DEBUG": Setting(
         type=SettingType.BOOL, default_value=VersionedValue(False)
@@ -82,7 +84,11 @@ SETTINGS = {
     "CLOSESPIDER_TIMEOUT": Setting(
         type=SettingType.FLOAT, default_value=VersionedValue(0)
     ),
-    "COMMANDS_MODULE": Setting(type=SettingType.STR, default_value=VersionedValue("")),
+    "COMMANDS_MODULE": Setting(
+        type=SettingType.STR,
+        default_value=VersionedValue(""),
+        is_pre_crawler=True,
+    ),
     "COMPRESSION_ENABLED": Setting(
         type=SettingType.BOOL, default_value=VersionedValue(True)
     ),
@@ -130,14 +136,25 @@ SETTINGS = {
         type=SettingType.BOOL, default_value=VersionedValue(False)
     ),
     "DNSCACHE_ENABLED": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(True)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
+        is_pre_crawler=True,
     ),
-    "DNSCACHE_SIZE": Setting(type=SettingType.INT, default_value=VersionedValue(10000)),
+    "DNSCACHE_SIZE": Setting(
+        type=SettingType.INT,
+        default_value=VersionedValue(10000),
+        is_pre_crawler=True,
+    ),
     "DNS_RESOLVER": Setting(
         type=SettingType.CLS,
         default_value=VersionedValue("scrapy.resolver.CachingThreadedResolver"),
+        is_pre_crawler=True,
     ),
-    "DNS_TIMEOUT": Setting(type=SettingType.FLOAT, default_value=VersionedValue(60)),
+    "DNS_TIMEOUT": Setting(
+        type=SettingType.FLOAT,
+        default_value=VersionedValue(60),
+        is_pre_crawler=True,
+    ),
     "DOWNLOAD_DELAY": Setting(type=SettingType.FLOAT, default_value=VersionedValue(0)),
     "DOWNLOAD_FAIL_ON_DATALOSS": Setting(
         type=SettingType.BOOL, default_value=VersionedValue(True)
@@ -331,7 +348,9 @@ SETTINGS = {
         type=SettingType.OPT_STR, default_value=VersionedValue("private")
     ),
     "FORCE_CRAWLER_PROCESS": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+        is_pre_crawler=True,
     ),
     "FTP_PASSIVE_MODE": Setting(
         type=SettingType.BOOL, default_value=VersionedValue(True)
@@ -514,7 +533,9 @@ SETTINGS = {
         type=SettingType.BOOL, default_value=VersionedValue(True)
     ),
     "REACTOR_THREADPOOL_MAXSIZE": Setting(
-        type=SettingType.INT, default_value=VersionedValue(10)
+        type=SettingType.INT,
+        default_value=VersionedValue(10),
+        is_pre_crawler=True,
     ),
     "REDIRECT_ENABLED": Setting(
         type=SettingType.BOOL, default_value=VersionedValue(True)
@@ -628,9 +649,12 @@ SETTINGS = {
     "SPIDER_LOADER_CLASS": Setting(
         type=SettingType.CLS,
         default_value=VersionedValue("scrapy.spiderloader.SpiderLoader"),
+        is_pre_crawler=True,
     ),
     "SPIDER_LOADER_WARN_ONLY": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+        is_pre_crawler=True,
     ),
     "SPIDER_MIDDLEWARES": Setting(
         type=SettingType.BASED_DICT, default_value=VersionedValue({})
@@ -648,7 +672,11 @@ SETTINGS = {
             }
         )
     ),
-    "SPIDER_MODULES": Setting(type=SettingType.LIST, default_value=VersionedValue([])),
+    "SPIDER_MODULES": Setting(
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
+        is_pre_crawler=True,
+    ),
     "STATS_CLASS": Setting(
         type=SettingType.CLS,
         default_value=VersionedValue("scrapy.statscollectors.MemoryStatsCollector"),
@@ -687,6 +715,7 @@ SETTINGS = {
                 UNKNOWN_UNSUPPORTED_VERSION: None,
             },
         ),
+        is_pre_crawler=True,
     ),
     "URLLENGTH_LIMIT": Setting(
         type=SettingType.INT, default_value=VersionedValue(2083)

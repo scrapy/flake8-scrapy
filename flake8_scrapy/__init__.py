@@ -54,10 +54,16 @@ class ScrapyStyleIssueFinder(NodeVisitor):
             "Compare": [
                 setting_issue_finder,
             ],
+            "FunctionDef": [
+                setting_issue_finder,
+            ],
             "Subscript": [
                 ExtractThenIndexIssueFinder(),
                 setting_issue_finder,
             ],
+        }
+        self.post_visitors = {
+            "FunctionDef": (setting_issue_finder,),
         }
 
     def find_issues_visitor(self, visitor, node):
@@ -67,6 +73,8 @@ class ScrapyStyleIssueFinder(NodeVisitor):
             if issues:
                 self.issues.extend(list(issues))
         self.generic_visit(node)
+        for finder in self.post_visitors.get(visitor, ()):
+            finder.post_visit(node)
 
     def visit(self, node):
         node_type = type(node).__name__

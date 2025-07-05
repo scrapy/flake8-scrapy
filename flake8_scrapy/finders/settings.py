@@ -7,15 +7,18 @@ from ast import (
     ClassDef,
     Compare,
     Constant,
+    Del,
     Dict,
     FunctionDef,
     Import,
     ImportFrom,
     In,
+    Load,
     Module,
     Name,
     NodeVisitor,
     NotIn,
+    Store,
     Subscript,
     alias,
     expr,
@@ -44,6 +47,7 @@ from flake8_scrapy.settings import (
     SETTING_GETTERS,
     SETTING_METHODS,
     SETTING_TYPE_GETTERS,
+    SETTING_UPDATERS,
     UNKNOWN_FUTURE_VERSION,
     UNKNOWN_SETTING_VALUE,
     UNKNOWN_UNSUPPORTED_VERSION,
@@ -86,6 +90,7 @@ class SettingChecker:
     def __init__(self, context: Context, additional_known_settings: set[str]):
         self.project = context.project
         self.additional_known_settings = additional_known_settings
+        self.allow_pre_crawler_settings = False
 
     def is_known_setting(self, name: str) -> bool:
         return name in SETTINGS or name in self.additional_known_settings
@@ -201,11 +206,13 @@ class SettingChecker:
                 return
             for keyword in node.keywords:
                 yield from self.check_name(keyword)
+                yield from self.check_update(keyword)
             return
         assert isinstance(node, Dict)
         for key in node.keys:
             if isinstance(key, Constant):
                 yield from self.check_name(key)
+                yield from self.check_update(key)
 
     def check_name(
         self,
@@ -256,34 +263,55 @@ class SettingChecker:
             return
         yield from self.check_known_name(name, resolved_node, column)
 
-    def check_getter(self, name: str, func: Attribute) -> Generator[Issue, None, None]:
+    def check_update(self, node: keyword | Constant) -> Generator[Issue, None, None]:
+        name = node.value if isinstance(node, Constant) else node.arg
         if name not in SETTINGS:
             return
-        if func.attr not in SETTING_GETTERS:
+        setting = SETTINGS[name]
+        if setting.is_pre_crawler and not self.allow_pre_crawler_settings:
+            yield Issue(
+                35,
+                "no-op setting update",
+                node=node,
+            )
+
+    def check_method(
+        self, name_node: Constant, func: Attribute
+    ) -> Generator[Issue, None, None]:
+        name = name_node.value
+        if name not in SETTINGS:
             return
         setting = SETTINGS[name]
-        if setting.type is None:
-            return
-        assert isinstance(func.value, Name)
-        column = func.col_offset + len(func.value.id) + 1  # +1 for the dot
-        if setting.type in SETTING_TYPE_GETTERS:
-            expected = SETTING_TYPE_GETTERS[setting.type]
-            if func.attr != expected:
+        if func.attr in SETTING_GETTERS and setting.type is not None:
+            assert isinstance(func.value, Name)
+            column = func.col_offset + len(func.value.id) + 1  # +1 for the dot
+            if setting.type in SETTING_TYPE_GETTERS:
+                expected = SETTING_TYPE_GETTERS[setting.type]
+                if func.attr != expected:
+                    yield Issue(
+                        32,
+                        "wrong setting getter",
+                        detail=f"use {expected}()",
+                        column=column,
+                        node=func,
+                    )
+            elif func.attr not in {"get", "__getitem__"}:
                 yield Issue(
                     32,
                     "wrong setting getter",
-                    detail=f"use {expected}()",
+                    detail="use []",
                     column=column,
                     node=func,
                 )
-            return
-        if func.attr not in {"get", "__getitem__"}:
+        if (
+            func.attr in SETTING_UPDATERS
+            and setting.is_pre_crawler
+            and not self.allow_pre_crawler_settings
+        ):
             yield Issue(
-                32,
-                "wrong setting getter",
-                detail="use []",
-                column=column,
-                node=func,
+                35,
+                "no-op setting update",
+                node=name_node,
             )
 
     def check_subscript(
@@ -292,20 +320,33 @@ class SettingChecker:
         if name not in SETTINGS:
             return
         setting = SETTINGS[name]
-        if setting.type is None:
-            return
-        if setting.type not in SETTING_TYPE_GETTERS:
-            return
-        assert isinstance(node.value, Name)
-        column = node.value.col_offset + len(node.value.id)
-        expected = SETTING_TYPE_GETTERS[setting.type]
-        yield Issue(
-            32,
-            "wrong setting getter",
-            detail=f"use {expected}()",
-            column=column,
-            node=node,
-        )
+        if (
+            isinstance(node.ctx, Load)
+            and setting.type is not None
+            and setting.type in SETTING_TYPE_GETTERS
+        ):
+            assert isinstance(node.value, Name)
+            column = node.value.col_offset + len(node.value.id)
+            expected = SETTING_TYPE_GETTERS[setting.type]
+            yield Issue(
+                32,
+                "wrong setting getter",
+                detail=f"use {expected}()",
+                column=column,
+                node=node,
+            )
+        if (
+            isinstance(node.ctx, (Store, Del))
+            and setting.is_pre_crawler
+            and not self.allow_pre_crawler_settings
+        ):
+            column = getattr(node.slice, "col_offset", node.col_offset + 1)
+            yield Issue(
+                35,
+                "no-op setting update",
+                column=column,
+                node=node,
+            )
 
 
 class SettingIssueFinder:
@@ -315,7 +356,7 @@ class SettingIssueFinder:
         self.setting_checker = setting_checker
 
     def find_issues(
-        self, node: Call | Compare | Subscript
+        self, node: Call | Compare | Subscript | FunctionDef
     ) -> Generator[Issue, None, None]:
         if isinstance(node, Call):
             yield from self.find_call_issues(node)
@@ -326,6 +367,16 @@ class SettingIssueFinder:
         if isinstance(node, Compare):
             yield from self.find_compare_issues(node)
             return
+        if isinstance(node, FunctionDef):
+            if node.name == "update_pre_crawler_settings":
+                self.setting_checker.allow_pre_crawler_settings = True
+            return
+
+    def post_visit(self, node: Call | Compare | FunctionDef | Subscript) -> None:
+        if isinstance(node, FunctionDef):
+            if node.name == "update_pre_crawler_settings":
+                self.setting_checker.allow_pre_crawler_settings = False
+            return
 
     def find_call_issues(self, node: Call) -> Generator[Issue, None, None]:
         if self.looks_like_setting_method(node.func):
@@ -334,16 +385,16 @@ class SettingIssueFinder:
                 if isinstance(node.args[0], Constant):
                     name_constant = node.args[0]
                     yield from self.setting_checker.check_name(name_constant)
-                    yield from self.setting_checker.check_getter(
-                        name_constant.value, node.func
+                    yield from self.setting_checker.check_method(
+                        name_constant, node.func
                     )
                 return
             for keyword in node.keywords:
                 if keyword.arg == "name" and isinstance(keyword.value, Constant):
                     name_constant = keyword.value
                     yield from self.setting_checker.check_name(name_constant)
-                    yield from self.setting_checker.check_getter(
-                        name_constant.value, node.func
+                    yield from self.setting_checker.check_method(
+                        name_constant, node.func
                     )
                     return
             return
