@@ -323,7 +323,9 @@ SETTINGS = {
     "FILES_STORE_S3_ACL": Setting(
         type=SettingType.OPT_STR, default_value=VersionedValue("private")
     ),
-    "FORCE_CRAWLER_PROCESS": Setting(default_value=VersionedValue(False)),
+    "FORCE_CRAWLER_PROCESS": Setting(
+        type=SettingType.BOOL, default_value=VersionedValue(False)
+    ),
     "FTP_PASSIVE_MODE": Setting(
         type=SettingType.BOOL, default_value=VersionedValue(True)
     ),
@@ -778,32 +780,40 @@ SETTINGS = {
         default_value=VersionedValue(32768),
     ),
     "REQUEST_FINGERPRINTER_IMPLEMENTATION": Setting(
+        type=SettingType.ENUM_STR,
         added_in=Version("2.7.0"),
         deprecated_in=Version("2.12.0"),
         default_value=VersionedValue("SENTINEL"),
+        values=("2.6", "2.7"),
     ),
     "FEED_FORMAT": Setting(
         default_value=VersionedValue("jsonlines"),
         deprecated_in=Version("2.1.0"),
         sunset_guidance="use FEEDS instead",
+        type=SettingType.STR,
     ),
     "FEED_URI": Setting(
         deprecated_in=Version("2.1.0"),
         sunset_guidance="use FEEDS instead",
+        type=SettingType.OPT_STR,
     ),
     # Removed Scrapy built-in settings, in reverse removal order.
     "SPIDER_MANAGER_CLASS": Setting(
-        removed_in=Version("2.5.0"), deprecated_in=Version("1.0.0")
+        removed_in=Version("2.5.0"),
+        deprecated_in=Version("1.0.0"),
+        type=SettingType.CLS,
     ),
     "LOG_UNSERIALIZABLE_REQUESTS": Setting(
         removed_in=Version("2.1.0"),
         deprecated_in=UNKNOWN_UNSUPPORTED_VERSION,
         sunset_guidance="use SCHEDULER_DEBUG instead",
+        type=SettingType.BOOL,
     ),
     "REDIRECT_MAX_METAREFRESH_DELAY": Setting(
         removed_in=Version("2.1.0"),
         deprecated_in=UNKNOWN_UNSUPPORTED_VERSION,
         sunset_guidance="use METAREFRESH_MAXDELAY instead",
+        type=SettingType.FLOAT,
     ),
     # scrapy-feedexporter-azure-storage plugin settings, in order of appearance
     # in https://github.com/scrapy-plugins/scrapy-feedexporter-azure-storage

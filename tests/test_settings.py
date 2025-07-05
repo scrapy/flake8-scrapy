@@ -325,24 +325,46 @@ CASES: Cases = (
                 "settings['SCRAPY_POET_CACHE']",
                 NO_ISSUE,
             ),
-            # SCP32 wrong setting getter
+            # SCP32 wrong setting getter: positional argument
             (
                 "settings.getint('LOG_ENABLED')",
                 Issue("SCP32 wrong setting getter: use getbool()", column=9, path=path),
             ),
+            # SCP32 wrong setting getter: keyword argument
             (
                 "settings.get(name='RETRY_TIMES')",
                 Issue("SCP32 wrong setting getter: use getint()", column=9, path=path),
             ),
+            # SCP32 wrong setting getter: subscript
             (
                 "settings['DOWNLOAD_DELAY']",
                 Issue(
                     "SCP32 wrong setting getter: use getfloat()", column=8, path=path
                 ),
             ),
+            # SCP32 wrong setting getter: subscript recommendation
             (
                 "settings.getint('DEFAULT_DROPITEM_LOG_LEVEL')",
                 Issue("SCP32 wrong setting getter: use []", column=9, path=path),
+            ),
+            # SCP32 wrong setting getter: non-getter setting method
+            (
+                "settings.__contains__('DEFAULT_DROPITEM_LOG_LEVEL')",
+                NO_ISSUE,
+            ),
+            # SCP32 wrong setting getter: setting with unknown type
+            (
+                "settings.getdict('DEBUG')",
+                NO_ISSUE,
+            ),
+            # SCP33 base setting use
+            (
+                "settings['DOWNLOAD_HANDLERS_BASE']",
+                Issue("SCP33 base setting use", column=9, path=path),
+            ),
+            (
+                "settings['FOO_BASE']",
+                Issue("SCP27 unknown setting", column=9, path=path),
             ),
         )
     ),
@@ -1117,6 +1139,11 @@ CASES: Cases = (
                         path=path,
                         column=column,
                     ),
+                    Issue(
+                        "SCP32 wrong setting getter: use getbool()",
+                        path=path,
+                        column=column - 1,
+                    ),
                 ),
             ),
             (
@@ -1130,6 +1157,11 @@ CASES: Cases = (
                     Issue(
                         "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
                         path="requirements.txt",
+                    ),
+                    Issue(
+                        "SCP32 wrong setting getter: use getbool()",
+                        path=path,
+                        column=column - 1,
                     ),
                 ),
             ),
@@ -1173,6 +1205,11 @@ CASES: Cases = (
                         "lower, removed in 2.1.0; use SCHEDULER_DEBUG instead",
                         path=path,
                         column=column,
+                    ),
+                    Issue(
+                        "SCP32 wrong setting getter: use getbool()",
+                        path=path,
+                        column=column - 1,
                     ),
                 ),
             ),

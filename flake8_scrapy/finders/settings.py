@@ -122,9 +122,16 @@ class SettingChecker:
         matches.sort(key=lambda x: (-x[1], x[0]))
         return [m[0] for m in matches[:MAX_AUTOMATIC_SUGGESTIONS]]
 
-    def check_known_name(
+    def check_known_name(  # noqa: PLR0912
         self, name: str, node: IssueNode, column: int
     ) -> Generator[Issue, None, None]:
+        if name.endswith("_BASE"):
+            yield Issue(
+                33,
+                "base setting use",
+                node=node,
+                column=column,
+            )
         if name not in SETTINGS:
             return
         setting = SETTINGS[name]
