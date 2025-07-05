@@ -27,7 +27,7 @@ def test_canonical_package_names():
         )
 
 
-def test_default_value_history_oldest_known_value():
+def test_default_value_history():
     for data in SETTINGS.values():
         default_value = data.default_value
         if isinstance(default_value, UnknownSettingValue):
@@ -36,6 +36,7 @@ def test_default_value_history_oldest_known_value():
         if not history:
             continue
         assert UNKNOWN_UNSUPPORTED_VERSION in history
+        assert len(history) == 2
 
 
 def test_enum_setting_values():

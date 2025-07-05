@@ -3,6 +3,7 @@ from __future__ import annotations
 from packaging.version import Version
 
 from flake8_scrapy.settings import (
+    UNKNOWN_FUTURE_VERSION,
     UNKNOWN_SETTING_VALUE,
     UNKNOWN_UNSUPPORTED_VERSION,
     Setting,
@@ -252,7 +253,13 @@ SETTINGS = {
         added_in=Version("2.3.0"), type=SettingType.INT, default_value=VersionedValue(0)
     ),
     "FEED_EXPORT_ENCODING": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue(None)
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(
+            history={
+                UNKNOWN_FUTURE_VERSION: "utf-8",
+                UNKNOWN_UNSUPPORTED_VERSION: None,
+            }
+        ),
     ),
     "FEED_EXPORT_FIELDS": Setting(
         type=SettingType.DICT_OR_LIST, default_value=VersionedValue(None)
