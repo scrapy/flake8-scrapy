@@ -4,12 +4,14 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
-from flake8_scrapy.data.packages import PACKAGES
-
 if TYPE_CHECKING:
     from packaging.version import Version
 
     from flake8_scrapy.context import Project
+
+
+class UnknownFutureVersion:
+    pass
 
 
 class UnknownSettingValue:
@@ -20,6 +22,7 @@ class UnknownUnsupportedVersion:
     pass
 
 
+UNKNOWN_FUTURE_VERSION = UnknownFutureVersion()
 UNKNOWN_SETTING_VALUE = UnknownSettingValue()
 UNKNOWN_UNSUPPORTED_VERSION = UnknownUnsupportedVersion()
 
@@ -105,7 +108,8 @@ class VersionedValue:
     def __init__(
         self,
         value: Any = UNKNOWN_SETTING_VALUE,
-        history: dict[Version | UnknownUnsupportedVersion, Any] | None = None,
+        history: dict[Version | UnknownUnsupportedVersion | UnknownFutureVersion, Any]
+        | None = None,
     ):
         self.all_time_value = value
         self.value_history = history or {}
@@ -116,7 +120,9 @@ class VersionedValue:
         applicable_versions = [
             v
             for v in self.value_history
-            if not isinstance(v, UnknownUnsupportedVersion) and v <= version
+            if not isinstance(v, UnknownUnsupportedVersion)
+            and not isinstance(v, UnknownFutureVersion)
+            and v <= version
         ]
         if not applicable_versions:
             assert UNKNOWN_UNSUPPORTED_VERSION in self.value_history
@@ -146,9 +152,6 @@ class Setting:
         if self.package not in project.frozen_requirements:
             return versioned_value.all_time_value
         version = project.frozen_requirements[self.package]
-        lowest_supported_version = PACKAGES[self.package].lowest_supported_version
-        if lowest_supported_version is not None and version < lowest_supported_version:
-            return UNKNOWN_SETTING_VALUE
         return versioned_value[version]
 
     def parse(self, value: Any) -> Any:

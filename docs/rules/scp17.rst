@@ -8,7 +8,7 @@ What it does
 ============
 
 Finds settings in a settings module (e.g. ``settings.py``) that are set to
-their default value.
+their default value and are not :ref:`changing settings <scp34>`.
 
 
 Why is this bad?

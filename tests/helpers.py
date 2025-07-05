@@ -14,9 +14,7 @@ if TYPE_CHECKING:
 
 
 def sort_issues(issues: Sequence[Issue]) -> Sequence[Issue]:
-    return sorted(
-        issues, key=lambda issue: (issue.message[:5], issue.line, issue.column)
-    )
+    return sorted(issues, key=lambda issue: (issue.message, issue.line, issue.column))
 
 
 def check_project(

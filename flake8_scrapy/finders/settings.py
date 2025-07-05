@@ -29,6 +29,8 @@ from importlib.util import find_spec
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Union
 
+from packaging.version import Version
+
 from flake8_scrapy.ast import extract_literal_value
 from flake8_scrapy.data.packages import PACKAGES
 from flake8_scrapy.data.settings import (
@@ -42,7 +44,10 @@ from flake8_scrapy.settings import (
     SETTING_GETTERS,
     SETTING_METHODS,
     SETTING_TYPE_GETTERS,
+    UNKNOWN_FUTURE_VERSION,
     UNKNOWN_SETTING_VALUE,
+    UNKNOWN_UNSUPPORTED_VERSION,
+    UnknownSettingValue,
     UnknownUnsupportedVersion,
     getbool,
 )
@@ -500,7 +505,7 @@ class SettingsModuleSettingsProcessor:
         self.seen_settings: set[str] = set()
         self.autothrottle_enabled = False
         self.robotstxt_obey_values: list[tuple[bool, int, int]] = []
-        self.redundant_values: list[tuple[int, int]] = []
+        self.redundant_values: list[tuple[str, int, int]] = []
         self.issues: list[Issue] = []
         self.setting_checker = setting_checker
 
@@ -520,6 +525,25 @@ class SettingsModuleSettingsProcessor:
         elif name == "ROBOTSTXT_OBEY":
             self.process_robotstxt(child)
         self.check_redundant_values(name, child)
+
+    def check_redundant_values(self, name: str, assignment: Assign) -> None:
+        if name not in SETTINGS:
+            return
+        setting_info = SETTINGS[name]
+        default_value = setting_info.get_default_value(self.context.project)
+        if default_value is UNKNOWN_SETTING_VALUE:
+            return
+        setting_value, is_literal = extract_literal_value(assignment.value)
+        if not is_literal:
+            return
+        try:
+            parsed_value = setting_info.parse(setting_value)
+        except (ValueError, TypeError):
+            return
+        if parsed_value == default_value:
+            self.redundant_values.append(
+                (name, assignment.value.lineno, assignment.value.col_offset)
+            )
 
     def process_autothrottle(self, child: Assign) -> None:
         if not isinstance(child.value, Constant):
@@ -559,6 +583,7 @@ class SettingsModuleSettingsProcessor:
         self.validate_user_agent()
         self.validate_robotstxt()
         self.validate_throttling()
+        self.validate_missing_changing_settings()
         self.validate_redundant_values()
         return self.issues
 
@@ -586,27 +611,67 @@ class SettingsModuleSettingsProcessor:
         ):
             self.issues.append(Issue(10, "incomplete project throttling"))
 
-    def check_redundant_values(self, name: str, assignment: Assign) -> None:
-        if name not in SETTINGS:
-            return
-        setting_info = SETTINGS[name]
-        default_value = setting_info.get_default_value(self.context.project)
-        if default_value is UNKNOWN_SETTING_VALUE:
-            return
-        setting_value, is_literal = extract_literal_value(assignment.value)
-        if not is_literal:
-            return
-        try:
-            parsed_value = setting_info.parse(setting_value)
-        except (ValueError, TypeError):
-            return
-        if parsed_value == default_value:
-            self.redundant_values.append(
-                (assignment.value.lineno, assignment.value.col_offset)
+    def validate_missing_changing_settings(self) -> None:
+        for name, setting in SETTINGS.items():
+            if name in self.seen_settings:
+                continue
+            default = setting.default_value
+            if isinstance(default, UnknownSettingValue):
+                continue
+            if not default or not default.value_history:
+                continue
+            history = default.value_history
+            assert len(history) == 2  # noqa: PLR2004
+            assert UNKNOWN_UNSUPPORTED_VERSION in history
+            old_value = history[UNKNOWN_UNSUPPORTED_VERSION]
+            if UNKNOWN_FUTURE_VERSION in history:
+                new_value = history[UNKNOWN_FUTURE_VERSION]
+                detail = f"{name} changes from {old_value!r} to {new_value!r} in a future version of {setting.package}"
+                issue = Issue(34, "missing changing setting", detail=detail)
+                self.issues.append(issue)
+                continue
+            requirements = self.context.project.frozen_requirements
+            if not requirements or setting.package not in requirements:
+                continue
+            project_version = requirements[setting.package]
+            change_version, new_value = next(
+                iter(
+                    (k, v)
+                    for k, v in history.items()
+                    if k != UNKNOWN_UNSUPPORTED_VERSION
+                )
             )
+            assert isinstance(change_version, Version)
+            if project_version >= change_version:
+                continue
+            detail = f"{name} changes from {old_value!r} to {new_value!r} in {setting.package} {change_version}"
+            issue = Issue(34, "missing changing setting", detail=detail)
+            self.issues.append(issue)
 
     def validate_redundant_values(self) -> None:
-        for line, column in self.redundant_values:
+        for name, line, column in self.redundant_values:
+            if self.is_changing_setting(name):
+                continue
             self.issues.append(
                 Issue(17, "redundant setting value", line=line, column=column)
             )
+
+    def is_changing_setting(self, name: str) -> bool:
+        assert name in SETTINGS
+        setting = SETTINGS[name]
+        default = setting.default_value
+        assert not isinstance(default, UnknownSettingValue)
+        if not default or not default.value_history:
+            return False
+        history = default.value_history
+        assert len(history) == 2  # noqa: PLR2004
+        assert UNKNOWN_UNSUPPORTED_VERSION in history
+        assert UNKNOWN_FUTURE_VERSION not in history
+        requirements = self.context.project.frozen_requirements
+        assert setting.package in requirements
+        project_version = requirements[setting.package]
+        change_version = next(
+            iter(k for k in history if k != UNKNOWN_UNSUPPORTED_VERSION)
+        )
+        assert isinstance(change_version, Version)
+        return project_version < change_version

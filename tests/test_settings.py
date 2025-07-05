@@ -41,6 +41,7 @@ def default_issues(
             "SCP08 no project USER_AGENT",
             "SCP09 robots.txt ignored by default",
             "SCP10 incomplete project throttling",
+            "SCP34 missing changing setting: FEED_EXPORT_ENCODING changes from None to 'utf-8' in a future version of scrapy",
         )
         if not any(message.startswith(f"SCP{code:02} ") for code in exclude)
     ]
@@ -616,126 +617,6 @@ CASES: Cases = (
             ),
         )
     ),
-    # SCP17 redundant setting value
-    *(
-        (
-            [
-                File("[settings]\na=a", path="scrapy.cfg"),
-                File(f"scrapy=={version}", path="requirements.txt"),
-                File(f"{name} = {value}", path=path),
-            ],
-            (
-                *default_issues(path),
-                Issue("SCP13 incomplete requirements freeze", path="requirements.txt"),
-                *(
-                    Issue(message, path="requirements.txt")
-                    for message, min_version in (
-                        (
-                            "SCP14 unsupported requirement: flake8-scrapy only supports scrapy 2.0.1+",
-                            "2.0.1",
-                        ),
-                        (
-                            "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
-                            "2.11.2 ",
-                        ),
-                    )
-                    if Version(version) < Version(min_version)
-                ),
-                *(
-                    (
-                        Issue(
-                            "SCP17 redundant setting value",
-                            column=len(name) + 3,
-                            path=path,
-                        ),
-                    )
-                    if should_trigger
-                    else ()
-                ),
-            ),
-            {},
-        )
-        for path in ["a.py"]
-        for version, name, value, should_trigger in (
-            (
-                "2.13.0",
-                "TWISTED_REACTOR",
-                '"twisted.internet.asyncioreactor.AsyncioSelectorReactor"',
-                True,
-            ),
-            ("2.13.0", "TWISTED_REACTOR", "None", False),
-            ("2.12.0", "TWISTED_REACTOR", "None", True),
-            (
-                "2.12.0",
-                "TWISTED_REACTOR",
-                '"twisted.internet.asyncioreactor.AsyncioSelectorReactor"',
-                False,
-            ),
-            # Unsupported Scrapy version. SCP17 does not trigger for any value
-            # because the default value of the setting at that version of
-            # Scrapy is considered unknown.
-            ("2.0.0", "TWISTED_REACTOR", "None", False),
-            (
-                "2.0.0",
-                "TWISTED_REACTOR",
-                '"twisted.internet.asyncioreactor.AsyncioSelectorReactor"',
-                False,
-            ),
-            # If a Scrapy version is known, SCP17 is still triggered or not as
-            # usual for settings for which we do not know a history of default
-            # value changes, but we do know their default value.
-            (
-                "2.13.0",
-                "TELNETCONSOLE_USERNAME",
-                '"scrapy"',
-                True,
-            ),
-            (
-                "2.13.0",
-                "TELNETCONSOLE_USERNAME",
-                '"username"',
-                False,
-            ),
-        )
-    ),
-    *(
-        (
-            [
-                File("[settings]\na=a", path="scrapy.cfg"),
-                File(requirements, path="requirements.txt"),
-                File('TELNETCONSOLE_USERNAME = "scrapy"', path=path),
-            ],
-            (
-                *default_issues(path),
-                *(
-                    Issue(
-                        "SCP13 incomplete requirements freeze", path="requirements.txt"
-                    )
-                    for _ in range(1)
-                    if not isinstance(requirements, bytes)
-                ),
-                Issue(
-                    "SCP17 redundant setting value",
-                    column=len("TELNETCONSOLE_USERNAME") + 3,
-                    path=path,
-                ),
-            ),
-            {},
-        )
-        for path in ["a.py"]
-        for requirements in (
-            # Invalid or non-frozen requirements do not prevent SCP17 for
-            # settings for which SCP17 reporting does not depend on the version
-            # of Scrapy.
-            "",
-            "# scrapy==2.13.0",
-            "scrapy>=2.13.0",
-            "scrapy>=2.13.0,<2.14.0",
-            "scrapy!",
-            "scrapy!=2.13.0  # foo",
-            b"\xff\xfe\x00\x00",
-        )
-    ),
     # Setting module detection and checking
     *(
         (files, issues, {})
@@ -902,6 +783,10 @@ CASES: Cases = (
                     "CONCURRENT_REQUESTS_PER_DOMAIN = 1\nDOWNLOAD_DELAY = 5.0",
                 )
             ),
+            # SCP34 missing changing setting: FEED_EXPORT_ENCODING
+            ("FEED_EXPORT_ENCODING = 'utf-8'", 34, ()),
+            ("FEED_EXPORT_ENCODING = None", 34, ()),
+            ("FEED_EXPORT_ENCODING = 'foo'", 34, ()),
         )
     ),
     # Checks bassed on requirements and setting names
@@ -1223,6 +1108,174 @@ CASES: Cases = (
                     column=column,
                 ),
             ),
+        )
+    ),
+    # Checks based on requirements and code in a settings module
+    *(
+        (
+            (
+                File("[settings]\na=a", path="scrapy.cfg"),
+                File("\n".join(requirements), path="requirements.txt"),
+                File(code, path=path),
+            ),
+            (
+                *(
+                    issues
+                    if isinstance(issues, Sequence)
+                    else (issues,)
+                    if issues
+                    else ()
+                ),
+                *default_issues(path),
+                Issue("SCP13 incomplete requirements freeze", path="requirements.txt"),
+            ),
+            {},
+        )
+        for path in ("a.py",)
+        for requirements, code, issues in (
+            # Baseline
+            (
+                (),
+                "",
+                NO_ISSUE,
+            ),
+            # SCP34 missing changing setting
+            (
+                ("scrapy==2.13.0",),
+                "",
+                NO_ISSUE,
+            ),
+            (
+                ("scrapy==2.13.0",),
+                "TWISTED_REACTOR = 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'",
+                Issue(
+                    "SCP17 redundant setting value",
+                    column=18,
+                    path=path,
+                ),
+            ),
+            (
+                ("scrapy==2.12.0",),
+                "",
+                Issue(
+                    "SCP34 missing changing setting: TWISTED_REACTOR changes "
+                    "from None to "
+                    "'twisted.internet.asyncioreactor.AsyncioSelectorReactor' "
+                    "in scrapy 2.13.0",
+                    path=path,
+                ),
+            ),
+            (
+                ("scrapy==2.12.0",),
+                "TWISTED_REACTOR = None",
+                NO_ISSUE,
+            ),
+            (
+                ("scrapy==2.12.0",),
+                'TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"',
+                NO_ISSUE,
+            ),
+            (
+                ("scrapy==2.12.0",),
+                'TWISTED_REACTOR = "custom.reactor"',
+                NO_ISSUE,
+            ),
+        )
+    ),
+    # SCP17 redundant setting value
+    *(
+        (
+            [
+                File("[settings]\na=a", path="scrapy.cfg"),
+                File(f"scrapy=={version}", path="requirements.txt"),
+                File(f"{name} = {value}", path=path),
+            ],
+            (
+                *default_issues(path),
+                Issue("SCP13 incomplete requirements freeze", path="requirements.txt"),
+                *(
+                    Issue(message, path="requirements.txt")
+                    for message, min_version in (
+                        (
+                            "SCP14 unsupported requirement: flake8-scrapy only supports scrapy 2.0.1+",
+                            "2.0.1",
+                        ),
+                        (
+                            "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
+                            "2.11.2 ",
+                        ),
+                    )
+                    if Version(version) < Version(min_version)
+                ),
+                *(
+                    (
+                        Issue(
+                            "SCP17 redundant setting value",
+                            column=len(name) + 3,
+                            path=path,
+                        ),
+                    )
+                    if should_trigger
+                    else ()
+                ),
+            ),
+            {},
+        )
+        for path in ["a.py"]
+        for version, name, value, should_trigger in (
+            # If a Scrapy version is known, SCP17 is still triggered or not as
+            # usual for settings for which we do not know a history of default
+            # value changes, but we do know their default value.
+            (
+                "2.13.0",
+                "TELNETCONSOLE_USERNAME",
+                '"scrapy"',
+                True,
+            ),
+            (
+                "2.13.0",
+                "TELNETCONSOLE_USERNAME",
+                '"username"',
+                False,
+            ),
+        )
+    ),
+    *(
+        (
+            [
+                File("[settings]\na=a", path="scrapy.cfg"),
+                File(requirements, path="requirements.txt"),
+                File('TELNETCONSOLE_USERNAME = "scrapy"', path=path),
+            ],
+            (
+                *default_issues(path),
+                *(
+                    Issue(
+                        "SCP13 incomplete requirements freeze", path="requirements.txt"
+                    )
+                    for _ in range(1)
+                    if not isinstance(requirements, bytes)
+                ),
+                Issue(
+                    "SCP17 redundant setting value",
+                    column=len("TELNETCONSOLE_USERNAME") + 3,
+                    path=path,
+                ),
+            ),
+            {},
+        )
+        for path in ["a.py"]
+        for requirements in (
+            # Invalid or non-frozen requirements do not prevent SCP17 for
+            # settings for which SCP17 reporting does not depend on the version
+            # of Scrapy.
+            "",
+            "# scrapy==2.13.0",
+            "scrapy>=2.13.0",
+            "scrapy>=2.13.0,<2.14.0",
+            "scrapy!",
+            "scrapy!=2.13.0  # foo",
+            b"\xff\xfe\x00\x00",
         )
     ),
     # scrapy_known_settings silences SCP27
