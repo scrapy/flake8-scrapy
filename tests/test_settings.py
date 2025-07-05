@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 from collections.abc import Sequence
+from itertools import cycle
 
 from packaging.version import Version
 
@@ -17,6 +18,17 @@ from .test_requirements import (
 
 FALSE_BOOLS = ("False", "'false'", "0")
 TRUE_UNKNOWN_OR_INVALID_BOOLS = ("True", "'true'", "1", "foo", "'foo'")
+
+
+class SafeDict(dict):
+    def __missing__(self, key):
+        return "{" + key + "}"
+
+
+def zip_uneven_cycle(a, b):
+    if len(a) >= len(b):
+        return tuple((*ta, *tb) for ta, tb in zip(a, cycle(b)))
+    return tuple((*ta, *tb) for ta, tb in zip(cycle(a), b))
 
 
 def supports_alias_col_offset():
@@ -367,6 +379,128 @@ CASES: Cases = (
                 "settings['FOO_BASE']",
                 Issue("SCP27 unknown setting", column=9, path=path),
             ),
+            # SCP35 no-op setting update
+            *(
+                (
+                    template.format_map(SafeDict(setting=setting, value=value)),
+                    Issue(
+                        "SCP35 no-op setting update",
+                        column=column,
+                        path=path,
+                    ),
+                )
+                for template, column, setting, value in zip_uneven_cycle(
+                    (
+                        ("settings.delete('{setting}')", 16),
+                        ("settings.pop(name='{setting}')", 18),
+                        ("settings.set(name='{setting}', value={value})", 18),
+                        ("settings.setdefault('{setting}', {value}, 'addon')", 20),
+                        ("settings['{setting}'] = {value}", 9),
+                        ("del self.settings['{setting}']", 18),
+                        ("settings.__delitem__('{setting}')", 21),
+                        ("crawler.settings.__setitem__('{setting}', {value})", 29),
+                        ("BaseSettings({{'{setting}': {value}}})", 14),
+                        ("settings.Settings(dict({setting}={value}))", 23),
+                        (
+                            "scrapy.settings.overridden_settings(settings={{'{setting}': {value}}})",
+                            46,
+                        ),
+                    ),
+                    (
+                        ("ADDONS", "{'my.addons.Addon': 100}"),
+                        ("ASYNCIO_EVENT_LOOP", "'uvloop.Loop'"),
+                        ("COMMANDS_MODULE", "'my_project.commands'"),
+                        ("DNS_RESOLVER", "'scrapy.resolver.CachingHostnameResolver'"),
+                        ("DNS_TIMEOUT", "120"),
+                        ("DNSCACHE_ENABLED", "False"),
+                        ("DNSCACHE_SIZE", "20_000"),
+                        ("FORCE_CRAWLER_PROCESS", "True"),
+                        ("REACTOR_THREADPOOL_MAXSIZE", "50"),
+                        ("SPIDER_LOADER_CLASS", "CustomSpiderLoader"),
+                        ("SPIDER_LOADER_WARN_ONLY", "True"),
+                        ("SPIDER_MODULES", "['my_project.spiders_module']"),
+                        (
+                            "TWISTED_REACTOR",
+                            "'twisted.internet.pollreactor.PollReactor'",
+                        ),
+                    ),
+                )
+            ),
+            *(
+                (
+                    template.format_map(SafeDict(setting=setting, value=value)),
+                    Issue(
+                        "SCP35 no-op setting update",
+                        column=column,
+                        path=path,
+                    ),
+                )
+                for template, column, setting, value in zip_uneven_cycle(
+                    (
+                        ("settings.add_to_list('{setting}', {value})", 21),
+                        (
+                            "settings.remove_from_list(name='{setting}', item={value})",
+                            31,
+                        ),
+                    ),
+                    (
+                        ("SPIDER_MODULES", "'myspiders'"),
+                        ("SPIDER_MODULES", "'myproject.spiders'"),
+                    ),
+                )
+            ),
+            *(
+                (
+                    template.format_map(SafeDict(setting=setting)),
+                    Issue(
+                        "SCP35 no-op setting update",
+                        column=column,
+                        path=path,
+                    ),
+                )
+                for template, column, setting in zip_uneven_cycle(
+                    (
+                        (
+                            "settings.replace_in_component_priority_dict('{setting}', Old, New, 200)",
+                            44,
+                        ),
+                        (
+                            "settings.set_in_component_priority_dict(name='{setting}', cls=MyAddon, priority=300)",
+                            45,
+                        ),
+                        (
+                            "settings.setdefault_in_component_priority_dict('{setting}', Addon)",
+                            47,
+                        ),
+                    ),
+                    (("ADDONS",),),
+                )
+            ),
+            (
+                "\n".join(
+                    (
+                        "class MyAddon:",
+                        "    def update_settings(self, settings):",
+                        "        settings.add_to_list('SPIDER_MODULES', 'addon.spiders')",
+                    )
+                ),
+                Issue(
+                    "SCP35 no-op setting update",
+                    line=3,
+                    column=29,
+                    path=path,
+                ),
+            ),
+            (
+                "\n".join(
+                    (
+                        "class MyAddon:",
+                        "    def update_pre_crawler_settings(cls, settings):",
+                        "        settings.add_to_list('SPIDER_MODULES', 'addon.spiders')",
+                    )
+                ),
+                NO_ISSUE,
+            ),
         )
     ),
     # Single setting module
@@ -614,6 +748,15 @@ CASES: Cases = (
             (
                 "FOO = 'bar'",
                 Issue("SCP27 unknown setting", path=path),
+            ),
+            # SCP35 no-op setting update
+            (
+                "SPIDER_MODULES = ['myproject.spiders']",
+                NO_ISSUE,
+            ),
+            (
+                "settings['SPIDER_MODULES'] = ['myproject.spiders']",
+                Issue("SCP35 no-op setting update", column=9, path=path),
             ),
         )
     ),
