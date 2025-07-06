@@ -44,7 +44,7 @@ SETTINGS = {
     # https://github.com/scrapy/scrapy/blob/master/scrapy/settings/default_settings.py
     "ADDONS": Setting(
         added_in=Version("2.10.0"),
-        type=SettingType.DICT,
+        type=SettingType.COMP_PRIO_DICT,
         default_value=VersionedValue({}),
         is_pre_crawler=True,
     ),
@@ -211,7 +211,7 @@ SETTINGS = {
         ),
     ),
     "DOWNLOADER_MIDDLEWARES": Setting(
-        type=SettingType.BASED_DICT, default_value=VersionedValue({})
+        type=SettingType.BASED_COMP_PRIO_DICT, default_value=VersionedValue({})
     ),
     "DOWNLOADER_MIDDLEWARES_BASE": Setting(
         default_value=VersionedValue(
@@ -249,7 +249,7 @@ SETTINGS = {
         default_value=UNKNOWN_SETTING_VALUE,
     ),
     "EXTENSIONS": Setting(
-        type=SettingType.BASED_DICT, default_value=VersionedValue({})
+        type=SettingType.BASED_COMP_PRIO_DICT, default_value=VersionedValue({})
     ),
     "EXTENSIONS_BASE": Setting(
         default_value=VersionedValue(
@@ -419,7 +419,7 @@ SETTINGS = {
         type=SettingType.OPT_STR, default_value=VersionedValue("private")
     ),
     "ITEM_PIPELINES": Setting(
-        type=SettingType.BASED_DICT, default_value=VersionedValue({})
+        type=SettingType.BASED_COMP_PRIO_DICT, default_value=VersionedValue({})
     ),
     "ITEM_PIPELINES_BASE": Setting(default_value=VersionedValue({})),
     "ITEM_PROCESSOR": Setting(
@@ -633,7 +633,7 @@ SETTINGS = {
         type=SettingType.INT, default_value=VersionedValue(5000000)
     ),
     "SPIDER_CONTRACTS": Setting(
-        type=SettingType.BASED_DICT, default_value=VersionedValue({})
+        type=SettingType.BASED_COMP_PRIO_DICT, default_value=VersionedValue({})
     ),
     "SPIDER_CONTRACTS_BASE": Setting(
         default_value=VersionedValue(
@@ -657,7 +657,7 @@ SETTINGS = {
         is_pre_crawler=True,
     ),
     "SPIDER_MIDDLEWARES": Setting(
-        type=SettingType.BASED_DICT, default_value=VersionedValue({})
+        type=SettingType.BASED_COMP_PRIO_DICT, default_value=VersionedValue({})
     ),
     "SPIDER_MIDDLEWARES_BASE": Setting(
         default_value=VersionedValue(
