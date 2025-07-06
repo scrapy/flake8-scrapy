@@ -6,6 +6,8 @@ from itertools import cycle
 
 from packaging.version import Version
 
+from flake8_scrapy.finders.settings import SETTING_TYPE_CHECKERS
+from flake8_scrapy.settings import SettingType
 from tests.helpers import check_project
 
 from . import NO_ISSUE, Cases, File, Issue, cases
@@ -16,8 +18,16 @@ from .test_requirements import (
     SCRAPY_LOWEST_SUPPORTED,
 )
 
+
+def test_type_checkers():
+    for setting_type in SettingType:
+        assert setting_type in SETTING_TYPE_CHECKERS, (
+            f"{setting_type} is missing from SETTING_TYPE_CHECKERS"
+        )
+
+
 FALSE_BOOLS = ("False", "'false'", "0")
-TRUE_UNKNOWN_OR_INVALID_BOOLS = ("True", "'true'", "1", "foo", "'foo'")
+TRUE_BOOLS = ("True", "'true'", "1")
 
 
 class SafeDict(dict):
@@ -60,7 +70,7 @@ def default_issues(
 
 
 CASES: Cases = (
-    # Non-settings module Python file
+    # Python file checks
     *(
         (
             [File(code, path=path)],
@@ -543,9 +553,346 @@ CASES: Cases = (
                 ),
                 NO_ISSUE,
             ),
+            # Setting value checks
+            *(
+                (
+                    template.format_map(SafeDict(setting=setting, value=value)),
+                    NO_ISSUE,
+                )
+                for template, setting, value in zip_uneven_cycle(
+                    (("settings['{setting}'] = {value}",),),
+                    (
+                        # Valid values
+                        ("AWS_ACCESS_KEY_ID", '"AKIAIOSFODNN7EXAMPLE"'),
+                        ("AWS_ACCESS_KEY_ID", "None"),
+                        ("BOT_NAME", '"mybot"'),
+                        ("CONCURRENT_REQUESTS", '"1"'),
+                        ("CONCURRENT_REQUESTS", 'b"1"'),
+                        ("CONCURRENT_REQUESTS", "1.0"),
+                        ("CONCURRENT_REQUESTS", "1"),
+                        ("CONCURRENT_REQUESTS", "True"),
+                        ("CONCURRENT_REQUESTS", "foo"),
+                        ("DEFAULT_REQUEST_HEADERS", "foo"),
+                        ("DEFAULT_REQUEST_HEADERS", "None"),
+                        ("DEFAULT_REQUEST_HEADERS", "{}"),
+                        ("DEFAULT_REQUEST_HEADERS", "'{}'"),
+                        ("DEFAULT_REQUEST_HEADERS", "{a: b}"),
+                        ("DEFAULT_REQUEST_HEADERS", "[(a, b)]"),
+                        ("DEFAULT_REQUEST_HEADERS", '\'[["a", "b"]]\''),
+                        ("DEFAULT_REQUEST_HEADERS", "{'Foo': 'Bar'}"),
+                        (
+                            "DEFAULT_REQUEST_HEADERS",
+                            "{1: 'keys do not have to be str'}",
+                        ),
+                        ("DOWNLOAD_HANDLERS", "foo"),
+                        ("DOWNLOAD_HANDLERS", "None"),
+                        ("DOWNLOAD_HANDLERS", "{}"),
+                        ("DOWNLOAD_HANDLERS", "'{}'"),
+                        ("DOWNLOAD_HANDLERS", "{a: b}"),
+                        ("DOWNLOAD_HANDLERS", "{'websocket': WebSocketHandler}"),
+                        ("DOWNLOAD_SLOTS", "foo"),
+                        ("DOWNLOAD_SLOTS", '"{}"'),
+                        ("DOWNLOAD_SLOTS", "{a: b}"),
+                        ("DOWNLOAD_SLOTS", "{a: {b: c}}"),
+                        ("DOWNLOAD_SLOTS", '{"toscrape.com": {"concurrency": 1}}'),
+                        ("DOWNLOAD_SLOTS", '{"toscrape.com": {"delay": 0.0}}'),
+                        (
+                            "DOWNLOAD_SLOTS",
+                            '{"toscrape.com": {"randomize_delay": True}}',
+                        ),
+                        ("DOWNLOAD_SLOTS", '{"toscrape.com": {}}'),
+                        ("DOWNLOAD_SLOTS", '\'{"toscrape.com": {"concurrency": 1}}\''),
+                        ("DOWNLOAD_SLOTS", "{}"),
+                        ("DOWNLOADER_CLIENT_TLS_METHOD", '"TLS"'),
+                        ("DOWNLOADER_CLIENT_TLS_METHOD", '"TLSv1.2"'),
+                        ("DOWNLOADER_CLIENT_TLS_METHOD", "foo"),
+                        ("DOWNLOADER_MIDDLEWARES", "{}"),
+                        ("DOWNLOADER_MIDDLEWARES", "'{}'"),
+                        ("DOWNLOADER_MIDDLEWARES", "{a: b}"),
+                        ("DOWNLOADER_MIDDLEWARES", "{Foo: 100}"),
+                        ("DOWNLOADER_MIDDLEWARES", "{'foo.Foo': 100}"),
+                        ("FEED_EXPORT_FIELDS", '"foo"'),
+                        ("FEED_EXPORT_FIELDS", "()"),
+                        ("FEED_EXPORT_FIELDS", "[]"),
+                        ("FEED_EXPORT_FIELDS", "{}"),
+                        ("FEED_EXPORT_FIELDS", "None"),
+                        ("FEED_EXPORT_INDENT", '"2"'),
+                        ("FEED_EXPORT_INDENT", "0"),
+                        ("FEED_EXPORT_INDENT", "1"),
+                        ("FEED_EXPORT_INDENT", "None"),
+                        ("FEED_EXPORT_INDENT", "True"),
+                        ("FEED_URI_PARAMS", '"myproject.utils.get_uri_params"'),
+                        ("FEED_URI_PARAMS", "None"),
+                        ("FEED_URI_PARAMS", "uri_params"),
+                        ("FEED_URI_PARAMS", "my_project.feeds.uri_params"),
+                        ("FEEDS", "foo"),
+                        ("FEEDS", '"{}"'),
+                        (
+                            "FEEDS",
+                            '{"output.csv": {"format": "csv", "fields": ["name", "price"], "encoding": "utf-8"}}',
+                        ),
+                        (
+                            "FEEDS",
+                            '{"output.json": {"format": "json", "batch_item_count": 0, "indent": 0, "fields": None}}',
+                        ),
+                        ("FEEDS", '{"output.json": {"format": "json"}}'),
+                        (
+                            "FEEDS",
+                            '{"output.jsonl":{"item_classes":[ProductItem],"item_filter":MyFilter,"uri_params":get_uri_params,}}',
+                        ),
+                        (
+                            "FEEDS",
+                            '{"output.xml": {"format": "xml", "batch_item_count": 100, "encoding": None, "fields": {"name": "product_name", "price": "product_price"}, "item_classes": ["myproject.items.ProductItem"], "item_filter": "myproject.filters.MyFilter", "indent": 2, "item_export_kwargs": {"root_element": "products"}, "overwrite": True, "store_empty": False, "uri_params": "myproject.utils.get_uri_params"}}',
+                        ),
+                        ("FEEDS", '\'{"output.json": {"format": "json"}}\''),
+                        ("FEEDS", "{}"),
+                        ("FEEDS", "{a: b}"),
+                        ("FEEDS", "{a: {b: c}}"),
+                        ("JOBDIR", '"/tmp/foo"'),
+                        ("JOBDIR", 'Path("/tmp/foo")'),
+                        ("JOBDIR", "None"),
+                        ("LOG_LEVEL", "foo"),
+                        ("LOG_LEVEL", '"debug"'),
+                        ("LOG_LEVEL", '"INFO"'),
+                        ("LOG_LEVEL", "0"),
+                        ("LOG_LEVEL", "20"),
+                        ("LOG_LEVEL", "25"),
+                        ("LOG_VERSIONS", '"foo,bar"'),
+                        ("LOG_VERSIONS", '"foo"'),
+                        ("LOG_VERSIONS", '["foo", "bar"]'),
+                        ("LOG_VERSIONS", '["foo"]'),
+                        ("LOG_VERSIONS", "b''"),
+                        ("LOG_VERSIONS", "()"),
+                        ("LOG_VERSIONS", "[]"),
+                        ("LOG_VERSIONS", "{}"),
+                        ("LOG_VERSIONS", "range(2)"),
+                        ("LOG_VERSIONS", "set()"),
+                        ("LOG_VERSIONS", "None"),
+                        ("LOGSTATS_INTERVAL", '"1.0"'),
+                        ("LOGSTATS_INTERVAL", 'b"1.0"'),
+                        ("LOGSTATS_INTERVAL", "1.0"),
+                        ("LOGSTATS_INTERVAL", "1"),
+                        ("LOGSTATS_INTERVAL", "True"),
+                        ("LOGSTATS_INTERVAL", "foo"),
+                        ("PERIODIC_LOG_DELTA", "foo"),
+                        ("PERIODIC_LOG_DELTA", "None"),
+                        ("PERIODIC_LOG_DELTA", "True"),
+                        ("PERIODIC_LOG_DELTA", "{}"),
+                        ("PERIODIC_LOG_DELTA", "{a: [b, c]}"),
+                        ("PERIODIC_LOG_DELTA", '{"exclude": foo}'),
+                        (
+                            "PERIODIC_LOG_DELTA",
+                            '{"exclude": ["downloader/response_count"]}',
+                        ),
+                        ("PERIODIC_LOG_DELTA", '{"exclude": []}'),
+                        (
+                            "PERIODIC_LOG_DELTA",
+                            '{"include": ["stats"], "exclude": ["other"]}',
+                        ),
+                        ("PERIODIC_LOG_DELTA", '{"include": ["stats"]}'),
+                        ("PERIODIC_LOG_DELTA", '{"include": []}'),
+                        ("SCHEDULER", "CustomScheduler"),
+                        ("SCHEDULER", "my_project.schedulers.CustomScheduler"),
+                        ("SPIDER_CONTRACTS", '"{}"'),
+                        ("SPIDER_CONTRACTS", "{}"),
+                        ("SPIDER_CONTRACTS", "None"),
+                        # Unknown setting type
+                        ("SERVICE_ROOT", "foo"),
+                    ),
+                )
+            ),
+            *(
+                (
+                    template.format_map(SafeDict(setting=setting, value=value)),
+                    Issue(
+                        issue,
+                        column=column + len(setting),
+                        path=path,
+                    ),
+                )
+                for template, column, issue, setting, value in zip_uneven_cycle(
+                    (("settings['{setting}'] = {value}", 15),),
+                    (
+                        *(
+                            ("SCP36 invalid setting value", setting, value)
+                            for setting, value in (
+                                ("AUTOTHROTTLE_ENABLED", "'foo'"),
+                                ("AUTOTHROTTLE_ENABLED", "{}"),
+                                ("AWS_ACCESS_KEY_ID", "[]"),
+                                ("BOT_NAME", "None"),
+                                ("BOT_NAME", "[]"),
+                                ("CONCURRENT_REQUESTS", "None"),
+                                ("CONCURRENT_REQUESTS", "{}"),
+                                ("DEFAULT_ITEM_CLASS", "[]"),
+                                ("DEFAULT_ITEM_CLASS", '""'),
+                                ("DEFAULT_ITEM_CLASS", '"mymodule"'),
+                                ("DEFAULT_REQUEST_HEADERS", "'invalid json'"),
+                                (
+                                    "DEFAULT_REQUEST_HEADERS",
+                                    "'[\"non-dict-compatible list\"]'",
+                                ),
+                                ("DOWNLOAD_HANDLERS", "42"),
+                                ("DOWNLOAD_HANDLERS", "'invalid json'"),
+                                ("DOWNLOAD_HANDLERS", "'[]'"),
+                                ("DOWNLOAD_HANDLERS", "{1: 'keys must be str'}"),
+                                ("DOWNLOAD_SLOTS", '"not_a_dict"'),
+                                ("DOWNLOAD_SLOTS", "[]"),
+                                ("DOWNLOAD_SLOTS", '"[]"'),
+                                ("DOWNLOAD_SLOTS", "None"),
+                                ("DOWNLOAD_SLOTS", "{1: {}}"),
+                                ("DOWNLOAD_SLOTS", '{"toscrape.com": []}'),
+                                ("DOWNLOAD_SLOTS", '{"toscrape.com": {"foo": "bar"}}'),
+                                (
+                                    "DOWNLOAD_SLOTS",
+                                    '{"toscrape.com": {"concurrency": -1}}',
+                                ),
+                                (
+                                    "DOWNLOAD_SLOTS",
+                                    '{"toscrape.com": {"concurrency": 0}}',
+                                ),
+                                ("DOWNLOAD_SLOTS", '{"toscrape.com": {"delay": -1}}'),
+                                (
+                                    "DOWNLOAD_SLOTS",
+                                    '{"toscrape.com": {"randomize_delay": 1}}',
+                                ),
+                                ("DOWNLOADER_CLIENT_TLS_METHOD", "'TLSv1.3'"),
+                                ("DOWNLOADER_CLIENT_TLS_METHOD", "None"),
+                                ("DOWNLOADER_CLIENT_TLS_METHOD", "{}"),
+                                ("DOWNLOADER_MIDDLEWARES", "{1: 100}"),
+                                ("DOWNLOADER_MIDDLEWARES", "{'module': 100}"),
+                                ("DOWNLOADER_MIDDLEWARES", "{Foo: []}"),
+                                ("DOWNLOADER_MIDDLEWARES", "{Foo: 'bar'}"),
+                                ("FEED_EXPORT_FIELDS", "0"),
+                                ("FEED_EXPORT_INDENT", '"not_int"'),
+                                ("FEED_URI_PARAMS", '"invalid"'),
+                                ("FEED_URI_PARAMS", "123"),
+                                ("FEED_URI_PARAMS", "[]"),
+                                ("FEEDS", '"not_a_dict"'),
+                                ("FEEDS", "[]"),
+                                ("FEEDS", '"[]"'),
+                                ("FEEDS", "None"),
+                                ("FEEDS", "{1: {}}"),
+                                ("FEEDS", '{"output.json": "not_a_dict"}'),
+                                ("FEEDS", '{"output.json": 123}'),
+                                ("FEEDS", '{"output.json": []}'),
+                                ("FEEDS", '{"output.json": "[]"}'),
+                                ("FEEDS", '{"output.json": {"foo": "bar"}}'),
+                                ("FEEDS", '{"output.json": {"format": 123}}'),
+                                ("FEEDS", '{"output.json": {"format": {}}}'),
+                                ("FEEDS", '{"output.json": {"batch_item_count": -1}}'),
+                                (
+                                    "FEEDS",
+                                    '{"output.json": {"batch_item_count": "not_int"}}',
+                                ),
+                                ("FEEDS", '{"output.json": {"batch_item_count": {}}}'),
+                                ("FEEDS", '{"output.json": {"encoding": 123}}'),
+                                ("FEEDS", '{"output.json": {"encoding": {}}}'),
+                                (
+                                    "FEEDS",
+                                    '{"output.json": {"fields": "not_list_or_dict"}}',
+                                ),
+                                ("FEEDS", '{"output.json": {"fields": [123]}}'),
+                                ("FEEDS", '{"output.json": {"fields": {"key": 123}}}'),
+                                (
+                                    "FEEDS",
+                                    '{"output.json": {"item_classes": "not_list"}}',
+                                ),
+                                ("FEEDS", '{"output.json": {"item_classes": [[]]}}'),
+                                (
+                                    "FEEDS",
+                                    '{"output.json": {"item_classes": ["invalid_path"]}}',
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{"output.json": {"item_filter": "invalid_path"}}',
+                                ),
+                                ("FEEDS", '{"output.json": {"indent": -1}}'),
+                                ("FEEDS", '{"output.json": {"indent": "not_int"}}'),
+                                (
+                                    "FEEDS",
+                                    '{"output.json": {"item_export_kwargs": "not_dict"}}',
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{"output.json": {"item_export_kwargs": {1: "key is invalid"}}}',
+                                ),
+                                ("FEEDS", '{"output.json": {"overwrite": "not_bool"}}'),
+                                ("FEEDS", '{"output.json": {"overwrite": {}}}'),
+                                (
+                                    "FEEDS",
+                                    '{"output.json": {"store_empty": "not_bool"}}',
+                                ),
+                                ("FEEDS", '{"output.json": {"uri_params": "invalid"}}'),
+                                ("FEEDS", '{"output.json": {"uri_params": {}}}'),
+                                (
+                                    "FEEDS",
+                                    '{"output.json": {"postprocessing": ["invalid_path"]}}',
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{"item_classes": [ProductItem], "item_filter": MyFilter, "uri_params": get_uri_params}',
+                                ),
+                                ("JOBDIR", "[]"),
+                                ("LOG_LEVEL", "'FOO'"),
+                                ("LOG_LEVEL", "None"),
+                                ("LOG_LEVEL", "{}"),
+                                ("LOG_VERSIONS", "b'foo,bar'"),
+                                ("LOGSTATS_INTERVAL", "None"),
+                                ("LOGSTATS_INTERVAL", "{}"),
+                                ("PERIODIC_LOG_DELTA", "[]"),
+                                ("PERIODIC_LOG_DELTA", '{1: "key is int"}'),
+                                ("PERIODIC_LOG_DELTA", '{"include": "not_a_list"}'),
+                                ("PERIODIC_LOG_DELTA", '{"include": [123]}'),
+                                ("PERIODIC_LOG_DELTA", '{"include": [{}]}'),
+                                ("PERIODIC_LOG_DELTA", '{"invalid_key": ["stats"]}'),
+                                ("PERIODIC_LOG_DELTA", "'invalid'"),
+                                ("PERIODIC_LOG_DELTA", "False"),
+                                ("SCHEDULER", "123"),
+                            )
+                        ),
+                    ),
+                )
+            ),
         )
     ),
-    # Single setting module
+    # Setting module detection
+    *(
+        (files, issues, {})
+        for default_issues in (default_issues(),)
+        for files, issues in (
+            # - Only modules declared in scrapy.cfg are checked.
+            # - settings.py is not assumed to be a setting module.
+            # - Multiple setting modules are supported.
+            # - module/__init__.py is supported and takes precedence over
+            #   module.py
+            # - Unexisting modules are ignored.
+            (
+                (
+                    File("[settings]\na=b\nc=d\ne=f", path="scrapy.cfg"),
+                    File("", path="a.py"),
+                    File("", path="b.py"),
+                    File("", path="d.py"),
+                    File("", path="d/__init__.py"),
+                    File("", path="settings.py"),
+                ),
+                tuple(
+                    issue.replace(path=path)
+                    for path in ("b.py", "d/__init__.py")
+                    for issue in default_issues
+                ),
+            ),
+            # scrapy.cfg files may miss the [settings] section, in which case
+            # no module is treated as a setting module.
+            (
+                (
+                    File("", path="scrapy.cfg"),
+                    File("", path="a.py"),
+                ),
+                NO_ISSUE,
+            ),
+        )
+    ),
+    # Setting module checks
     *(
         (
             [
@@ -770,7 +1117,7 @@ CASES: Cases = (
                     "DOWNLOAD_DELAY = 1.5",
                     "AUTOTHROTTLE_DEBUG = True",
                     "JOBDIR = 'value'",
-                    'ADDONS = {"addon1": True}',
+                    'ADDONS = {"addon1.Addon": True}',
                     'SPIDER_MODULES = ["myproject.spiders"]',
                     "RETRY_HTTP_CODES = [500, 502]",
                     # Unparseable values
@@ -800,42 +1147,36 @@ CASES: Cases = (
                 "settings['SPIDER_MODULES'] = ['myproject.spiders']",
                 Issue("SCP35 no-op setting update", column=9, path=path),
             ),
-        )
-    ),
-    # Setting module detection and checking
-    *(
-        (files, issues, {})
-        for default_issues in (default_issues(),)
-        for files, issues in (
-            # - Only modules declared in scrapy.cfg are checked.
-            # - settings.py is not assumed to be a setting module.
-            # - Multiple setting modules are supported.
-            # - module/__init__.py is supported and takes precedence over
-            #   module.py
-            # - Unexisting modules are ignored.
+            # Setting value checks for pre-crawler settings
             (
-                (
-                    File("[settings]\na=b\nc=d\ne=f", path="scrapy.cfg"),
-                    File("", path="a.py"),
-                    File("", path="b.py"),
-                    File("", path="d.py"),
-                    File("", path="d/__init__.py"),
-                    File("", path="settings.py"),
-                ),
-                tuple(
-                    issue.replace(path=path)
-                    for path in ("b.py", "d/__init__.py")
-                    for issue in default_issues
-                ),
+                "ADDONS = '{}'",
+                Issue("SCP17 redundant setting value", column=9, path=path),
             ),
-            # scrapy.cfg files may miss the [settings] section, in which case
-            # no module is treated as a setting module.
             (
+                "ADDONS = {}",
+                Issue("SCP17 redundant setting value", column=9, path=path),
+            ),
+            *(
                 (
-                    File("", path="scrapy.cfg"),
-                    File("", path="a.py"),
-                ),
-                NO_ISSUE,
+                    f"ADDONS = {value}",
+                    NO_ISSUE,
+                )
+                for value in (
+                    "{'my.addons.Addon': 100}",
+                    "{'my.addons.Addon': value}",
+                )
+            ),
+            *(
+                (
+                    f"ADDONS = {value}",
+                    Issue("SCP36 invalid setting value", column=9, path=path),
+                )
+                for value in (
+                    "{1: 100}",
+                    "{'myaddons': 100}",
+                    "{Addon: 'foo'}",
+                    "{Addon: {}}",
+                )
             ),
         )
     ),
@@ -912,10 +1253,7 @@ CASES: Cases = (
                 )
             ),
             # SCP09 robots.txt ignored by default
-            *(
-                (f"ROBOTSTXT_OBEY = {value}", 9, ())
-                for value in TRUE_UNKNOWN_OR_INVALID_BOOLS
-            ),
+            *((f"ROBOTSTXT_OBEY = {value}", 9, ()) for value in TRUE_BOOLS),
             *(
                 (
                     f"ROBOTSTXT_OBEY = {value}",
@@ -929,11 +1267,14 @@ CASES: Cases = (
                 )
                 for value in FALSE_BOOLS
             ),
-            # SCP10 incomplete project throttling
-            *(
-                (f"AUTOTHROTTLE_ENABLED = {value}", 10, ())
-                for value in TRUE_UNKNOWN_OR_INVALID_BOOLS
+            ("ROBOTSTXT_OBEY = foo", 9, ()),
+            (
+                "ROBOTSTXT_OBEY = 'foo'",
+                9,
+                (Issue("SCP36 invalid setting value", column=17, path=path),),
             ),
+            # SCP10 incomplete project throttling
+            *((f"AUTOTHROTTLE_ENABLED = {value}", 10, ()) for value in TRUE_BOOLS),
             *(
                 (
                     f"AUTOTHROTTLE_ENABLED = {value}",
@@ -946,6 +1287,12 @@ CASES: Cases = (
                     ),
                 )
                 for value in FALSE_BOOLS
+            ),
+            ("AUTOTHROTTLE_ENABLED = foo", 10, ()),
+            (
+                "AUTOTHROTTLE_ENABLED = 'foo'",
+                10,
+                (Issue("SCP36 invalid setting value", column=23, path=path),),
             ),
             (
                 "CONCURRENT_REQUESTS = 1\nCONCURRENT_REQUESTS_PER_DOMAIN = 1\nDOWNLOAD_DELAY = 5.0",
@@ -1292,6 +1639,68 @@ CASES: Cases = (
                     path=path,
                     column=column,
                 ),
+            ),
+        )
+    ),
+    # Checks bassed on requirements and setting values
+    *(
+        (
+            (
+                File("", path="scrapy.cfg"),
+                File(requirements, path="requirements.txt"),
+                File(f"settings[{name!r}] = {value}", path=path),
+            ),
+            (
+                Issue(
+                    "SCP13 incomplete requirements freeze",
+                    path="requirements.txt",
+                ),
+                *(
+                    (issues,)
+                    if isinstance(issues, Issue)
+                    else issues
+                    if isinstance(issues, Sequence)
+                    else ()
+                ),
+            ),
+            {},
+        )
+        for path in ("a.py",)
+        for requirements, name, value, issues in (
+            # SCP36 invalid setting value: FEEDS keys
+            *(
+                (
+                    f"scrapy=={version}",
+                    "FEEDS",
+                    value,
+                    (
+                        Issue(
+                            "SCP15 insecure requirement: scrapy 2.11.2 implements "
+                            "security fixes",
+                            path="requirements.txt",
+                        ),
+                        *(
+                            Issue("SCP36 invalid setting value", column=20, path=path)
+                            for _ in range(1)
+                            if has_issue
+                        ),
+                    ),
+                )
+                for versions, value in (
+                    (("2.2.0", "2.3.0"), '{"output.json": {"batch_item_count": 100}}'),
+                    (("2.3.0", "2.4.0"), '{"output.json": {"item_export_kwargs": {}}}'),
+                    (("2.3.0", "2.4.0"), '{"output.json": {"overwrite": False}}'),
+                    (
+                        ("2.5.0", "2.6.0"),
+                        '{"output.json": {"item_classes": ["myproject.items.Item"]}}',
+                    ),
+                    (
+                        ("2.5.0", "2.6.0"),
+                        '{"output.json": {"item_filter": "myproject.filters.Filter"}}',
+                    ),
+                    (("2.5.0", "2.6.0"), '{"output.json": {"postprocessing": []}}'),
+                )
+                for version, has_issue in zip(versions, (True, False))
             ),
         )
     ),

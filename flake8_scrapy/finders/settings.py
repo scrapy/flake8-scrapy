@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ast
+import json
 from ast import (
     Assign,
     Attribute,
@@ -13,30 +15,38 @@ from ast import (
     Import,
     ImportFrom,
     In,
+    Lambda,
+    List,
     Load,
     Module,
     Name,
     NodeVisitor,
     NotIn,
+    Set,
     Store,
     Subscript,
+    Tuple,
+    UnaryOp,
+    USub,
     alias,
     expr,
     keyword,
 )
 from ast import walk as iter_nodes
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 from contextlib import suppress
 from difflib import SequenceMatcher
 from importlib.util import find_spec
+from itertools import chain
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Protocol, Union
 
 from packaging.version import Version
 
 from flake8_scrapy.ast import extract_literal_value
 from flake8_scrapy.data.packages import PACKAGES
 from flake8_scrapy.data.settings import (
+    FEEDS_KEY_VERSION_ADDED,
     MAX_AUTOMATIC_SUGGESTIONS,
     MIN_AUTOMATIC_SUGGESTION_SCORE,
     PREDEFINED_SUGGESTIONS,
@@ -52,6 +62,7 @@ from flake8_scrapy.settings import (
     UNKNOWN_FUTURE_VERSION,
     UNKNOWN_SETTING_VALUE,
     UNKNOWN_UNSUPPORTED_VERSION,
+    SettingType,
     UnknownSettingValue,
     UnknownUnsupportedVersion,
     getbool,
@@ -87,8 +98,495 @@ def import_column(node: Import | ImportFrom, alias: alias) -> int:
     return node.col_offset
 
 
+def is_getbool_compatible(node: expr, **kwargs) -> bool:
+    if isinstance(node, (Dict, Lambda, List, Set, Tuple)):
+        return False
+    if not isinstance(node, Constant):
+        return True
+    return node.value in {
+        True,
+        "1",
+        "True",
+        "true",
+        False,
+        "0",
+        "False",
+        "false",
+        None,
+    }
+
+
+def is_getint_compatible(node: expr, **kwargs) -> bool:
+    if isinstance(node, (Dict, Lambda, List, Set, Tuple)):
+        return False
+    if not isinstance(node, Constant):
+        return True
+    try:
+        int(node.value)
+    except (TypeError, ValueError):
+        return False
+    else:
+        return True
+
+
+def is_getfloat_compatible(node: expr, **kwargs) -> bool:
+    if isinstance(node, (Dict, Lambda, List, Set, Tuple)):
+        return False
+    if not isinstance(node, Constant):
+        return True
+    try:
+        float(node.value)
+    except (TypeError, ValueError):
+        return False
+    else:
+        return True
+
+
+def is_getlist_compatible(node: expr, **kwargs) -> bool:
+    if not isinstance(node, Constant):
+        return True
+    value = node.value
+    if not value:
+        return True
+    if isinstance(value, (bytes, bytearray)):
+        return False
+    return isinstance(value, Iterable)
+
+
+def is_getdict_compatible(node: expr, **kwargs) -> bool:
+    if not isinstance(node, Constant):
+        return True
+    value = node.value
+    if value is None:
+        return True
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            return False
+    try:
+        dict(value)
+    except ValueError:
+        return False
+    else:
+        return True
+
+
+def is_getdict_compatible_comp_prio(node: expr, **kwargs) -> bool:
+    if not isinstance(node, Dict):
+        return is_getdict_compatible(node, **kwargs)
+    for key_node in node.keys:
+        if not isinstance(key_node, Constant):
+            continue
+        key = key_node.value
+        if not isinstance(key, str):
+            return False
+        if not is_import_path(key):
+            return False
+    for value_node in node.values:
+        if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
+            return False
+        if not isinstance(value_node, Constant):
+            continue
+        value = value_node.value
+        if not isinstance(value, int):
+            return False
+    return True
+
+
+def is_getwithbase_compatible(node: expr, **kwargs) -> bool:  # noqa: PLR0911
+    if not isinstance(node, (Constant, Dict)):
+        return True
+    if isinstance(node, Constant):
+        value = node.value
+        if value is None:
+            return True
+        if not isinstance(value, str):
+            return False
+        try:
+            data = json.loads(value)
+        except ValueError:
+            return False
+        if not isinstance(data, dict):
+            return False
+        node = ast.parse(repr(data), mode="eval").body
+    assert isinstance(node, Dict)
+    for key_node in node.keys:
+        if not isinstance(key_node, Constant):
+            continue
+        key = key_node.value
+        if not isinstance(key, str):
+            return False
+    return True
+
+
+def is_getwithbase_compatible_comp_prio(node: expr, **kwargs) -> bool:
+    if not isinstance(node, Dict):
+        return is_getwithbase_compatible(node, **kwargs)
+    for key_node in node.keys:
+        if not isinstance(key_node, Constant):
+            continue
+        key = key_node.value
+        if not isinstance(key, str):
+            return False
+        if not is_import_path(key):
+            return False
+    for value_node in node.values:
+        if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
+            return False
+        if not isinstance(value_node, Constant):
+            continue
+        value = value_node.value
+        if value is not None and not isinstance(value, int):
+            return False
+    return True
+
+
+def is_getdictorlist_compatible(node: expr, **kwargs) -> bool:
+    if not isinstance(node, Constant):
+        return True
+    value = node.value
+    return value is None or isinstance(value, str)
+
+
+def is_opt_str(node: expr, **kwargs) -> bool:
+    if isinstance(node, (Dict, Lambda, List, Set, Tuple)):
+        return False
+    if not isinstance(node, Constant):
+        return True
+    value = node.value
+    return value is None or isinstance(value, str)
+
+
+def is_str(node: expr, **kwargs) -> bool:
+    if isinstance(node, (Dict, Lambda, List, Set, Tuple)):
+        return False
+    if not isinstance(node, Constant):
+        return True
+    return isinstance(node.value, str)
+
+
+def is_import_path(value: str, **kwargs) -> bool:
+    if not value:
+        return False
+    parts = value.split(".")
+    return bool(parts and all(part.isidentifier() for part in parts) and len(parts) > 1)
+
+
+def is_callable(node: expr, **kwargs) -> bool:
+    if isinstance(node, (Dict, List, Set, Tuple)):
+        return False
+    if not isinstance(node, Constant):
+        return True
+    value = node.value
+    return isinstance(value, str) and is_import_path(value)
+
+
+def is_opt_callable(node: expr, **kwargs) -> bool:
+    if isinstance(node, (Dict, List, Set, Tuple)):
+        return False
+    if not isinstance(node, Constant):
+        return True
+    value = node.value
+    return value is None or (isinstance(value, str) and is_import_path(value))
+
+
+def is_log_level(node: expr, **kwargs) -> bool:
+    if isinstance(node, (Dict, Lambda, List, Set, Tuple)):
+        return False
+    if not isinstance(node, Constant):
+        return True
+    value = node.value
+    if isinstance(value, int):
+        return True
+    if not isinstance(value, str):
+        return False
+    return value in {
+        "CRITICAL",
+        "FATAL",
+        "ERROR",
+        "WARNING",
+        "WARN",
+        "INFO",
+        "DEBUG",
+        "NOTSET",
+        "critical",
+        "fatal",
+        "error",
+        "warning",
+        "warn",
+        "info",
+        "debug",
+        "notset",
+    }
+
+
+def is_enum_str(node: expr, name: str, **kwargs) -> bool:
+    setting = SETTINGS[name]
+    assert setting.values
+    if isinstance(node, (Dict, Lambda, List, Set, Tuple)):
+        return False
+    if not isinstance(node, Constant):
+        return True
+    return node.value in setting.values
+
+
+def is_periodic_log_config(node: expr, **kwargs) -> bool:  # noqa: PLR0911, PLR0912
+    if isinstance(node, (Lambda, List, Set, Tuple)):
+        return False
+    if isinstance(node, Constant):
+        return node.value is None or node.value is True
+    if not isinstance(node, Dict):
+        return True
+    for key_node in node.keys:
+        if not isinstance(key_node, Constant):
+            continue
+        if not isinstance(key_node.value, str):
+            return False
+        if key_node.value not in {"include", "exclude"}:
+            return False
+    for value_node in node.values:
+        if isinstance(value_node, (Constant, Dict, Lambda)):
+            return False
+        if not isinstance(value_node, (List, Set, Tuple)):
+            continue
+        for item in value_node.elts:
+            if isinstance(item, (Dict, Lambda, List, Set, Tuple)):
+                return False
+            if not isinstance(item, Constant):
+                continue
+            if not isinstance(item.value, str):
+                return False
+    return True
+
+
+def is_opt_int(node: expr, **kwargs) -> bool:
+    if isinstance(node, Constant) and node.value is None:
+        return True
+    return is_getint_compatible(node, **kwargs)
+
+
+def is_download_slots(node: expr, **kwargs) -> bool:  # noqa: PLR0911, PLR0912
+    if isinstance(node, (Lambda, List, Set, Tuple)):
+        return False
+    if isinstance(node, Constant):
+        value = node.value
+        if not isinstance(value, str):
+            return False
+        try:
+            data = json.loads(value)
+        except ValueError:
+            return False
+        if not isinstance(data, dict):
+            return False
+        node = ast.parse(repr(data), mode="eval").body
+    if not isinstance(node, Dict):
+        return True
+    for key_node in node.keys:
+        if not isinstance(key_node, Constant):
+            continue
+        key = key_node.value
+        if not isinstance(key, str):
+            return False
+    for value_node in node.values:
+        if isinstance(value_node, (Constant, Lambda, List, Set, Tuple)):
+            return False
+        if not isinstance(value_node, Dict):
+            continue
+        if not is_slot_config(value_node):
+            return False
+    return True
+
+
+def is_slot_config(node: Dict) -> bool:
+    for key_node, value_node in zip(node.keys, node.values):
+        if not isinstance(key_node, Constant):
+            continue
+        key = key_node.value
+        if key == "concurrency":
+            if isinstance(value_node, Constant) and (
+                not isinstance(value_node.value, int) or value_node.value < 1
+            ):
+                return False
+            if isinstance(value_node, UnaryOp) and isinstance(value_node.op, USub):
+                return False
+        elif key == "delay":
+            if (
+                isinstance(value_node, UnaryOp)
+                and isinstance(value_node.op, USub)
+                and isinstance(value_node.operand, Constant)
+                and isinstance(value_node.operand.value, (int, float))
+                and value_node.operand.value > 0
+            ):
+                return False
+        elif key == "randomize_delay":
+            if isinstance(value_node, Constant) and not isinstance(
+                value_node.value, bool
+            ):
+                return False
+        else:
+            return False
+    return True
+
+
+def is_feeds(node: expr, context: Context, **kwargs) -> bool:  # noqa: PLR0911, PLR0912
+    if isinstance(node, (Lambda, List, Set, Tuple)):
+        return False
+    if isinstance(node, Constant):
+        value = node.value
+        if not isinstance(value, str):
+            return False
+        try:
+            data = json.loads(value)
+        except ValueError:
+            return False
+        if not isinstance(data, dict):
+            return False
+        node = ast.parse(repr(data), mode="eval").body
+    if not isinstance(node, Dict):
+        return True
+    for key_node in node.keys:
+        if not isinstance(key_node, Constant):
+            continue
+        key = key_node.value
+        if not isinstance(key, str):
+            return False
+    for value_node in node.values:
+        if isinstance(value_node, (Constant, Lambda, List, Set, Tuple)):
+            return False
+        if not isinstance(value_node, Dict):
+            continue
+        if not is_feed_config(value_node, context):
+            return False
+    return True
+
+
+def is_feed_config(node: Dict, context: Context) -> bool:  # noqa: PLR0911, PLR0912
+    for key_node, value_node in zip(node.keys, node.values):
+        if not isinstance(key_node, Constant):
+            continue
+        key = key_node.value
+        if key in FEEDS_KEY_VERSION_ADDED:
+            scrapy_version = context.project.frozen_requirements.get("scrapy")
+            if scrapy_version and scrapy_version < FEEDS_KEY_VERSION_ADDED[key]:
+                return False
+        if key == "format":
+            if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
+                return False
+            if isinstance(value_node, Constant) and not isinstance(
+                value_node.value, str
+            ):
+                return False
+        elif key in {"overwrite", "store_empty"}:
+            if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
+                return False
+            if isinstance(value_node, Constant) and not isinstance(
+                value_node.value, bool
+            ):
+                return False
+        elif key in {"batch_item_count", "indent"}:
+            if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
+                return False
+            if isinstance(value_node, Constant) and (
+                not isinstance(value_node.value, int) or value_node.value < 0
+            ):
+                return False
+            if isinstance(value_node, UnaryOp) and isinstance(value_node.op, USub):
+                return False
+        elif key == "encoding":
+            if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
+                return False
+            if (
+                isinstance(value_node, Constant)
+                and not isinstance(value_node.value, str)
+                and value_node.value is not None
+            ):
+                return False
+        elif key in {"item_filter", "uri_params"}:
+            if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
+                return False
+            if isinstance(value_node, Constant) and (
+                not isinstance(value_node.value, str)
+                or not is_import_path(value_node.value)
+            ):
+                return False
+        elif key == "item_export_kwargs":
+            if isinstance(value_node, (Constant, Lambda, List, Set, Tuple)):
+                return False
+            if isinstance(value_node, Dict):
+                for key_elt in value_node.keys:
+                    if not isinstance(key_elt, Constant) or not isinstance(
+                        key_elt.value, str
+                    ):
+                        return False
+        elif key in {"item_classes", "postprocessing"}:
+            if isinstance(value_node, (Constant, Dict, Lambda)):
+                return False
+            if isinstance(value_node, (List, Set, Tuple)):
+                for elt in value_node.elts:
+                    if isinstance(elt, (Dict, Lambda, List, Set, Tuple)):
+                        return False
+                    if isinstance(elt, Constant) and (
+                        not isinstance(elt.value, str) or not is_import_path(elt.value)
+                    ):
+                        return False
+        elif key == "fields":
+            if isinstance(value_node, Constant):
+                if value_node.value is not None:
+                    return False
+            elif isinstance(value_node, (List, Set, Tuple)):
+                for elt in value_node.elts:
+                    if isinstance(elt, Constant) and not isinstance(elt.value, str):
+                        return False
+            elif isinstance(value_node, Dict):
+                for elt in chain(value_node.keys, value_node.values):  # type: ignore[assignment]
+                    if isinstance(elt, Constant) and not isinstance(elt.value, str):
+                        return False
+        else:
+            return False
+    return True
+
+
+class SettingSpecificChecker(Protocol):
+    def __call__(self, node: expr, *, context: Context) -> bool: ...
+
+
+SETTING_CHECKERS: dict[str, SettingSpecificChecker] = {
+    "DOWNLOAD_SLOTS": is_download_slots,
+    "FEEDS": is_feeds,
+}
+
+
+class SettingTypeChecker(Protocol):
+    def __call__(self, node: expr, *, name: str) -> bool: ...
+
+
+SETTING_TYPE_CHECKERS: dict[SettingType, SettingTypeChecker] = {
+    SettingType.BOOL: is_getbool_compatible,
+    SettingType.INT: is_getint_compatible,
+    SettingType.FLOAT: is_getfloat_compatible,
+    SettingType.LIST: is_getlist_compatible,
+    SettingType.DICT: is_getdict_compatible,
+    SettingType.DICT_OR_LIST: is_getdictorlist_compatible,
+    SettingType.BASED_DICT: is_getwithbase_compatible,
+    SettingType.OPT_STR: is_opt_str,
+    SettingType.STR: is_str,
+    SettingType.CALLABLE: is_callable,
+    SettingType.PATH: is_str,
+    SettingType.OPT_PATH: is_opt_str,
+    SettingType.LOG_LEVEL: is_log_level,
+    SettingType.ENUM_STR: is_enum_str,
+    SettingType.PERIODIC_LOG_CONFIG: is_periodic_log_config,
+    SettingType.OPT_CALLABLE: is_opt_callable,
+    SettingType.OPT_INT: is_opt_int,
+    SettingType.COMP_PRIO_DICT: is_getdict_compatible_comp_prio,
+    SettingType.BASED_COMP_PRIO_DICT: is_getwithbase_compatible_comp_prio,
+}
+
+
 class SettingChecker:
     def __init__(self, context: Context, additional_known_settings: set[str]):
+        self.context = context
         self.project = context.project
         self.additional_known_settings = additional_known_settings
         self.allow_pre_crawler_settings = False
@@ -133,7 +631,7 @@ class SettingChecker:
         matches.sort(key=lambda x: (-x[1], x[0]))
         return [m[0] for m in matches[:MAX_AUTOMATIC_SUGGESTIONS]]
 
-    def check_known_name(  # noqa: PLR0912
+    def check_known_name(  # noqa: PLR0911, PLR0912
         self, name: str, node: IssueNode, column: int
     ) -> Generator[Issue, None, None]:
         if name.endswith("_BASE"):
@@ -173,7 +671,8 @@ class SettingChecker:
                 column=column,
             )
             return
-        assert deprecated_in
+        if not deprecated_in:
+            return
         if isinstance(deprecated_in, UnknownUnsupportedVersion):
             deprecated_in = PACKAGES[package].lowest_supported_version
             assert deprecated_in
@@ -359,6 +858,27 @@ class SettingChecker:
                 node=node,
             )
 
+    def check_value(self, name: str, node: expr) -> Generator[Issue, None, None]:
+        if name not in SETTINGS:
+            return
+        if name in SETTING_CHECKERS:
+            if not SETTING_CHECKERS[name](node, context=self.context):
+                yield Issue(
+                    36,
+                    "invalid setting value",
+                    node=node,
+                )
+            return
+        setting = SETTINGS[name]
+        if setting.type is None:
+            return
+        if not SETTING_TYPE_CHECKERS[setting.type](node, name=name):
+            yield Issue(
+                36,
+                "invalid setting value",
+                node=node,
+            )
+
 
 class SettingIssueFinder:
     NON_METHOD_SETTINGS_CALLABLES = ("BaseSettings", "Settings", "overridden_settings")
@@ -367,10 +887,13 @@ class SettingIssueFinder:
         self.setting_checker = setting_checker
 
     def find_issues(
-        self, node: Call | Compare | Subscript | FunctionDef
+        self, node: Assign | Call | Compare | FunctionDef | Subscript
     ) -> Generator[Issue, None, None]:
         if isinstance(node, Call):
             yield from self.find_call_issues(node)
+            return
+        if isinstance(node, Assign):
+            yield from self.find_assign_issues(node)
             return
         if isinstance(node, Subscript):
             yield from self.find_subscript_issues(node)
@@ -419,6 +942,18 @@ class SettingIssueFinder:
                     yield from self.setting_checker.check_dict(keyword.value)
                     return
             return
+
+    def find_assign_issues(self, node: Assign) -> Generator[Issue, None, None]:
+        for target in node.targets:
+            if (
+                isinstance(target, Subscript)
+                and self.looks_like_settings_variable(target.value)
+                and self.looks_like_setting_constant(target.slice)
+            ):
+                assert isinstance(target.slice, Constant)
+                yield from self.setting_checker.check_value(
+                    target.slice.value, node.value
+                )
 
     def looks_like_setting_method(self, func: expr) -> bool:
         if not isinstance(func, Attribute):
@@ -581,12 +1116,14 @@ class SettingsModuleSettingsProcessor:
             self.seen_settings.add(name)
             self.process_setting(name, assignment)
 
-    def process_setting(self, name: str, child: Assign) -> None:
+    def process_setting(self, name: str, assignment: Assign) -> None:
         if name == "AUTOTHROTTLE_ENABLED":
-            self.process_autothrottle(child)
+            self.process_autothrottle(assignment)
         elif name == "ROBOTSTXT_OBEY":
-            self.process_robotstxt(child)
-        self.check_redundant_values(name, child)
+            self.process_robotstxt(assignment)
+        self.check_redundant_values(name, assignment)
+        for issue in self.setting_checker.check_value(name, assignment.value):
+            self.issues.append(issue)
 
     def check_redundant_values(self, name: str, assignment: Assign) -> None:
         if name not in SETTINGS:
