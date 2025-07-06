@@ -42,6 +42,7 @@ class ScrapyStyleIssueFinder(NodeVisitor):
             "Assign": [
                 lambda_callback_issue_finder,
                 OldSelectorIssueFinder(),
+                setting_issue_finder,
                 UnreachableDomainIssueFinder(),
                 UrlInAllowedDomainsIssueFinder(),
             ],

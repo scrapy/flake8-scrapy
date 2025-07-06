@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -76,25 +77,25 @@ def getbool(value: Any) -> bool:
 
 
 class SettingType(Enum):
+    BASED_COMP_PRIO_DICT = "based_comp_prio_dict"
+    BASED_DICT = "based_dict"
     BOOL = "bool"
-    INT = "int"
-    FLOAT = "float"
-    LIST = "list"
+    CALLABLE = "callable"
+    COMP_PRIO_DICT = "comp_prio_dict"
     DICT = "dict"
     DICT_OR_LIST = "dict_or_list"
-    BASED_DICT = "based_dict"
-    OPT_STR = "opt_str"
-    STR = "str"
-    CLS = "cls"
-    PATH = "path"
-    OPT_PATH = "opt_path"
-    LOG_LEVEL = "log_level"
     ENUM_STR = "enum_str"
-    PERIODIC_LOG_CONFIG = "periodic_log_config"
+    FLOAT = "float"
+    INT = "int"
+    LIST = "list"
+    LOG_LEVEL = "log_level"
     OPT_CALLABLE = "opt_callable"
     OPT_INT = "opt_int"
-    COMP_PRIO_DICT = "comp_prio_dict"
-    BASED_COMP_PRIO_DICT = "based_comp_prio_dict"
+    OPT_PATH = "opt_path"
+    OPT_STR = "opt_str"
+    PATH = "path"
+    PERIODIC_LOG_CONFIG = "periodic_log_config"
+    STR = "str"
 
 
 # Missing types use the `get` method.
@@ -188,4 +189,11 @@ class Setting:
             return float(value)
         if self.type == SettingType.STR:
             return str(value)
+        if self.type in {
+            SettingType.DICT,
+            SettingType.BASED_DICT,
+            SettingType.COMP_PRIO_DICT,
+            SettingType.BASED_COMP_PRIO_DICT,
+        } and isinstance(value, str):
+            return json.loads(value)
         return value

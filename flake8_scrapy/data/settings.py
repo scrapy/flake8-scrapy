@@ -50,7 +50,7 @@ SETTINGS = {
     ),
     "ASYNCIO_EVENT_LOOP": Setting(
         added_in=Version("2.4.0"),
-        type=SettingType.CLS,
+        type=SettingType.OPT_CALLABLE,
         default_value=VersionedValue(None),
         is_pre_crawler=True,
     ),
@@ -119,7 +119,7 @@ SETTINGS = {
         default_value=VersionedValue("WARNING"),
     ),
     "DEFAULT_ITEM_CLASS": Setting(
-        type=SettingType.CLS, default_value=VersionedValue("scrapy.item.Item")
+        type=SettingType.CALLABLE, default_value=VersionedValue("scrapy.item.Item")
     ),
     "DEFAULT_REQUEST_HEADERS": Setting(
         type=SettingType.DICT,
@@ -146,7 +146,7 @@ SETTINGS = {
         is_pre_crawler=True,
     ),
     "DNS_RESOLVER": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.resolver.CachingThreadedResolver"),
         is_pre_crawler=True,
     ),
@@ -184,7 +184,7 @@ SETTINGS = {
         type=SettingType.INT, default_value=VersionedValue(32 * 1024 * 1024)
     ),
     "DOWNLOADER": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.core.downloader.Downloader"),
     ),
     "DOWNLOADER_CLIENT_TLS_CIPHERS": Setting(
@@ -199,13 +199,13 @@ SETTINGS = {
         type=SettingType.BOOL, default_value=VersionedValue(False)
     ),
     "DOWNLOADER_CLIENTCONTEXTFACTORY": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue(
             "scrapy.core.downloader.contextfactory.ScrapyClientContextFactory"
         ),
     ),
     "DOWNLOADER_HTTPCLIENTFACTORY": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue(
             "scrapy.core.downloader.webclient.ScrapyHTTPClientFactory"
         ),
@@ -240,7 +240,7 @@ SETTINGS = {
         type=SettingType.BOOL, default_value=VersionedValue(True)
     ),
     "DUPEFILTER_CLASS": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.dupefilters.RFPDupeFilter"),
     ),
     "EDITOR": Setting(
@@ -397,11 +397,11 @@ SETTINGS = {
         type=SettingType.LIST, default_value=VersionedValue(["file"])
     ),
     "HTTPCACHE_POLICY": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.extensions.httpcache.DummyPolicy"),
     ),
     "HTTPCACHE_STORAGE": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue(
             "scrapy.extensions.httpcache.FilesystemCacheStorage"
         ),
@@ -423,7 +423,7 @@ SETTINGS = {
     ),
     "ITEM_PIPELINES_BASE": Setting(default_value=VersionedValue({})),
     "ITEM_PROCESSOR": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.pipelines.ItemPipelineManager"),
     ),
     "JOBDIR": Setting(type=SettingType.OPT_PATH, default_value=VersionedValue(None)),
@@ -447,7 +447,7 @@ SETTINGS = {
         ),
     ),
     "LOG_FORMATTER": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.logformatter.LogFormatter"),
     ),
     "LOG_LEVEL": Setting(
@@ -550,14 +550,14 @@ SETTINGS = {
         type=SettingType.BOOL, default_value=VersionedValue(True)
     ),
     "REFERRER_POLICY": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue(
             "scrapy.spidermiddlewares.referer.DefaultReferrerPolicy"
         ),
     ),
     "REQUEST_FINGERPRINTER_CLASS": Setting(
         added_in=Version("2.7.0"),
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.utils.request.RequestFingerprinter"),
     ),
     "RETRY_ENABLED": Setting(type=SettingType.BOOL, default_value=VersionedValue(True)),
@@ -594,39 +594,39 @@ SETTINGS = {
         type=SettingType.BOOL, default_value=VersionedValue(False)
     ),
     "ROBOTSTXT_PARSER": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.robotstxt.ProtegoRobotParser"),
     ),
     "ROBOTSTXT_USER_AGENT": Setting(
         type=SettingType.OPT_STR, default_value=VersionedValue(None)
     ),
     "SCHEDULER": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.core.scheduler.Scheduler"),
     ),
     "SCHEDULER_DEBUG": Setting(
         type=SettingType.BOOL, default_value=VersionedValue(False)
     ),
     "SCHEDULER_DISK_QUEUE": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.squeues.PickleLifoDiskQueue"),
     ),
     "SCHEDULER_MEMORY_QUEUE": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.squeues.LifoMemoryQueue"),
     ),
     "SCHEDULER_PRIORITY_QUEUE": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.pqueues.ScrapyPriorityQueue"),
     ),
     "SCHEDULER_START_DISK_QUEUE": Setting(
         added_in=Version("2.13.0"),
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.squeues.PickleFifoDiskQueue"),
     ),
     "SCHEDULER_START_MEMORY_QUEUE": Setting(
         added_in=Version("2.13.0"),
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.squeues.FifoMemoryQueue"),
     ),
     "SCRAPER_SLOT_MAX_ACTIVE_SIZE": Setting(
@@ -647,7 +647,7 @@ SETTINGS = {
         )
     ),
     "SPIDER_LOADER_CLASS": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.spiderloader.SpiderLoader"),
         is_pre_crawler=True,
     ),
@@ -678,7 +678,7 @@ SETTINGS = {
         is_pre_crawler=True,
     ),
     "STATS_CLASS": Setting(
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
         default_value=VersionedValue("scrapy.statscollectors.MemoryStatsCollector"),
     ),
     "STATS_DUMP": Setting(type=SettingType.BOOL, default_value=VersionedValue(True)),
@@ -706,7 +706,7 @@ SETTINGS = {
         default_value=UNKNOWN_SETTING_VALUE,
     ),
     "TWISTED_REACTOR": Setting(
-        type=SettingType.CLS,
+        type=SettingType.OPT_CALLABLE,
         default_value=VersionedValue(
             history={
                 Version(
@@ -837,7 +837,7 @@ SETTINGS = {
     "SPIDER_MANAGER_CLASS": Setting(
         removed_in=Version("2.5.0"),
         deprecated_in=Version("1.0.0"),
-        type=SettingType.CLS,
+        type=SettingType.CALLABLE,
     ),
     "LOG_UNSERIALIZABLE_REQUESTS": Setting(
         removed_in=Version("2.1.0"),
