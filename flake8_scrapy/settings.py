@@ -93,6 +93,8 @@ class SettingType(Enum):
     PERIODIC_LOG_CONFIG = "periodic_log_config"
     OPT_CALLABLE = "opt_callable"
     OPT_INT = "opt_int"
+    COMP_PRIO_DICT = "comp_prio_dict"
+    BASED_COMP_PRIO_DICT = "based_comp_prio_dict"
 
 
 # Missing types use the `get` method.
@@ -102,8 +104,26 @@ SETTING_TYPE_GETTERS = {
     SettingType.FLOAT: "getfloat",
     SettingType.LIST: "getlist",
     SettingType.DICT: "getdict",
+    SettingType.COMP_PRIO_DICT: "getdict",
     SettingType.DICT_OR_LIST: "getdictorlist",
     SettingType.BASED_DICT: "getwithbase",
+    SettingType.BASED_COMP_PRIO_DICT: "getwithbase",
+}
+SETTING_UPDATER_TYPES = {
+    "add_to_list": {SettingType.LIST},
+    "remove_from_list": {SettingType.LIST},
+    "replace_in_component_priority_dict": {
+        SettingType.COMP_PRIO_DICT,
+        SettingType.BASED_COMP_PRIO_DICT,
+    },
+    "set_in_component_priority_dict": {
+        SettingType.COMP_PRIO_DICT,
+        SettingType.BASED_COMP_PRIO_DICT,
+    },
+    "setdefault_in_component_priority_dict": {
+        SettingType.COMP_PRIO_DICT,
+        SettingType.BASED_COMP_PRIO_DICT,
+    },
 }
 
 

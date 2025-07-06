@@ -47,6 +47,7 @@ from flake8_scrapy.settings import (
     SETTING_GETTERS,
     SETTING_METHODS,
     SETTING_TYPE_GETTERS,
+    SETTING_UPDATER_TYPES,
     SETTING_UPDATERS,
     UNKNOWN_FUTURE_VERSION,
     UNKNOWN_SETTING_VALUE,
@@ -290,7 +291,7 @@ class SettingChecker:
                 if func.attr != expected:
                     yield Issue(
                         32,
-                        "wrong setting getter",
+                        "wrong setting method",
                         detail=f"use {expected}()",
                         column=column,
                         node=func,
@@ -298,7 +299,7 @@ class SettingChecker:
             elif func.attr not in {"get", "__getitem__"}:
                 yield Issue(
                     32,
-                    "wrong setting getter",
+                    "wrong setting method",
                     detail="use []",
                     column=column,
                     node=func,
@@ -311,6 +312,16 @@ class SettingChecker:
             yield Issue(
                 35,
                 "no-op setting update",
+                node=name_node,
+            )
+        if (
+            setting.type is not None
+            and func.attr in SETTING_UPDATER_TYPES
+            and setting.type not in SETTING_UPDATER_TYPES[func.attr]
+        ):
+            yield Issue(
+                32,
+                "wrong setting method",
                 node=name_node,
             )
 
@@ -330,7 +341,7 @@ class SettingChecker:
             expected = SETTING_TYPE_GETTERS[setting.type]
             yield Issue(
                 32,
-                "wrong setting getter",
+                "wrong setting method",
                 detail=f"use {expected}()",
                 column=column,
                 node=node,

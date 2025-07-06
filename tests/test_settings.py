@@ -338,34 +338,76 @@ CASES: Cases = (
                 "settings['SCRAPY_POET_CACHE']",
                 NO_ISSUE,
             ),
-            # SCP32 wrong setting getter: positional argument
+            # SCP32 wrong setting method: positional argument
             (
                 "settings.getint('LOG_ENABLED')",
-                Issue("SCP32 wrong setting getter: use getbool()", column=9, path=path),
+                Issue("SCP32 wrong setting method: use getbool()", column=9, path=path),
             ),
-            # SCP32 wrong setting getter: keyword argument
+            # SCP32 wrong setting method: keyword argument
             (
                 "settings.get(name='RETRY_TIMES')",
-                Issue("SCP32 wrong setting getter: use getint()", column=9, path=path),
+                Issue("SCP32 wrong setting method: use getint()", column=9, path=path),
             ),
-            # SCP32 wrong setting getter: subscript
+            # SCP32 wrong setting method: subscript
             (
                 "settings['DOWNLOAD_DELAY']",
                 Issue(
-                    "SCP32 wrong setting getter: use getfloat()", column=8, path=path
+                    "SCP32 wrong setting method: use getfloat()", column=8, path=path
                 ),
             ),
-            # SCP32 wrong setting getter: subscript recommendation
+            # SCP32 wrong setting method: subscript recommendation
             (
                 "settings.getint('DEFAULT_DROPITEM_LOG_LEVEL')",
-                Issue("SCP32 wrong setting getter: use []", column=9, path=path),
+                Issue("SCP32 wrong setting method: use []", column=9, path=path),
             ),
-            # SCP32 wrong setting getter: non-getter setting method
+            # SCP32 wrong setting method: list
+            (
+                "settings.add_to_list('LOG_SHORT_NAMES', 'foo')",
+                Issue("SCP32 wrong setting method", column=21, path=path),
+            ),
+            (
+                "settings.add_to_list('LOG_VERSIONS', 'foo')",
+                NO_ISSUE,
+            ),
+            # SCP32 wrong setting method: component priority dict
+            (
+                "settings.replace_in_component_priority_dict('DOWNLOAD_HANDLERS', Old, New)",
+                Issue("SCP32 wrong setting method", column=44, path=path),
+            ),
+            (
+                "settings.replace_in_component_priority_dict('DOWNLOADER_MIDDLEWARES', Old, New)",
+                NO_ISSUE,
+            ),
+            # SCP32 wrong setting method: component priority dict, based
+            (
+                "settings.getdict('DOWNLOADER_MIDDLEWARES')",
+                Issue(
+                    "SCP32 wrong setting method: use getwithbase()", column=9, path=path
+                ),
+            ),
+            # SCP32 wrong setting method: regular dict, based
+            (
+                "settings.getdict('DOWNLOAD_HANDLERS')",
+                Issue(
+                    "SCP32 wrong setting method: use getwithbase()", column=9, path=path
+                ),
+            ),
+            # SCP32 wrong setting method: component priority dict, not based
+            (
+                "settings.getwithbase('ADDONS')",
+                Issue("SCP32 wrong setting method: use getdict()", column=9, path=path),
+            ),
+            # SCP32 wrong setting method: regular dict, not based
+            (
+                "settings.getwithbase('DOWNLOAD_SLOTS')",
+                Issue("SCP32 wrong setting method: use getdict()", column=9, path=path),
+            ),
+            # SCP32 wrong setting method: non-getter setting method
             (
                 "settings.__contains__('DEFAULT_DROPITEM_LOG_LEVEL')",
                 NO_ISSUE,
             ),
-            # SCP32 wrong setting getter: setting with unknown type
+            # SCP32 wrong setting method: setting with unknown type
             (
                 "settings.getdict('DEBUG')",
                 NO_ISSUE,
@@ -1168,7 +1210,7 @@ CASES: Cases = (
                         column=column,
                     ),
                     Issue(
-                        "SCP32 wrong setting getter: use getbool()",
+                        "SCP32 wrong setting method: use getbool()",
                         path=path,
                         column=column - 1,
                     ),
@@ -1187,7 +1229,7 @@ CASES: Cases = (
                         path="requirements.txt",
                     ),
                     Issue(
-                        "SCP32 wrong setting getter: use getbool()",
+                        "SCP32 wrong setting method: use getbool()",
                         path=path,
                         column=column - 1,
                     ),
@@ -1235,7 +1277,7 @@ CASES: Cases = (
                         column=column,
                     ),
                     Issue(
-                        "SCP32 wrong setting getter: use getbool()",
+                        "SCP32 wrong setting method: use getbool()",
                         path=path,
                         column=column - 1,
                     ),
