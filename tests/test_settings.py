@@ -706,15 +706,15 @@ CASES: Cases = (
                     template.format_map(SafeDict(setting=setting, value=value)),
                     Issue(
                         issue,
-                        column=column + len(setting),
+                        column=template_column + len(setting) + value_column,
                         path=path,
                     ),
                 )
-                for template, column, issue, setting, value in zip_uneven_cycle(
+                for template, template_column, issue, setting, value, value_column in zip_uneven_cycle(
                     (("settings['{setting}'] = {value}", 15),),
                     (
                         *(
-                            ("SCP36 invalid setting value", setting, value)
+                            ("SCP36 invalid setting value", setting, value, 0)
                             for setting, value in (
                                 ("AUTOTHROTTLE_ENABLED", "'foo'"),
                                 ("AUTOTHROTTLE_ENABLED", "{}"),
@@ -848,6 +848,23 @@ CASES: Cases = (
                                 ("PERIODIC_LOG_DELTA", "'invalid'"),
                                 ("PERIODIC_LOG_DELTA", "False"),
                                 ("SCHEDULER", "123"),
+                            )
+                        ),
+                        *(
+                            ("SCP37 unpicklable setting value", setting, value, 0)
+                            for setting, value in (
+                                ("FEED_URI_PARAMS", "lambda params, spider: {}"),
+                                ("LOG_VERSIONS", "(k for k in deps)"),
+                            )
+                        ),
+                        *(
+                            ("SCP37 unpicklable setting value", setting, value, column)
+                            for setting, value, column in (
+                                (
+                                    "FEEDS",
+                                    '{"output.jsonl":{"item_classes": (cls for cls in item_classes)}}',
+                                    33,
+                                ),
                             )
                         ),
                     ),

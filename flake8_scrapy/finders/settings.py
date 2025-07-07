@@ -12,6 +12,7 @@ from ast import (
     Del,
     Dict,
     FunctionDef,
+    GeneratorExp,
     Import,
     ImportFrom,
     In,
@@ -859,6 +860,13 @@ class SettingChecker:
             )
 
     def check_value(self, name: str, node: expr) -> Generator[Issue, None, None]:
+        for child in ast.walk(node):
+            if isinstance(child, (GeneratorExp, Lambda)):
+                yield Issue(
+                    37,
+                    "unpicklable setting value",
+                    node=child,
+                )
         if name not in SETTINGS:
             return
         if name in SETTING_CHECKERS:
