@@ -14,8 +14,11 @@ Finds usage of :func:`~urllib.parse.urljoin` that can be replaced with
 Why is this bad?
 ================
 
-:meth:`Response.urljoin() <scrapy.http.Response.urljoin>` is more readable.
+:meth:`Response.urljoin() <scrapy.http.Response.urljoin>`
 
+* uses HTML ``<base>`` tag to properly resolve relative URLs,
+* doesn't require an extra import, and
+* is more readable.
 
 Example
 =======
