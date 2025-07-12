@@ -57,6 +57,7 @@ from flake8_scrapy.issues import Issue
 from flake8_scrapy.settings import (
     SETTING_GETTERS,
     SETTING_METHODS,
+    SETTING_SETTERS,
     SETTING_TYPE_GETTERS,
     SETTING_UPDATER_TYPES,
     SETTING_UPDATERS,
@@ -708,12 +709,17 @@ class SettingChecker:
             for keyword in node.keywords:
                 yield from self.check_name(keyword)
                 yield from self.check_update(keyword)
+                if isinstance(keyword.arg, str):
+                    yield from self.check_value(keyword.arg, keyword.value)
             return
         assert isinstance(node, Dict)
-        for key in node.keys:
-            if isinstance(key, Constant):
-                yield from self.check_name(key)
-                yield from self.check_update(key)
+        for key, value in zip(node.keys, node.values):
+            if not isinstance(key, Constant):
+                continue
+            yield from self.check_name(key)
+            yield from self.check_update(key)
+            if isinstance(key.value, str):
+                yield from self.check_value(key.value, value)
 
     def check_name(
         self,
@@ -783,6 +789,26 @@ class SettingChecker:
         if name not in SETTINGS:
             return
         setting = SETTINGS[name]
+        if (
+            func.attr in SETTING_UPDATERS
+            and setting.is_pre_crawler
+            and not self.allow_pre_crawler_settings
+        ):
+            yield Issue(
+                35,
+                "no-op setting update",
+                node=name_node,
+            )
+        if (
+            setting.type is not None
+            and func.attr in SETTING_UPDATER_TYPES
+            and setting.type not in SETTING_UPDATER_TYPES[func.attr]
+        ):
+            yield Issue(
+                32,
+                "wrong setting method",
+                node=name_node,
+            )
         if func.attr in SETTING_GETTERS and setting.type is not None:
             assert isinstance(func.value, Name)
             column = func.col_offset + len(func.value.id) + 1  # +1 for the dot
@@ -804,26 +830,6 @@ class SettingChecker:
                     column=column,
                     node=func,
                 )
-        if (
-            func.attr in SETTING_UPDATERS
-            and setting.is_pre_crawler
-            and not self.allow_pre_crawler_settings
-        ):
-            yield Issue(
-                35,
-                "no-op setting update",
-                node=name_node,
-            )
-        if (
-            setting.type is not None
-            and func.attr in SETTING_UPDATER_TYPES
-            and setting.type not in SETTING_UPDATER_TYPES[func.attr]
-        ):
-            yield Issue(
-                32,
-                "wrong setting method",
-                node=name_node,
-            )
 
     def check_subscript(
         self, name: str, node: Subscript
@@ -920,25 +926,32 @@ class SettingIssueFinder:
                 self.setting_checker.allow_pre_crawler_settings = False
             return
 
-    def find_call_issues(self, node: Call) -> Generator[Issue, None, None]:
+    def find_call_issues(self, node: Call) -> Generator[Issue, None, None]:  # noqa: PLR0912
         if self.looks_like_setting_method(node.func):
             assert isinstance(node.func, Attribute)
-            if node.args:
-                if isinstance(node.args[0], Constant):
-                    name_constant = node.args[0]
-                    yield from self.setting_checker.check_name(name_constant)
-                    yield from self.setting_checker.check_method(
-                        name_constant, node.func
-                    )
-                return
-            for keyword in node.keywords:
-                if keyword.arg == "name" and isinstance(keyword.value, Constant):
-                    name_constant = keyword.value
-                    yield from self.setting_checker.check_name(name_constant)
-                    yield from self.setting_checker.check_method(
-                        name_constant, node.func
-                    )
-                    return
+            name: Constant | None = None
+            value: expr | None = None
+            if node.args and isinstance(node.args[0], Constant):
+                name = node.args[0]
+            if len(node.args) >= 2:  # noqa: PLR2004
+                value = node.args[1]
+            else:
+                for keyword in node.keywords:
+                    if not node.args and keyword.arg == "name":
+                        if not isinstance(keyword.value, Constant):
+                            return
+                        name = keyword.value
+                    elif keyword.arg == "value":
+                        value = keyword.value
+            if name:
+                yield from self.setting_checker.check_name(name)
+                yield from self.setting_checker.check_method(name, node.func)
+                if (
+                    isinstance(name.value, str)
+                    and value
+                    and node.func.attr in SETTING_SETTERS
+                ):
+                    yield from self.setting_checker.check_value(name.value, value)
             return
 
         if self.looks_like_settings_callable(node.func):
