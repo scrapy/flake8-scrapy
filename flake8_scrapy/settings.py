@@ -39,26 +39,30 @@ SETTING_GETTERS = {
     "getdictorlist",
     "getwithbase",
 }
+# Methods of the Settings class that set an entire setting value.
+SETTING_SETTERS = {
+    "__setitem__",
+    "set",
+    "setdefault",
+}
 # Methods of the Settings class that delete or change a setting value.
 SETTING_UPDATERS = {
+    *SETTING_SETTERS,
     "__delitem__",
-    "__setitem__",
     "add_to_list",
     "delete",
     "pop",
     "remove_from_list",
     "replace_in_component_priority_dict",
-    "set",
     "set_in_component_priority_dict",
-    "setdefault",
     "setdefault_in_component_priority_dict",
 }
 # Methods of the Settings class that get a setting name as parameter.
 SETTING_METHODS = {
-    "__contains__",
-    "__init__",
     *SETTING_GETTERS,
     *SETTING_UPDATERS,
+    "__contains__",
+    "__init__",
     "getpriority",
 }
 

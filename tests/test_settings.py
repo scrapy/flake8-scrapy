@@ -29,6 +29,21 @@ def test_type_checkers():
 FALSE_BOOLS = ("False", "'false'", "0")
 TRUE_BOOLS = ("True", "'true'", "1")
 
+# (template, setting column, value column - setting length)
+SETTING_VALUE_CHECK_TEMPLATES = (
+    ("settings['{setting}'] = {value}", 9, 15),
+    ("BaseSettings({{'{setting}': {value}}})", 14, 18),
+    ("settings.set(name='{setting}', value={value})", 18, 28),
+    ("settings.setdefault('{setting}', {value}, 'addon')", 20, 24),
+    ("settings.Settings(dict({setting}={value}))", 23, 24),
+    ("crawler.settings.__setitem__('{setting}', {value})", 29, 33),
+    (
+        "scrapy.settings.overridden_settings(settings={{'{setting}': {value}}})",
+        46,
+        50,
+    ),
+)
+
 
 class SafeDict(dict):
     def __missing__(self, key):
@@ -232,6 +247,10 @@ CASES: Cases = (
             # ignoring non-str keys,
             (
                 "Settings({1: 'bar'})",
+                NO_ISSUE,
+            ),
+            (
+                "Settings({foo: 'bar'})",
                 NO_ISSUE,
             ),
             # supporting different parameter syntaxes,
@@ -443,19 +462,11 @@ CASES: Cases = (
                 )
                 for template, column, setting, value in zip_uneven_cycle(
                     (
-                        ("settings.delete('{setting}')", 16),
-                        ("settings.pop(name='{setting}')", 18),
-                        ("settings.set(name='{setting}', value={value})", 18),
-                        ("settings.setdefault('{setting}', {value}, 'addon')", 20),
-                        ("settings['{setting}'] = {value}", 9),
-                        ("del self.settings['{setting}']", 18),
-                        ("settings.__delitem__('{setting}')", 21),
-                        ("crawler.settings.__setitem__('{setting}', {value})", 29),
-                        ("BaseSettings({{'{setting}': {value}}})", 14),
-                        ("settings.Settings(dict({setting}={value}))", 23),
-                        (
-                            "scrapy.settings.overridden_settings(settings={{'{setting}': {value}}})",
-                            46,
+                        *(
+                            (template, setting_column)
+                            for template, setting_column, _ in SETTING_VALUE_CHECK_TEMPLATES[
+                                :13
+                            ]
                         ),
                     ),
                     (
@@ -560,7 +571,12 @@ CASES: Cases = (
                     NO_ISSUE,
                 )
                 for template, setting, value in zip_uneven_cycle(
-                    (("settings['{setting}'] = {value}",),),
+                    (
+                        *(
+                            (template,)
+                            for template, _, _ in SETTING_VALUE_CHECK_TEMPLATES
+                        ),
+                    ),
                     (
                         # Valid values
                         ("AWS_ACCESS_KEY_ID", '"AKIAIOSFODNN7EXAMPLE"'),
@@ -706,12 +722,17 @@ CASES: Cases = (
                     template.format_map(SafeDict(setting=setting, value=value)),
                     Issue(
                         issue,
-                        column=template_column + len(setting) + value_column,
+                        column=template_column + len(setting) + value_offset,
                         path=path,
                     ),
                 )
-                for template, template_column, issue, setting, value, value_column in zip_uneven_cycle(
-                    (("settings['{setting}'] = {value}", 15),),
+                for template, template_column, issue, setting, value, value_offset in zip_uneven_cycle(
+                    (
+                        *(
+                            (template, value_column)
+                            for template, _, value_column in SETTING_VALUE_CHECK_TEMPLATES
+                        ),
+                    ),
                     (
                         *(
                             ("SCP36 invalid setting value", setting, value, 0)
