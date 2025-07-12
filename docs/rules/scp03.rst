@@ -16,7 +16,7 @@ Why is this bad?
 
 :meth:`Response.urljoin() <scrapy.http.Response.urljoin>`
 
-* uses HTML ``<base>`` tag to properly resolve relative URLs,
+* uses the HTML ``<base>`` tag to properly resolve relative URLs,
 * doesn't require an extra import, and
 * is more readable.
 
