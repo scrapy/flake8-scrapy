@@ -305,6 +305,38 @@ CASES: Cases = (
                 "'FOO' in foo",
                 NO_ISSUE,
             ),
+            # BaseSetting setter methods trigger setting value checks,
+            *(
+                (
+                    f"settings.{method_name}('BOT_NAME', None)",
+                    Issue(
+                        "SCP36 invalid setting value",
+                        column=len(method_name) + 22,
+                        path=path,
+                    ),
+                )
+                for method_name in (
+                    "__setitem__",
+                    "set",
+                    "setdefault",
+                )
+            ),
+            # regardless of parameter syntax used.
+            *(
+                (
+                    f"settings.set({params})",
+                    Issue(
+                        "SCP36 invalid setting value",
+                        column=13 + column_offset,
+                        path=path,
+                    ),
+                )
+                for params, column_offset in (
+                    ("'BOT_NAME', value=None", 18),
+                    ("name='BOT_NAME', value=None", 23),
+                    ("value=None, name='BOT_NAME'", 6),
+                )
+            ),
             # SCP27 unknown setting
             *(
                 (
