@@ -1,8 +1,8 @@
 .. _scp01:
 
-==================================
-SCP01: Start URL domain disallowed
-==================================
+========================
+SCP01: Disallowed domain
+========================
 
 What it does
 ============
@@ -34,10 +34,9 @@ Example
 
     class MySpider(scrapy.Spider):
         name = "myspider"
-        allowed_domains = ["a.example"]
+        allowed_domains = ["b.example"]
         start_urls = [
             "https://a.example/",
-            "https://b.example/",
         ]
 
 Use instead:
@@ -49,8 +48,7 @@ Use instead:
 
     class MySpider(scrapy.Spider):
         name = "myspider"
-        allowed_domains = ["a.example", "b.example"]
+        allowed_domains = ["a.example"]
         start_urls = [
             "https://a.example/",
-            "https://b.example/",
         ]

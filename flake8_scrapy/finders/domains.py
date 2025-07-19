@@ -23,7 +23,7 @@ def is_list_assignment(node, var_name):
 
 class UnreachableDomainIssueFinder(IssueFinder):
     msg_code = "SCP01"
-    msg_info = "allowed_domains doesn't allow this URL from start_urls"
+    msg_info = "disallowed domain"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -51,7 +51,7 @@ class UnreachableDomainIssueFinder(IssueFinder):
 
 class UrlInAllowedDomainsIssueFinder(IssueFinder):
     msg_code = "SCP02"
-    msg_info = "allowed_domains should not contain URLs"
+    msg_info = "URL in allowed_domains"
 
     def is_url(self, domain):
         # when it's just a domain (as 'toscrape.com'), the parsed URL contains
