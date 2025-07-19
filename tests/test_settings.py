@@ -10,7 +10,7 @@ from flake8_scrapy.finders.settings import SETTING_TYPE_CHECKERS
 from flake8_scrapy.settings import SettingType
 from tests.helpers import check_project
 
-from . import NO_ISSUE, Cases, File, Issue, cases
+from . import NO_ISSUE, Cases, File, Issue, cases, iter_issues
 from .test_requirements import (
     SCRAPY_ANCIENT_VERSION,
     SCRAPY_FUTURE_VERSION,
@@ -1306,7 +1306,10 @@ CASES: Cases = (
                 File("[settings]\na=a", path="scrapy.cfg"),
                 File(code, path=path),
             ],
-            (*default_issues(path, exclude=exclude), *issues),
+            (
+                *default_issues(path, exclude=exclude),
+                *iter_issues(issues),
+            ),
             {},
         )
         for path in ["a.py"]
@@ -1344,30 +1347,10 @@ CASES: Cases = (
                 (Issue("SCP36 invalid setting value", column=17, path=path),),
             ),
             # SCP10 incomplete project throttling
-            *((f"AUTOTHROTTLE_ENABLED = {value}", 10, ()) for value in TRUE_BOOLS),
-            *(
-                (
-                    f"AUTOTHROTTLE_ENABLED = {value}",
-                    10,
-                    (
-                        Issue(
-                            "SCP10 incomplete project throttling", column=0, path=path
-                        ),
-                        Issue("SCP17 redundant setting value", column=23, path=path),
-                    ),
-                )
-                for value in FALSE_BOOLS
-            ),
-            ("AUTOTHROTTLE_ENABLED = foo", 10, ()),
             (
-                "AUTOTHROTTLE_ENABLED = 'foo'",
+                "CONCURRENT_REQUESTS_PER_DOMAIN = 1\nDOWNLOAD_DELAY = 1.0",
                 10,
-                (Issue("SCP36 invalid setting value", column=23, path=path),),
-            ),
-            (
-                "CONCURRENT_REQUESTS = 1\nCONCURRENT_REQUESTS_PER_DOMAIN = 1\nDOWNLOAD_DELAY = 5.0",
-                10,
-                (),
+                NO_ISSUE,
             ),
             *(
                 (
@@ -1380,10 +1363,42 @@ CASES: Cases = (
                     ),
                 )
                 for code in (
-                    "CONCURRENT_REQUESTS = 1\nCONCURRENT_REQUESTS_PER_DOMAIN = 1",
-                    "CONCURRENT_REQUESTS = 1\nDOWNLOAD_DELAY = 5.0",
-                    "CONCURRENT_REQUESTS_PER_DOMAIN = 1\nDOWNLOAD_DELAY = 5.0",
+                    "CONCURRENT_REQUESTS_PER_DOMAIN = 1",
+                    "DOWNLOAD_DELAY = 1.0",
                 )
+            ),
+            # SCP10 incomplete project throttling: AUTOTHROTTLE is ignored
+            *(
+                (
+                    f"AUTOTHROTTLE_ENABLED = {value}",
+                    10,
+                    Issue("SCP10 incomplete project throttling", path=path),
+                )
+                for value in TRUE_BOOLS
+            ),
+            (
+                "AUTOTHROTTLE_ENABLED = foo",
+                10,
+                Issue("SCP10 incomplete project throttling", path=path),
+            ),
+            (
+                "AUTOTHROTTLE_ENABLED = 'foo'",
+                10,
+                (
+                    Issue("SCP10 incomplete project throttling", path=path),
+                    Issue("SCP36 invalid setting value", column=23, path=path),
+                ),
+            ),
+            *(
+                (
+                    f"AUTOTHROTTLE_ENABLED = {value}",
+                    10,
+                    (
+                        Issue("SCP10 incomplete project throttling", path=path),
+                        Issue("SCP17 redundant setting value", column=23, path=path),
+                    ),
+                )
+                for value in FALSE_BOOLS
             ),
             # SCP34 missing changing setting: FEED_EXPORT_ENCODING
             ("FEED_EXPORT_ENCODING = 'utf-8'", 34, ()),
@@ -1404,13 +1419,7 @@ CASES: Cases = (
                     "SCP13 incomplete requirements freeze",
                     path="requirements.txt",
                 ),
-                *(
-                    (issues,)
-                    if isinstance(issues, Issue)
-                    else issues
-                    if isinstance(issues, Sequence)
-                    else ()
-                ),
+                *iter_issues(issues),
             ),
             {},
         )
@@ -1725,13 +1734,7 @@ CASES: Cases = (
                     "SCP13 incomplete requirements freeze",
                     path="requirements.txt",
                 ),
-                *(
-                    (issues,)
-                    if isinstance(issues, Issue)
-                    else issues
-                    if isinstance(issues, Sequence)
-                    else ()
-                ),
+                *iter_issues(issues),
             ),
             {},
         )

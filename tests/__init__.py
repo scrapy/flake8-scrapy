@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 import os
 import sys
-from collections.abc import Sequence
+from collections.abc import Generator, Iterable, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -131,3 +131,12 @@ def cases(test_cases: Cases) -> Callable:
         )(func)
 
     return decorator
+
+
+def iter_issues(issues: Iterable[Issue] | Issue | None) -> Generator[Issue, None, None]:
+    if issues is None:
+        return
+    if isinstance(issues, Issue):
+        yield issues
+        return
+    yield from issues
