@@ -142,8 +142,17 @@ CASES: Cases = (
             *(
                 (
                     f"settings.{method_name}('FOO')",
-                    Issue(
-                        "SCP27 unknown setting", column=len(method_name) + 10, path=path
+                    (
+                        Issue(
+                            "SCP27 unknown setting",
+                            column=len(method_name) + 10,
+                            path=path,
+                        ),
+                        *(
+                            Issue("SCP40 unneeded setting get", column=8, path=path)
+                            for _ in range(1)
+                            if method_name == "get"
+                        ),
                     ),
                 )
                 for method_name in (
@@ -176,20 +185,29 @@ CASES: Cases = (
             *(
                 (
                     f"settings.get({params})",
-                    Issue(
-                        "SCP27 unknown setting", column=13 + column_offset, path=path
+                    (
+                        Issue(
+                            "SCP27 unknown setting",
+                            column=13 + column_offset,
+                            path=path,
+                        ),
+                        *(
+                            Issue("SCP40 unneeded setting get", column=8, path=path)
+                            for _ in range(1)
+                            if not has_default
+                        ),
                     ),
                 )
-                for params, column_offset in (
-                    ("name='FOO'", 5),
-                    ("'FOO', foo", 0),
-                    ("'FOO', default=foo", 0),
-                    ("name='FOO', default=foo", 5),
-                    ("default=foo, name='FOO'", 18),
+                for params, column_offset, has_default in (
+                    ("name='FOO'", 5, False),
+                    ("'FOO', foo", 0, True),
+                    ("'FOO', default=foo", 0, True),
+                    ("name='FOO', default=foo", 5, True),
+                    ("default=foo, name='FOO'", 18, True),
                     # and even if parameters do not match the expected function
                     # signature, since the similarities could suggest that it
                     # is still about a setting name.
-                    ("'FOO', foo, bar", 0),
+                    ("'FOO', foo, bar", 0, True),
                 )
             ),
             # and not triggering issues with unparseable values.
@@ -407,7 +425,12 @@ CASES: Cases = (
             # SCP32 wrong setting method: keyword argument
             (
                 "settings.get(name='RETRY_TIMES')",
-                Issue("SCP32 wrong setting method: use getint()", column=9, path=path),
+                (
+                    Issue(
+                        "SCP32 wrong setting method: use getint()", column=9, path=path
+                    ),
+                    Issue("SCP40 unneeded setting get", column=8, path=path),
+                ),
             ),
             # SCP32 wrong setting method: subscript
             (
@@ -596,6 +619,28 @@ CASES: Cases = (
                 ),
                 NO_ISSUE,
             ),
+            # SCP40 unneeded setting get
+            *(
+                (
+                    code,
+                    Issue("SCP40 unneeded setting get", column=8, path=path),
+                )
+                for code in (
+                    "settings.get('DOWNLOADER')",
+                    "settings.get('DOWNLOADER', None)",
+                    "settings.get('DOWNLOADER', default=None)",
+                    "settings.get(name='DOWNLOADER', default=None)",
+                )
+            ),
+            *(
+                (code, NO_ISSUE)
+                for code in (
+                    "settings['DOWNLOADER']",
+                    "settings.get('DOWNLOADER', foo)",
+                )
+            ),
+            # SCP40 unneeded setting get: alternative call syntaxes
+            # …
             # Setting value checks
             *(
                 (
@@ -1020,8 +1065,8 @@ CASES: Cases = (
             ("BOT_NAME = 'a'", NO_ISSUE),
             # Non-setting-module specific checks for Python files also apply
             (
-                "settings.get('FOO')",
-                Issue("SCP27 unknown setting", column=13, path=path),
+                "settings['FOO']",
+                Issue("SCP27 unknown setting", column=9, path=path),
             ),
             # Setting name checks work with module-specific setting syntax
             *(
