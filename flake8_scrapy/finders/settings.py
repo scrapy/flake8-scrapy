@@ -393,17 +393,14 @@ def is_opt_int(node: expr, **kwargs) -> bool:
     return is_getint_compatible(node, **kwargs)
 
 
-def is_download_slots(node: expr, **kwargs) -> bool:  # noqa: PLR0911, PLR0912
+def is_download_slots(node: expr, **kwargs) -> bool:  # noqa: PLR0911
     if isinstance(node, (Lambda, List, Set, Tuple)):
         return False
     if isinstance(node, Constant):
         value = node.value
         if not isinstance(value, str):
             return False
-        try:
-            data = json.loads(value)
-        except ValueError:
-            return False
+        data = json.loads(value)
         if not isinstance(data, dict):
             return False
         node = ast.parse(repr(data), mode="eval").body
@@ -456,17 +453,14 @@ def is_slot_config(node: Dict) -> bool:
     return True
 
 
-def is_feeds(node: expr, context: Context, **kwargs) -> bool:  # noqa: PLR0911, PLR0912
+def is_feeds(node: expr, context: Context, **kwargs) -> bool:  # noqa: PLR0911
     if isinstance(node, (Lambda, List, Set, Tuple)):
         return False
     if isinstance(node, Constant):
         value = node.value
         if not isinstance(value, str):
             return False
-        try:
-            data = json.loads(value)
-        except ValueError:
-            return False
+        data = json.loads(value)
         if not isinstance(data, dict):
             return False
         node = ast.parse(repr(data), mode="eval").body
