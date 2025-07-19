@@ -74,6 +74,7 @@ from flake8_scrapy.issues import (
     ROBOTS_TXT_IGNORED_BY_DEFAULT,
     SETTING_NEEDS_UPGRADE,
     UNKNOWN_SETTING,
+    UNNEEDED_SETTING_GET,
     WRONG_SETTING_METHOD,
     Issue,
     Pos,
@@ -392,17 +393,14 @@ def is_opt_int(node: expr, **kwargs) -> bool:
     return is_getint_compatible(node, **kwargs)
 
 
-def is_download_slots(node: expr, **kwargs) -> bool:  # noqa: PLR0911, PLR0912
+def is_download_slots(node: expr, **kwargs) -> bool:  # noqa: PLR0911
     if isinstance(node, (Lambda, List, Set, Tuple)):
         return False
     if isinstance(node, Constant):
         value = node.value
         if not isinstance(value, str):
             return False
-        try:
-            data = json.loads(value)
-        except ValueError:
-            return False
+        data = json.loads(value)
         if not isinstance(data, dict):
             return False
         node = ast.parse(repr(data), mode="eval").body
@@ -455,17 +453,14 @@ def is_slot_config(node: Dict) -> bool:
     return True
 
 
-def is_feeds(node: expr, context: Context, **kwargs) -> bool:  # noqa: PLR0911, PLR0912
+def is_feeds(node: expr, context: Context, **kwargs) -> bool:  # noqa: PLR0911
     if isinstance(node, (Lambda, List, Set, Tuple)):
         return False
     if isinstance(node, Constant):
         value = node.value
         if not isinstance(value, str):
             return False
-        try:
-            data = json.loads(value)
-        except ValueError:
-            return False
+        data = json.loads(value)
         if not isinstance(data, dict):
             return False
         node = ast.parse(repr(data), mode="eval").body
@@ -933,28 +928,40 @@ class SettingIssueFinder:
         if self.looks_like_setting_method(node.func):
             assert isinstance(node.func, Attribute)
             name: Constant | None = None
-            value: expr | None = None
+            value_or_default: expr | None = None
             if node.args and isinstance(node.args[0], Constant):
                 name = node.args[0]
             if len(node.args) >= 2:  # noqa: PLR2004
-                value = node.args[1]
+                value_or_default = node.args[1]
             else:
                 for keyword in node.keywords:
                     if not node.args and keyword.arg == "name":
                         if not isinstance(keyword.value, Constant):
                             return
                         name = keyword.value
-                    elif keyword.arg == "value":
-                        value = keyword.value
-            if name:
-                yield from self.setting_checker.check_name(name)
-                yield from self.setting_checker.check_method(name, node.func)
-                if (
-                    isinstance(name.value, str)
-                    and value
-                    and node.func.attr in SETTING_SETTERS
-                ):
-                    yield from self.setting_checker.check_value(name.value, value)
+                    elif keyword.arg in {"value", "default"}:
+                        value_or_default = keyword.value
+            if not name:
+                return
+            yield from self.setting_checker.check_name(name)
+            yield from self.setting_checker.check_method(name, node.func)
+            if node.func.attr in SETTING_SETTERS:
+                if isinstance(name.value, str) and value_or_default:
+                    yield from self.setting_checker.check_value(
+                        name.value, value_or_default
+                    )
+            elif node.func.attr == "get" and (
+                value_or_default is None
+                or (
+                    isinstance(value_or_default, Constant)
+                    and value_or_default.value is None
+                )
+            ):
+                pos = Pos.from_node(
+                    node.func.value.end_lineno,
+                    node.func.value.end_col_offset,
+                )
+                yield Issue(UNNEEDED_SETTING_GET, pos)
             return
 
         if self.looks_like_settings_callable(node.func):
