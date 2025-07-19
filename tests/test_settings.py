@@ -1445,6 +1445,19 @@ CASES: Cases = (
                     Issue("SCP38 low project throttling", line=2, column=17, path=path),
                 ),
             ),
+            (
+                "CONCURRENT_REQUESTS_PER_DOMAIN = foo\nDOWNLOAD_DELAY = bar",
+                10,
+                NO_ISSUE,
+            ),
+            (
+                "CONCURRENT_REQUESTS_PER_DOMAIN = 'foo'\nDOWNLOAD_DELAY = 'bar'",
+                10,
+                (
+                    Issue("SCP36 invalid setting value", column=33, path=path),
+                    Issue("SCP36 invalid setting value", line=2, column=17, path=path),
+                ),
+            ),
         )
     ),
     # Checks bassed on requirements and setting names
