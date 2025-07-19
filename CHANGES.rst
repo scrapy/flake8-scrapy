@@ -1,13 +1,56 @@
-=======================
-flake8-scrapy changelog
-=======================
+=============
+Release notes
+=============
 
 0.1.0 (unreleased)
 ==================
 
--   Drop Python 3.8 support, add Python 3.9+ support.
+-   Dropped Python 3.8 support, added Python 3.9+ support.
 
--   Require Scrapy 2.0.1+.
+-   Requires Scrapy 2.0.1+.
+
+-   Added 36 new rules:
+
+    | :ref:`scp05`
+    | :ref:`scp06`
+    | :ref:`scp07`
+    | :ref:`scp08`
+    | :ref:`scp09`
+    | :ref:`scp10`
+    | :ref:`scp11`
+    | :ref:`scp12`
+    | :ref:`scp13`
+    | :ref:`scp14`
+    | :ref:`scp15`
+    | :ref:`scp16`
+    | :ref:`scp17`
+    | :ref:`scp18`
+    | :ref:`scp19`
+    | :ref:`scp20`
+    | :ref:`scp21`
+    | :ref:`scp22`
+    | :ref:`scp23`
+    | :ref:`scp24`
+    | :ref:`scp25`
+    | :ref:`scp26`
+    | :ref:`scp27`
+    | :ref:`scp28`
+    | :ref:`scp29`
+    | :ref:`scp30`
+    | :ref:`scp31`
+    | :ref:`scp32`
+    | :ref:`scp33`
+    | :ref:`scp34`
+    | :ref:`scp35`
+    | :ref:`scp36`
+    | :ref:`scp37`
+    | :ref:`scp38`
+    | :ref:`scp39`
+    | :ref:`scp40`
+
+-   Added `documentation <https://flake8-scrapy.readthedocs.io/en/latest/>`_.
+
+-   Improved CI and achieved full test coverage.
 
 
 Earlier releases
