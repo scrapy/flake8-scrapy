@@ -23,10 +23,6 @@ NO_ISSUE = None
 pytest.register_assert_rewrite("tests.helpers")
 
 
-def load_sample_file(filename):
-    return (Path(__file__).parent / "samples" / filename).read_text()
-
-
 class MockParser:
     def __init__(self):
         self.options = {}
