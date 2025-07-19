@@ -1157,8 +1157,6 @@ CASES: Cases = (
                     ("BOT_NAME", "'scrapybot'"),
                     ("CONCURRENT_REQUESTS", "16"),
                     ("COOKIES_ENABLED", "True"),
-                    ("DOWNLOAD_DELAY", "0"),
-                    ("DOWNLOAD_DELAY", "0.0"),
                     ("COOKIES_ENABLED", '"true"'),
                     ("COOKIES_ENABLED", '"True"'),
                     ("COOKIES_ENABLED", "1"),
@@ -1175,6 +1173,30 @@ CASES: Cases = (
                         '{"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en"}',
                     ),
                     ("ASYNCIO_EVENT_LOOP", "None"),
+                )
+            ),
+            *(
+                (
+                    f"{name} = {value}",
+                    (
+                        Issue(
+                            "SCP17 redundant setting value",
+                            line=1,
+                            column=len(name) + 3,
+                            path=path,
+                        ),
+                        *iter_issues(issues),
+                    ),
+                )
+                for name, value, issues in (
+                    *(
+                        (
+                            "DOWNLOAD_DELAY",
+                            value,
+                            Issue("SCP38 low project throttling", column=17, path=path),
+                        )
+                        for value in ("0", "0.0")
+                    ),
                 )
             ),
             *(
@@ -1404,6 +1426,25 @@ CASES: Cases = (
             ("FEED_EXPORT_ENCODING = 'utf-8'", 34, ()),
             ("FEED_EXPORT_ENCODING = None", 34, ()),
             ("FEED_EXPORT_ENCODING = 'foo'", 34, ()),
+            # SCP38 low project throttling
+            (
+                "CONCURRENT_REQUESTS_PER_DOMAIN = 1\nDOWNLOAD_DELAY = 5.0",
+                10,
+                NO_ISSUE,
+            ),
+            (
+                "CONCURRENT_REQUESTS_PER_DOMAIN = 1\nDOWNLOAD_DELAY = 1.0",
+                10,
+                NO_ISSUE,
+            ),
+            (
+                "CONCURRENT_REQUESTS_PER_DOMAIN = 2\nDOWNLOAD_DELAY = 0.9",
+                10,
+                (
+                    Issue("SCP38 low project throttling", column=33, path=path),
+                    Issue("SCP38 low project throttling", line=2, column=17, path=path),
+                ),
+            ),
         )
     ),
     # Checks bassed on requirements and setting names

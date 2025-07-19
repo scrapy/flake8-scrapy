@@ -60,6 +60,7 @@ from flake8_scrapy.issues import (
     IMPROPER_SETTING_DEFINITION,
     INCOMPLETE_PROJECT_THROTTLING,
     INVALID_SETTING_VALUE,
+    LOW_PROJECT_THROTTLING,
     MISSING_CHANGING_SETTING,
     MISSING_SETTING_REQUIREMENT,
     NO_OP_SETTING_UPDATE,
@@ -1071,6 +1072,7 @@ class SettingsModuleSettingsProcessor:
         if name == "ROBOTSTXT_OBEY":
             self.process_robotstxt(assignment)
         self.check_redundant_values(name, assignment)
+        self.check_throttling(name, assignment)
         for issue in self.setting_checker.check_value(name, assignment.value):
             self.issues.append(issue)
 
@@ -1092,6 +1094,20 @@ class SettingsModuleSettingsProcessor:
             self.redundant_values.append(
                 (name, assignment.value.lineno, assignment.value.col_offset)
             )
+
+    def check_throttling(self, name: str, assignment: Assign) -> None:
+        if name not in {"CONCURRENT_REQUESTS_PER_DOMAIN", "DOWNLOAD_DELAY"}:
+            return
+        if not isinstance(assignment.value, Constant):
+            return
+        value = assignment.value.value
+        if not isinstance(value, (int, float)):
+            return
+        if (name == "CONCURRENT_REQUESTS_PER_DOMAIN" and value > 1) or (
+            name == "DOWNLOAD_DELAY" and value < 1.0
+        ):
+            pos = Pos.from_node(assignment.value)
+            self.issues.append(Issue(LOW_PROJECT_THROTTLING, pos))
 
     def process_robotstxt(self, child: Assign) -> None:
         value = True
