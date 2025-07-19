@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-from . import NO_ISSUE, File, Issue, cases
+from . import NO_ISSUE, File, Issue, cases, iter_issues
 from .helpers import check_project
 
 
@@ -41,13 +41,7 @@ CASES = [
             ),
             (
                 *default_issues(),
-                *(
-                    issues
-                    if isinstance(issues, Sequence)
-                    else (issues,)
-                    if isinstance(issues, Issue)
-                    else ()
-                ),
+                *iter_issues(issues),
             ),
             {},
         )

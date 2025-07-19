@@ -60,6 +60,7 @@ from flake8_scrapy.issues import (
     IMPROPER_SETTING_DEFINITION,
     INCOMPLETE_PROJECT_THROTTLING,
     INVALID_SETTING_VALUE,
+    LOW_PROJECT_THROTTLING,
     MISSING_CHANGING_SETTING,
     MISSING_SETTING_REQUIREMENT,
     NO_OP_SETTING_UPDATE,
@@ -1052,7 +1053,6 @@ class SettingsModuleSettingsProcessor:
     def __init__(self, context: Context, setting_checker: SettingChecker):
         self.context = context
         self.seen_settings: set[str] = set()
-        self.autothrottle_enabled = False
         self.robotstxt_obey_values: list[tuple[bool, int, int]] = []
         self.redundant_values: list[tuple[str, int, int]] = []
         self.issues: list[Issue] = []
@@ -1069,11 +1069,10 @@ class SettingsModuleSettingsProcessor:
             self.process_setting(name, assignment)
 
     def process_setting(self, name: str, assignment: Assign) -> None:
-        if name == "AUTOTHROTTLE_ENABLED":
-            self.process_autothrottle(assignment)
-        elif name == "ROBOTSTXT_OBEY":
+        if name == "ROBOTSTXT_OBEY":
             self.process_robotstxt(assignment)
         self.check_redundant_values(name, assignment)
+        self.check_throttling(name, assignment)
         for issue in self.setting_checker.check_value(name, assignment.value):
             self.issues.append(issue)
 
@@ -1096,26 +1095,19 @@ class SettingsModuleSettingsProcessor:
                 (name, assignment.value.lineno, assignment.value.col_offset)
             )
 
-    def process_autothrottle(self, child: Assign) -> None:
-        if not isinstance(child.value, Constant):
-            self.autothrottle_enabled = True
-        else:
-            try:
-                value = getbool(child.value.value)
-            except ValueError:
-                # If the value is not a valid boolean, assume True
-                # to avoid reporting the setting as being disabled,
-                # and instead let a check about wrong setting
-                # values handle it.
-                self.autothrottle_enabled = True
-            else:
-                # Unlike with ROBOTSTXT_OBEY, we do not keep track
-                # of the line and column here because SCP10 can be
-                # silenced even if AUTOTHROTTLE_ENABLED is set to
-                # False by defining other concurrency settings, so
-                # a specific False value is not *the* reason why
-                # SCP10 triggers.
-                self.autothrottle_enabled = value
+    def check_throttling(self, name: str, assignment: Assign) -> None:
+        if name not in {"CONCURRENT_REQUESTS_PER_DOMAIN", "DOWNLOAD_DELAY"}:
+            return
+        if not isinstance(assignment.value, Constant):
+            return
+        value = assignment.value.value
+        if not isinstance(value, (int, float)):
+            return
+        if (name == "CONCURRENT_REQUESTS_PER_DOMAIN" and value > 1) or (
+            name == "DOWNLOAD_DELAY" and value < 1.0
+        ):
+            pos = Pos.from_node(assignment.value)
+            self.issues.append(Issue(LOW_PROJECT_THROTTLING, pos))
 
     def process_robotstxt(self, child: Assign) -> None:
         value = True
@@ -1150,10 +1142,9 @@ class SettingsModuleSettingsProcessor:
             self.issues.append(Issue(ROBOTS_TXT_IGNORED_BY_DEFAULT, Pos(line, column)))
 
     def validate_throttling(self) -> None:
-        if not self.autothrottle_enabled and not all(
+        if not all(
             setting in self.seen_settings
             for setting in (
-                "CONCURRENT_REQUESTS",
                 "CONCURRENT_REQUESTS_PER_DOMAIN",
                 "DOWNLOAD_DELAY",
             )
