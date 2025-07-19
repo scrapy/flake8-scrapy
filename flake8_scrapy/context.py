@@ -1,20 +1,23 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from configparser import ConfigParser
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
-from packaging.requirements import InvalidRequirement, Requirement
-from packaging.utils import canonicalize_name
 from packaging.version import Version
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
+from flake8_scrapy.requirements import iter_requirement_lines
+
 if TYPE_CHECKING:
     from ast import AST
     from collections.abc import Sequence
+
+    from packaging.requirements import Requirement
 
 
 @dataclass
@@ -101,30 +104,27 @@ class Project:
         return None
 
     @cached_property
-    def frozen_requirements(self) -> dict[str, Version]:
+    def _requirements(self) -> dict[str, list[Requirement]]:
         content = self.requirements_text
         if content is None:
             return {}
-        versions = {}
-        for line in content.splitlines():
-            line = line.strip()  # noqa: PLW2901
-            if not line or line.startswith("#"):
-                continue
-            if "#" in line:
-                line = line.split("#", 1)[0].strip()  # noqa: PLW2901
-            try:
-                requirement = Requirement(line)
-            except InvalidRequirement:
-                continue
-            # Only process if it's a frozen dependency (==version)
-            if len(requirement.specifier) != 1:
-                continue
-            spec = next(iter(requirement.specifier))
-            if spec.operator != "==":
-                continue
-            canonical_name = cast("str", canonicalize_name(requirement.name))
-            versions[canonical_name] = Version(spec.version)
-        return versions
+        result = defaultdict(list)
+        for _, name, requirement in iter_requirement_lines(content.splitlines()):
+            result[name].append(requirement)
+        return result
+
+    @cached_property
+    def frozen_requirements(self) -> dict[str, Version]:
+        result = {}
+        for name, requirements in self._requirements.items():
+            for requirement in requirements:
+                if len(requirement.specifier) != 1:
+                    continue
+                spec = next(iter(requirement.specifier))
+                if spec.operator != "==":
+                    continue
+                result[name] = Version(spec.version)
+        return result
 
     @cached_property
     def requirements_text(self) -> str | None:
@@ -137,24 +137,8 @@ class Project:
             return None
 
     @cached_property
-    def requirements(self) -> set[str]:
-        content = self.requirements_text
-        if content is None:
-            return set()
-        versions = set()
-        for line in content.splitlines():
-            line = line.strip()  # noqa: PLW2901
-            if not line or line.startswith("#"):
-                continue
-            if "#" in line:
-                line = line.split("#", 1)[0].strip()  # noqa: PLW2901
-            try:
-                requirement = Requirement(line)
-            except InvalidRequirement:
-                continue
-            canonical_name = cast("str", canonicalize_name(requirement.name))
-            versions.add(canonical_name)
-        return versions
+    def packages(self) -> set[str]:
+        return set(self._requirements)
 
 
 @dataclass

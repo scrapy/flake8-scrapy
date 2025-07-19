@@ -4,6 +4,8 @@ import ast
 from ast import Assign, Attribute, Call, Name, expr
 from typing import TYPE_CHECKING
 
+from flake8_scrapy.issues import LAMBDA_CALLBACK, Issue, Pos
+
 from . import IssueFinder
 
 if TYPE_CHECKING:
@@ -62,9 +64,6 @@ def import_path_from_attribute(attr: expr) -> tuple[str, ...]:
 
 
 class LambdaCallbackIssueFinder(IssueFinder):
-    msg_code = "SCP05"
-    msg_info = "lambda callback"
-
     def looks_like_request(self, func: expr):
         return (
             isinstance(func, Name)
@@ -97,9 +96,7 @@ class LambdaCallbackIssueFinder(IssueFinder):
         """Check if this looks like a FormRequest.from_response() call."""
         return isinstance(func, Attribute) and func.attr == "from_response"
 
-    def find_issues(
-        self, node: Call | Assign
-    ) -> Generator[tuple[int, int, str], None, None]:
+    def find_issues(self, node: Call | Assign) -> Generator[Issue, None, None]:
         if isinstance(node, Call):
             yield from self._find_issues_in_call(node)
         elif isinstance(node, Assign):
@@ -107,7 +104,7 @@ class LambdaCallbackIssueFinder(IssueFinder):
 
     def _check_lambda_callbacks_positional(
         self, node: Call
-    ) -> Generator[tuple[int, int, str], None, None]:
+    ) -> Generator[Issue, None, None]:
         """Check for lambda callbacks in positional arguments."""
         for position in (
             1,  # callback
@@ -116,26 +113,24 @@ class LambdaCallbackIssueFinder(IssueFinder):
             if len(node.args) > position:
                 arg = node.args[position]
                 if isinstance(arg, ast.Lambda):
-                    yield (arg.lineno, arg.col_offset, self.message)
+                    yield Issue(LAMBDA_CALLBACK, Pos.from_node(arg))
 
     def _check_lambda_callbacks_keyword_only(
         self, node: Call
-    ) -> Generator[tuple[int, int, str], None, None]:
+    ) -> Generator[Issue, None, None]:
         """Check for lambda callbacks in keyword arguments only."""
         for kw in node.keywords:
             if kw.arg in {"callback", "errback"} and isinstance(kw.value, ast.Lambda):
-                yield (kw.value.lineno, kw.value.col_offset, self.message)
+                yield Issue(LAMBDA_CALLBACK, Pos.from_node(kw.value))
 
     def _check_lambda_callbacks_in_call(
         self, node: Call
-    ) -> Generator[tuple[int, int, str], None, None]:
+    ) -> Generator[Issue, None, None]:
         """Check for lambda callbacks in call arguments (both positional and keyword)."""
         yield from self._check_lambda_callbacks_positional(node)
         yield from self._check_lambda_callbacks_keyword_only(node)
 
-    def _find_issues_in_call(
-        self, node: Call
-    ) -> Generator[tuple[int, int, str], None, None]:
+    def _find_issues_in_call(self, node: Call) -> Generator[Issue, None, None]:
         if (
             self.looks_like_request(node.func)
             or self.looks_like_request_replace(node.func)
@@ -145,9 +140,7 @@ class LambdaCallbackIssueFinder(IssueFinder):
         elif self.looks_like_from_response(node.func):
             yield from self._check_lambda_callbacks_keyword_only(node)
 
-    def _find_issues_in_assign(
-        self, node: Assign
-    ) -> Generator[tuple[int, int, str], None, None]:
+    def _find_issues_in_assign(self, node: Assign) -> Generator[Issue, None, None]:
         # Check for assignments like obj.callback = lambda x: x or obj.errback = lambda x: x
         if not isinstance(node.value, ast.Lambda):
             return
@@ -159,4 +152,4 @@ class LambdaCallbackIssueFinder(IssueFinder):
         )
 
         if has_callback_errback_target:
-            yield (node.value.lineno, node.value.col_offset, self.message)
+            yield Issue(LAMBDA_CALLBACK, Pos.from_node(node.value))

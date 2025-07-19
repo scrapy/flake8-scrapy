@@ -2,6 +2,8 @@ import ast
 from collections.abc import Generator
 from urllib.parse import urlparse
 
+from flake8_scrapy.issues import DISALLOWED_DOMAIN, URL_IN_ALLOWED_DOMAINS, Issue, Pos
+
 from . import IssueFinder
 
 
@@ -22,9 +24,6 @@ def is_list_assignment(node, var_name):
 
 
 class UnreachableDomainIssueFinder(IssueFinder):
-    msg_code = "SCP01"
-    msg_info = "disallowed domain"
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.allowed_domains = []
@@ -34,7 +33,7 @@ class UnreachableDomainIssueFinder(IssueFinder):
         netloc = urlparse(url).netloc
         return any(domain in netloc for _, _, domain in self.allowed_domains)
 
-    def find_issues(self, node) -> Generator[tuple[int, int, str], None, None]:
+    def find_issues(self, node) -> Generator[Issue, None, None]:
         if is_list_assignment(node, var_name="allowed_domains"):
             self.allowed_domains = get_list_metadata(node)
 
@@ -44,15 +43,12 @@ class UnreachableDomainIssueFinder(IssueFinder):
         if not all((self.allowed_domains, self.start_urls)):
             return
 
-        for line, col, url in self.start_urls:
+        for line, column, url in self.start_urls:
             if not self.url_in_allowed_domains(url):
-                yield (line, col, self.message)
+                yield Issue(DISALLOWED_DOMAIN, Pos(line, column))
 
 
 class UrlInAllowedDomainsIssueFinder(IssueFinder):
-    msg_code = "SCP02"
-    msg_info = "URL in allowed_domains"
-
     def is_url(self, domain):
         # when it's just a domain (as 'toscrape.com'), the parsed URL contains
         # only the 'path' component
@@ -66,10 +62,10 @@ class UrlInAllowedDomainsIssueFinder(IssueFinder):
         parts = urlparse(domain)
         return any(getattr(parts, comp, None) for comp in forbidden_components)
 
-    def find_issues(self, node):
+    def find_issues(self, node) -> Generator[Issue, None, None]:
         if is_list_assignment(node, var_name="allowed_domains"):
             allowed_domains = get_list_metadata(node)
 
-            for line, col, url in allowed_domains:
+            for line, column, url in allowed_domains:
                 if self.is_url(url):
-                    yield (line, col, self.message)
+                    yield Issue(URL_IN_ALLOWED_DOMAINS, Pos(line, column))

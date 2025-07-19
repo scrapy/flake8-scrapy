@@ -1,38 +1,33 @@
 import ast
+from collections.abc import Generator
+
+from flake8_scrapy.issues import (
+    IMPROPER_FIRST_MATCH_EXTRACTION,
+    IMPROPER_RESPONSE_SELECTOR,
+    IMPROPER_RESPONSE_URL_JOIN,
+    Issue,
+    Pos,
+)
 
 from . import IssueFinder
 
 
 class UrlJoinIssueFinder(IssueFinder):
-    msg_code = "SCP03"
-    msg_info = (
-        'urljoin(response.url, "/foo") can be replaced by response.urljoin("/foo")'
-    )
-
-    def find_issues(self, node):
-        if not self.issue_applies(node):
+    def find_issues(self, node) -> Generator[Issue, None, None]:
+        if not (
+            isinstance(node.func, ast.Name) and node.func.id == "urljoin" and node.args
+        ):
             return
-
         first_param = node.args[0]
         if not isinstance(first_param, ast.Attribute) or not isinstance(
             first_param.value, ast.Name
         ):
             return
-
         if first_param.value.id == "response" and first_param.attr == "url":
-            # found it: first param to urljoin is response.url
-            yield (node.lineno, node.col_offset, self.message)
-
-    def issue_applies(self, node):
-        return (
-            isinstance(node.func, ast.Name) and node.func.id == "urljoin" and node.args
-        )
+            yield Issue(IMPROPER_RESPONSE_URL_JOIN, Pos.from_node(node))
 
 
 class OldSelectorIssueFinder(IssueFinder):
-    msg_code = "SCP04"
-    msg_info = "use response.selector or response.xpath or response.css instead"
-
     def is_response_dot_body_as_unicode(self, node):
         """Returns True if node represents response.body_as_unicode()"""
         return (
@@ -74,29 +69,26 @@ class OldSelectorIssueFinder(IssueFinder):
             and node.value.func.id == "Selector"
         )
 
-    def find_issues(self, node):
+    def find_issues(self, node) -> Generator[Issue, None, None]:
         if not self.issue_applies(node):
-            return None
+            return
 
         # look for: Selector(response)
         if node.value.args:
             param = node.value.args[0]
             if self.is_response(param):
-                return [(node.lineno, node.col_offset, self.message)]
+                yield Issue(IMPROPER_RESPONSE_SELECTOR, Pos.from_node(node))
+                return
 
         # look for: Selector(response=response) or Selector(text=response.text)
         for kw in node.value.keywords:
             if self.has_response_for_keyword_parameter(kw):
-                return [(node.lineno, node.col_offset, self.message)]
-
-        return None
+                yield Issue(IMPROPER_RESPONSE_SELECTOR, Pos.from_node(node))
+                return
 
 
 class GetFirstByIndexIssueFinder(IssueFinder):
-    msg_code = "SCP06"
-    msg_info = "use .get() to get the first item"
-
-    def find_issues(self, node):
+    def find_issues(self, node) -> Generator[Issue, None, None]:
         node_func = node.func
         if not (
             isinstance(node_func, ast.Attribute)
@@ -126,11 +118,11 @@ class GetFirstByIndexIssueFinder(IssueFinder):
         ):
             return
 
-        yield (node.lineno, node.col_offset, self.message)
+        yield Issue(IMPROPER_FIRST_MATCH_EXTRACTION, Pos.from_node(node))
 
 
 class ExtractThenIndexIssueFinder(GetFirstByIndexIssueFinder):
-    def find_issues(self, node):
+    def find_issues(self, node) -> Generator[Issue, None, None]:
         if not isinstance(node.slice, ast.Constant):
             return
         if node.slice.value != 0:
@@ -149,4 +141,4 @@ class ExtractThenIndexIssueFinder(GetFirstByIndexIssueFinder):
             and extract_target.func.attr in ("css", "xpath")
         ):
             return
-        yield (node.lineno, node.col_offset, self.message)
+        yield Issue(IMPROPER_FIRST_MATCH_EXTRACTION, Pos.from_node(node))

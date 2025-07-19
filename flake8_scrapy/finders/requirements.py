@@ -2,15 +2,24 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from packaging.requirements import InvalidRequirement, Requirement
-from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
 from flake8_scrapy.data.packages import PACKAGES
-from flake8_scrapy.issues import Issue
+from flake8_scrapy.issues import (
+    INSECURE_REQUIREMENT,
+    MISSING_STACK_REQUIREMENTS,
+    PARTIAL_FREEZE,
+    UNMAINTAINED_REQUIREMENT,
+    UNSUPPORTED_REQUIREMENT,
+    Issue,
+    Pos,
+)
+from flake8_scrapy.requirements import iter_requirement_lines
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+
+    from packaging.requirements import Requirement
 
     from flake8_scrapy.context import Context
 
@@ -67,15 +76,9 @@ class RequirementsIssueFinder:
     def check(self) -> Generator[Issue, None, None]:
         packages: set[str] = set()
         assert self.context.file.lines is not None
-        for line_number, line in enumerate(self.context.file.lines, start=1):
-            line = line.strip()  # noqa: PLW2901
-            if not line or line.startswith("#"):
-                continue
-            try:
-                requirement = Requirement(line)
-            except InvalidRequirement:
-                continue
-            name = canonicalize_name(requirement.name)
+        for line_number, name, requirement in iter_requirement_lines(
+            self.context.file.lines
+        ):
             packages.add(name)
             if name not in PACKAGES:
                 continue
@@ -86,7 +89,7 @@ class RequirementsIssueFinder:
             yield from self.check_package_version(name, version, line_number)
         missing_deps = self.REQUIRED_DEPENDENCIES - packages
         if missing_deps or not packages:
-            yield Issue(13, "incomplete requirements freeze")
+            yield Issue(PARTIAL_FREEZE)
         yield from self.check_scrapy_cloud_stack_requirements(packages)
 
     @staticmethod
@@ -109,31 +112,23 @@ class RequirementsIssueFinder:
                 if len(package.replacements) == 1
                 else f"one of: {', '.join(package.replacements)}"
             )
-            yield Issue(
-                16, "unmaintained requirement", f"replace with {replacement}", line=line
-            )
+            detail = f"replace with {replacement}"
+            yield Issue(UNMAINTAINED_REQUIREMENT, Pos(line), detail)
 
     def check_package_version(
         self, name: str, version: Version, line: int
     ) -> Generator[Issue, None, None]:
         package = PACKAGES[name]
+        pos = Pos(line)
         if (
             package.lowest_supported_version
             and version < package.lowest_supported_version
         ):
-            yield Issue(
-                14,
-                "unsupported requirement",
-                f"flake8-scrapy only supports {name} {package.lowest_supported_version}+",
-                line=line,
-            )
+            detail = f"flake8-scrapy only supports {name} {package.lowest_supported_version}+"
+            yield Issue(UNSUPPORTED_REQUIREMENT, pos, detail)
         if package.lowest_safe_version and version < package.lowest_safe_version:
-            yield Issue(
-                15,
-                "insecure requirement",
-                f"{name} {package.lowest_safe_version} implements security fixes",
-                line=line,
-            )
+            detail = f"{name} {package.lowest_safe_version} implements security fixes"
+            yield Issue(INSECURE_REQUIREMENT, pos, detail)
 
     def check_scrapy_cloud_stack_requirements(
         self, packages: set[str]
@@ -147,4 +142,4 @@ class RequirementsIssueFinder:
         if not missing:
             return
         detail = f"missing packages: {', '.join(sorted(missing))}"
-        yield Issue(24, "missing stack requirements", detail)
+        yield Issue(MISSING_STACK_REQUIREMENTS, detail=detail)

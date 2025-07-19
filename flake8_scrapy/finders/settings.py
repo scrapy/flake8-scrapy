@@ -53,7 +53,28 @@ from flake8_scrapy.data.settings import (
     PREDEFINED_SUGGESTIONS,
     SETTINGS,
 )
-from flake8_scrapy.issues import Issue
+from flake8_scrapy.issues import (
+    BASE_SETTING_USE,
+    DEPRECATED_SETTING,
+    IMPORTED_SETTING,
+    IMPROPER_SETTING_DEFINITION,
+    INCOMPLETE_PROJECT_THROTTLING,
+    INVALID_SETTING_VALUE,
+    MISSING_CHANGING_SETTING,
+    MISSING_SETTING_REQUIREMENT,
+    NO_OP_SETTING_UPDATE,
+    NO_PROJECT_USER_AGENT,
+    NON_PICKLABLE_SETTING,
+    REDEFINED_SETTING,
+    REDUNDANT_SETTING_VALUE,
+    REMOVED_SETTING,
+    ROBOTS_TXT_IGNORED_BY_DEFAULT,
+    SETTING_NEEDS_UPGRADE,
+    UNKNOWN_SETTING,
+    WRONG_SETTING_METHOD,
+    Issue,
+    Pos,
+)
 from flake8_scrapy.settings import (
     SETTING_GETTERS,
     SETTING_METHODS,
@@ -597,14 +618,14 @@ class SettingChecker:
         return name in SETTINGS or name in self.additional_known_settings
 
     def is_supported_setting(self, setting: str) -> bool:
-        if not self.project.requirements:
+        if not self.project.packages:
             return True
         assert setting in SETTINGS
         setting_info = SETTINGS[setting]
         if setting_info.package not in self.project.frozen_requirements or (
             not setting_info.added_in and not setting_info.deprecated_in
         ):
-            return setting_info.package in self.project.requirements
+            return setting_info.package in self.project.packages
         deprecated_in = setting_info.deprecated_in
         if isinstance(deprecated_in, UnknownUnsupportedVersion):
             deprecated_in = PACKAGES[setting_info.package].lowest_supported_version
@@ -634,28 +655,17 @@ class SettingChecker:
         return [m[0] for m in matches[:MAX_AUTOMATIC_SUGGESTIONS]]
 
     def check_known_name(  # noqa: PLR0911, PLR0912
-        self, name: str, node: IssueNode, column: int
+        self, name: str, pos: Pos
     ) -> Generator[Issue, None, None]:
         if name.endswith("_BASE"):
-            yield Issue(
-                33,
-                "base setting use",
-                node=node,
-                column=column,
-            )
+            yield Issue(BASE_SETTING_USE, pos)
         if name not in SETTINGS:
             return
         setting = SETTINGS[name]
         package = setting.package
         if package not in self.project.frozen_requirements:
             if self.project.frozen_requirements:
-                yield Issue(
-                    31,
-                    "missing setting requirement",
-                    detail=package,
-                    node=node,
-                    column=column,
-                )
+                yield Issue(MISSING_SETTING_REQUIREMENT, pos, package)
             return
         added_in = setting.added_in
         deprecated_in = setting.deprecated_in
@@ -664,14 +674,7 @@ class SettingChecker:
             return
         version = self.project.frozen_requirements[package]
         if added_in and version < added_in:
-            detail = f"added in {package} {added_in}"
-            yield Issue(
-                29,
-                "setting needs upgrade",
-                detail=detail,
-                node=node,
-                column=column,
-            )
+            yield Issue(SETTING_NEEDS_UPGRADE, pos, f"added in {package} {added_in}")
             return
         if not deprecated_in:
             return
@@ -687,18 +690,12 @@ class SettingChecker:
             detail = f"deprecated in {package} {deprecated_in}"
         if removed_in and version >= removed_in:
             detail += f", removed in {removed_in}"
-            code, message = 30, "removed setting"
+            issue = REMOVED_SETTING
         else:
-            code, message = 28, "deprecated setting"
+            issue = DEPRECATED_SETTING
         if setting.sunset_guidance:
             detail += f"; {setting.sunset_guidance}"
-        yield Issue(
-            code,
-            message,
-            detail=detail,
-            node=node,
-            column=column,
-        )
+        yield Issue(issue, pos, detail)
 
     def check_dict(self, node: expr) -> Generator[Issue, None, None]:
         if not isinstance(node, (Call, Dict)):
@@ -756,19 +753,14 @@ class SettingChecker:
             column = definition_column(resolved_node)
         else:
             column = resolved_node.col_offset
+        pos = Pos.from_node(resolved_node, column)
         if not self.is_known_setting(name):
             detail = None
             if suggestions := self.suggest_names(name):
                 detail = f"did you mean: {', '.join(suggestions)}?"
-            yield Issue(
-                27,
-                "unknown setting",
-                detail=detail,
-                node=resolved_node,
-                column=column,
-            )
+            yield Issue(UNKNOWN_SETTING, pos, detail)
             return
-        yield from self.check_known_name(name, resolved_node, column)
+        yield from self.check_known_name(name, pos)
 
     def check_update(self, node: keyword | Constant) -> Generator[Issue, None, None]:
         name = node.value if isinstance(node, Constant) else node.arg
@@ -776,11 +768,7 @@ class SettingChecker:
             return
         setting = SETTINGS[name]
         if setting.is_pre_crawler and not self.allow_pre_crawler_settings:
-            yield Issue(
-                35,
-                "no-op setting update",
-                node=node,
-            )
+            yield Issue(NO_OP_SETTING_UPDATE, Pos.from_node(node))
 
     def check_method(
         self, name_node: Constant, func: Attribute
@@ -789,47 +777,29 @@ class SettingChecker:
         if name not in SETTINGS:
             return
         setting = SETTINGS[name]
+        name_pos = Pos.from_node(name_node)
         if (
             func.attr in SETTING_UPDATERS
             and setting.is_pre_crawler
             and not self.allow_pre_crawler_settings
         ):
-            yield Issue(
-                35,
-                "no-op setting update",
-                node=name_node,
-            )
+            yield Issue(NO_OP_SETTING_UPDATE, name_pos)
         if (
             setting.type is not None
             and func.attr in SETTING_UPDATER_TYPES
             and setting.type not in SETTING_UPDATER_TYPES[func.attr]
         ):
-            yield Issue(
-                32,
-                "wrong setting method",
-                node=name_node,
-            )
+            yield Issue(WRONG_SETTING_METHOD, name_pos)
         if func.attr in SETTING_GETTERS and setting.type is not None:
             assert isinstance(func.value, Name)
             column = func.col_offset + len(func.value.id) + 1  # +1 for the dot
+            pos = Pos.from_node(func, column)
             if setting.type in SETTING_TYPE_GETTERS:
                 expected = SETTING_TYPE_GETTERS[setting.type]
                 if func.attr != expected:
-                    yield Issue(
-                        32,
-                        "wrong setting method",
-                        detail=f"use {expected}()",
-                        column=column,
-                        node=func,
-                    )
+                    yield Issue(WRONG_SETTING_METHOD, pos, f"use {expected}()")
             elif func.attr not in {"get", "__getitem__"}:
-                yield Issue(
-                    32,
-                    "wrong setting method",
-                    detail="use []",
-                    column=column,
-                    node=func,
-                )
+                yield Issue(WRONG_SETTING_METHOD, pos, "use []")
 
     def check_subscript(
         self, name: str, node: Subscript
@@ -845,53 +815,32 @@ class SettingChecker:
             assert isinstance(node.value, Name)
             column = node.value.col_offset + len(node.value.id)
             expected = SETTING_TYPE_GETTERS[setting.type]
-            yield Issue(
-                32,
-                "wrong setting method",
-                detail=f"use {expected}()",
-                column=column,
-                node=node,
-            )
+            pos = Pos.from_node(node, column)
+            yield Issue(WRONG_SETTING_METHOD, pos, f"use {expected}()")
         if (
             isinstance(node.ctx, (Store, Del))
             and setting.is_pre_crawler
             and not self.allow_pre_crawler_settings
         ):
             column = getattr(node.slice, "col_offset", node.col_offset + 1)
-            yield Issue(
-                35,
-                "no-op setting update",
-                column=column,
-                node=node,
-            )
+            yield Issue(NO_OP_SETTING_UPDATE, Pos.from_node(node, column))
 
     def check_value(self, name: str, node: expr) -> Generator[Issue, None, None]:
         for child in ast.walk(node):
             if isinstance(child, (GeneratorExp, Lambda)):
-                yield Issue(
-                    37,
-                    "unpicklable setting value",
-                    node=child,
-                )
+                yield Issue(NON_PICKLABLE_SETTING, Pos.from_node(child))
         if name not in SETTINGS:
             return
+        pos = Pos.from_node(node)
         if name in SETTING_CHECKERS:
             if not SETTING_CHECKERS[name](node, context=self.context):
-                yield Issue(
-                    36,
-                    "invalid setting value",
-                    node=node,
-                )
+                yield Issue(INVALID_SETTING_VALUE, pos)
             return
         setting = SETTINGS[name]
         if setting.type is None:
             return
         if not SETTING_TYPE_CHECKERS[setting.type](node, name=name):
-            yield Issue(
-                36,
-                "invalid setting value",
-                node=node,
-            )
+            yield Issue(INVALID_SETTING_VALUE, pos)
 
 
 class SettingIssueFinder:
@@ -1066,17 +1015,12 @@ class SettingModuleIssueFinder(NodeVisitor):
             if not (isinstance(target, Name) and target.id.isupper()):
                 continue
             name = target.id
+            pos = Pos.from_node(node)
             if name in seen:
-                self.issues.append(
-                    Issue(
-                        7,
-                        "redefined setting",
-                        detail=f"seen first at line {seen[name]}",
-                        node=node,
-                    )
-                )
+                detail = f"seen first at line {seen[name]}"
+                self.issues.append(Issue(REDEFINED_SETTING, pos, detail))
                 continue
-            seen[name] = node.lineno
+            seen[name] = pos.line
         return seen
 
     def check_import_statement(self, node: Import | ImportFrom) -> None:
@@ -1084,14 +1028,8 @@ class SettingModuleIssueFinder(NodeVisitor):
             name = import_alias.asname if import_alias.asname else import_alias.name
             if not (name and name.isupper()):
                 continue
-            self.issues.append(
-                Issue(
-                    12,
-                    "imported setting",
-                    node=node,
-                    column=import_column(node, import_alias),
-                )
-            )
+            pos = Pos.from_node(node, import_column(node, import_alias))
+            self.issues.append(Issue(IMPORTED_SETTING, pos))
             for issue in self.setting_checker.check_name((node, import_alias)):
                 self.issues.append(issue)
 
@@ -1103,17 +1041,10 @@ class SettingModuleIssueFinder(NodeVisitor):
             elif isinstance(child, (ClassDef, FunctionDef)):
                 if not child.name.isupper():
                     continue
-                self.issues.append(
-                    Issue(
-                        11,
-                        "improper setting definition",
-                        node=child,
-                        column=definition_column(child),
-                    )
-                )
+                pos = Pos.from_node(child, definition_column(child))
+                self.issues.append(Issue(IMPROPER_SETTING_DEFINITION, pos))
                 for issue in self.setting_checker.check_name(child):
                     self.issues.append(issue)
-
         self.issues.extend(processor.get_issues())
 
 
@@ -1209,16 +1140,14 @@ class SettingsModuleSettingsProcessor:
 
     def validate_user_agent(self) -> None:
         if "USER_AGENT" not in self.seen_settings:
-            self.issues.append(Issue(8, "no project USER_AGENT"))
+            self.issues.append(Issue(NO_PROJECT_USER_AGENT))
 
     def validate_robotstxt(self) -> None:
         if not self.robotstxt_obey_values:
-            self.issues.append(Issue(9, "robots.txt ignored by default"))
+            self.issues.append(Issue(ROBOTS_TXT_IGNORED_BY_DEFAULT))
         elif all(not value for value, *_ in self.robotstxt_obey_values):
             _, line, column = self.robotstxt_obey_values[0]
-            self.issues.append(
-                Issue(9, "robots.txt ignored by default", line=line, column=column)
-            )
+            self.issues.append(Issue(ROBOTS_TXT_IGNORED_BY_DEFAULT, Pos(line, column)))
 
     def validate_throttling(self) -> None:
         if not self.autothrottle_enabled and not all(
@@ -1229,7 +1158,7 @@ class SettingsModuleSettingsProcessor:
                 "DOWNLOAD_DELAY",
             )
         ):
-            self.issues.append(Issue(10, "incomplete project throttling"))
+            self.issues.append(Issue(INCOMPLETE_PROJECT_THROTTLING))
 
     def validate_missing_changing_settings(self) -> None:
         for name, setting in SETTINGS.items():
@@ -1246,8 +1175,11 @@ class SettingsModuleSettingsProcessor:
             old_value = history[UNKNOWN_UNSUPPORTED_VERSION]
             if UNKNOWN_FUTURE_VERSION in history:
                 new_value = history[UNKNOWN_FUTURE_VERSION]
-                detail = f"{name} changes from {old_value!r} to {new_value!r} in a future version of {setting.package}"
-                issue = Issue(34, "missing changing setting", detail=detail)
+                detail = (
+                    f"{name} changes from {old_value!r} to {new_value!r} in a "
+                    f"future version of {setting.package}"
+                )
+                issue = Issue(MISSING_CHANGING_SETTING, detail=detail)
                 self.issues.append(issue)
                 continue
             requirements = self.context.project.frozen_requirements
@@ -1264,17 +1196,18 @@ class SettingsModuleSettingsProcessor:
             assert isinstance(change_version, Version)
             if project_version >= change_version:
                 continue
-            detail = f"{name} changes from {old_value!r} to {new_value!r} in {setting.package} {change_version}"
-            issue = Issue(34, "missing changing setting", detail=detail)
+            detail = (
+                f"{name} changes from {old_value!r} to {new_value!r} in "
+                f"{setting.package} {change_version}"
+            )
+            issue = Issue(MISSING_CHANGING_SETTING, detail=detail)
             self.issues.append(issue)
 
     def validate_redundant_values(self) -> None:
         for name, line, column in self.redundant_values:
             if self.is_changing_setting(name):
                 continue
-            self.issues.append(
-                Issue(17, "redundant setting value", line=line, column=column)
-            )
+            self.issues.append(Issue(REDUNDANT_SETTING_VALUE, Pos(line, column)))
 
     def is_changing_setting(self, name: str) -> bool:
         assert name in SETTINGS
