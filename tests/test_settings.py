@@ -278,12 +278,12 @@ CASES: Cases = (
             ),
             # and checking all keys in the dict.
             (
-                'Settings({"USER_AGENT": "foo", "BAR": "baz"})',
-                Issue("SCP27 unknown setting", column=31, path=path),
+                'Settings({"DOWNLOAD_DELAY": 5.0, "BAR": "baz"})',
+                Issue("SCP27 unknown setting", column=33, path=path),
             ),
             (
-                "Settings(dict(USER_AGENT='foo', BAR='baz'))",
-                Issue("SCP27 unknown setting", column=32, path=path),
+                "Settings(dict(DOWNLOAD_DELAY=5.0, BAR='baz'))",
+                Issue("SCP27 unknown setting", column=34, path=path),
             ),
             # "`FOO" in settings` triggers setting name checks,
             (
@@ -746,6 +746,22 @@ CASES: Cases = (
                         ("SPIDER_CONTRACTS", "None"),
                         # Unknown setting type
                         ("SERVICE_ROOT", "foo"),
+                        # SCP39 no contact info (valid values)
+                        *(
+                            ("USER_AGENT", value)
+                            for value in (
+                                "foo",
+                                '"https://jane.doe.example"',
+                                '"Jane Doe (https://jane.doe.example)"',
+                                '"Jane Doe (+https://jane.doe.example)"',
+                                '"jane.doe@example.com"',
+                                '"Jane Doe (jane.doe@example.com)"',
+                                '"Jane Doe (+mailto:jane.doe@example.com)"',
+                                '"+1 555-9292"',
+                                '"Jane Doe (+1 (555) 92.92))"',
+                                '"Jane Doe (+tel:+15559292"',
+                            )
+                        ),
                     ),
                 )
             ),
@@ -919,6 +935,23 @@ CASES: Cases = (
                                     33,
                                 ),
                             )
+                        ),
+                        # SCP39 no contact info (valid values)
+                        *(
+                            ("SCP39 no contact info", "USER_AGENT", value, 0)
+                            for value in (
+                                "None",
+                                "''",
+                                "'foo'",
+                                "'my_project (+http://www.yourdomain.com)'",
+                                "'Scrapy/2.11.2 (+https://scrapy.org)'",
+                                "'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36'",
+                                "'Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0'",
+                            )
+                        ),
+                        *(
+                            ("SCP36 invalid setting value", "USER_AGENT", value, 0)
+                            for value in ("5559292",)
                         ),
                     ),
                 )

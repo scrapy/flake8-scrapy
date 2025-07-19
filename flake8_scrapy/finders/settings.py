@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import json
+import re
 from ast import (
     Assign,
     Attribute,
@@ -63,6 +64,7 @@ from flake8_scrapy.issues import (
     LOW_PROJECT_THROTTLING,
     MISSING_CHANGING_SETTING,
     MISSING_SETTING_REQUIREMENT,
+    NO_CONTACT_INFO,
     NO_OP_SETTING_UPDATE,
     NO_PROJECT_USER_AGENT,
     NON_PICKLABLE_SETTING,
@@ -571,13 +573,62 @@ def is_feed_config(node: Dict, context: Context) -> bool:  # noqa: PLR0911, PLR0
     return True
 
 
-class SettingSpecificChecker(Protocol):
+class SettingValidityChecker(Protocol):
     def __call__(self, node: expr, *, context: Context) -> bool: ...
 
 
-SETTING_CHECKERS: dict[str, SettingSpecificChecker] = {
+SETTING_VALIDITY_CHECKERS: dict[str, SettingValidityChecker] = {
     "DOWNLOAD_SLOTS": is_download_slots,
     "FEEDS": is_feeds,
+}
+
+
+INVALID_UA_SUBSTRINGS = (
+    "(+http://www.yourdomain.com)",
+    "(+https://scrapy.org)",
+)
+INVALID_UA_PATTERNS = (
+    r"Mozilla/\d+\.\d+",
+    r"Chrome/\d+\.\d+",
+    r"Safari/\d+\.\d+",
+    r"Firefox/\d+\.\d+",
+    r"AppleWebKit/\d+\.\d+",
+    r"Gecko/\d+",
+)
+REQUIRED_UA_PATTERNS = (
+    # URL
+    r"https?://[a-zA-Z0-9.-]+|www\.[a-zA-Z0-9.-]+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
+    # email
+    r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
+    # international phone number
+    r"\+\d{1,3}[\s\-\.]?\(?\d+\)?([\s\-\.]?\d+)+",
+)
+
+
+def check_user_agent(node: expr) -> Generator[Issue, None, None]:
+    if isinstance(node, Constant) and (
+        node.value is None
+        or (
+            isinstance(node.value, str)
+            and (
+                not node.value
+                or (
+                    any(s in node.value for s in INVALID_UA_SUBSTRINGS)
+                    or any(re.search(p, node.value) for p in INVALID_UA_PATTERNS)
+                    or not any(re.search(p, node.value) for p in REQUIRED_UA_PATTERNS)
+                )
+            )
+        )
+    ):
+        yield Issue(NO_CONTACT_INFO, Pos.from_node(node))
+
+
+class SettingValueChecker(Protocol):
+    def __call__(self, node: expr) -> Generator[Issue, None, None]: ...
+
+
+SETTING_VALUE_CHECKERS: dict[str, SettingValueChecker] = {
+    "USER_AGENT": check_user_agent,
 }
 
 
@@ -833,15 +884,17 @@ class SettingChecker:
         if name not in SETTINGS:
             return
         pos = Pos.from_node(node)
-        if name in SETTING_CHECKERS:
-            if not SETTING_CHECKERS[name](node, context=self.context):
-                yield Issue(INVALID_SETTING_VALUE, pos)
-            return
         setting = SETTINGS[name]
-        if setting.type is None:
-            return
-        if not SETTING_TYPE_CHECKERS[setting.type](node, name=name):
+        if (
+            setting.type is not None
+            and not SETTING_TYPE_CHECKERS[setting.type](node, name=name)
+        ) or (
+            name in SETTING_VALIDITY_CHECKERS
+            and not SETTING_VALIDITY_CHECKERS[name](node, context=self.context)
+        ):
             yield Issue(INVALID_SETTING_VALUE, pos)
+        elif name in SETTING_VALUE_CHECKERS:
+            yield from SETTING_VALUE_CHECKERS[name](node)
 
 
 class SettingIssueFinder:
