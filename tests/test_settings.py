@@ -1460,7 +1460,7 @@ CASES: Cases = (
                     "SCP13 incomplete requirements freeze",
                     path="requirements.txt",
                 ),
-                *iter_issues(issues),
+                *iter_issues(issues),  # type: ignore[arg-type]
             ),
             {},
         )
