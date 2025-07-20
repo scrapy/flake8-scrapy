@@ -3,10 +3,11 @@ from __future__ import annotations
 import ast
 from collections.abc import Sequence
 from itertools import cycle
+from typing import overload
 
 from packaging.version import Version
 
-from flake8_scrapy.finders.settings import SETTING_TYPE_CHECKERS
+from flake8_scrapy.finders.settings import TYPE_CHECKERS
 from flake8_scrapy.settings import SettingType
 from tests.helpers import check_project
 
@@ -21,7 +22,7 @@ from .test_requirements import (
 
 def test_type_checkers():
     for setting_type in SettingType:
-        assert setting_type in SETTING_TYPE_CHECKERS, (
+        assert setting_type in TYPE_CHECKERS, (
             f"{setting_type} is missing from SETTING_TYPE_CHECKERS"
         )
 
@@ -46,13 +47,52 @@ SETTING_VALUE_CHECK_TEMPLATES = (
 
 
 class SafeDict(dict):
+    """Allows to use str.format_map() with missing keys. e.g.
+    SETTING_VALUE_CHECK_TEMPLATES can be used with a setting only, without a
+    value."""
+
     def __missing__(self, key):
         return "{" + key + "}"
 
 
-def zip_uneven_cycle(a, b):
-    if len(a) >= len(b):
-        return tuple((*ta, *tb) for ta, tb in zip(a, cycle(b)))
+@overload
+def zip_with_template(
+    a: tuple[tuple[str], ...], b: tuple[tuple[str, str], ...]
+) -> tuple[tuple[str, str, str], ...]: ...
+
+
+@overload
+def zip_with_template(
+    a: tuple[tuple[str, int], ...], b: tuple[tuple[str], ...]
+) -> tuple[tuple[str, int, str], ...]: ...
+
+
+@overload
+def zip_with_template(
+    a: tuple[tuple[str, int], ...], b: tuple[tuple[str, str], ...]
+) -> tuple[tuple[str, int, str, str], ...]: ...
+
+
+@overload
+def zip_with_template(
+    a: tuple[tuple[str, int], ...], b: tuple[tuple[str, str, str, int], ...]
+) -> tuple[tuple[str, int, str, str, str, int], ...]: ...
+
+
+@overload
+def zip_with_template(
+    a: tuple[tuple[str, int], ...], b: tuple[tuple[str, str | None, str, str, int], ...]
+) -> tuple[tuple[str, int, str, str | None, str, str, int], ...]: ...
+
+
+@overload
+def zip_with_template(
+    a: tuple[tuple[str, int], ...],
+    b: tuple[tuple[str, str, Sequence[Issue] | Issue | None], ...],
+) -> tuple[tuple[str, int, str, str, Sequence[Issue] | Issue | None], ...]: ...
+
+
+def zip_with_template(a, b):
     return tuple((*ta, *tb) for ta, tb in zip(cycle(a), b))
 
 
@@ -509,13 +549,16 @@ CASES: Cases = (
             *(
                 (
                     template.format_map(SafeDict(setting=setting, value=value)),
-                    Issue(
-                        "SCP35 no-op setting update",
-                        column=column,
-                        path=path,
+                    (
+                        Issue(
+                            "SCP35 no-op setting update",
+                            column=column,
+                            path=path,
+                        ),
+                        *iter_issues(issues),
                     ),
                 )
-                for template, column, setting, value in zip_uneven_cycle(
+                for template, column, setting, value, issues in zip_with_template(
                     (
                         *(
                             (template, setting_column)
@@ -525,21 +568,26 @@ CASES: Cases = (
                         ),
                     ),
                     (
-                        ("ADDONS", "{'my.addons.Addon': 100}"),
-                        ("ASYNCIO_EVENT_LOOP", "'uvloop.Loop'"),
-                        ("COMMANDS_MODULE", "'my_project.commands'"),
-                        ("DNS_RESOLVER", "'scrapy.resolver.CachingHostnameResolver'"),
-                        ("DNS_TIMEOUT", "120"),
-                        ("DNSCACHE_ENABLED", "False"),
-                        ("DNSCACHE_SIZE", "20_000"),
-                        ("FORCE_CRAWLER_PROCESS", "True"),
-                        ("REACTOR_THREADPOOL_MAXSIZE", "50"),
-                        ("SPIDER_LOADER_CLASS", "CustomSpiderLoader"),
-                        ("SPIDER_LOADER_WARN_ONLY", "True"),
-                        ("SPIDER_MODULES", "['my_project.spiders_module']"),
+                        ("ADDONS", "{'my.addons.Addon': 100}", NO_ISSUE),
+                        ("ASYNCIO_EVENT_LOOP", "'uvloop.Loop'", NO_ISSUE),
+                        ("COMMANDS_MODULE", "'my_project.commands'", NO_ISSUE),
+                        (
+                            "DNS_RESOLVER",
+                            "'scrapy.resolver.CachingHostnameResolver'",
+                            NO_ISSUE,
+                        ),
+                        ("DNS_TIMEOUT", "120", NO_ISSUE),
+                        ("DNSCACHE_ENABLED", "False", NO_ISSUE),
+                        ("DNSCACHE_SIZE", "20_000", NO_ISSUE),
+                        ("FORCE_CRAWLER_PROCESS", "True", NO_ISSUE),
+                        ("REACTOR_THREADPOOL_MAXSIZE", "50", NO_ISSUE),
+                        ("SPIDER_LOADER_CLASS", "CustomSpiderLoader", NO_ISSUE),
+                        ("SPIDER_LOADER_WARN_ONLY", "True", NO_ISSUE),
+                        ("SPIDER_MODULES", "['my_project.spiders_module']", NO_ISSUE),
                         (
                             "TWISTED_REACTOR",
                             "'twisted.internet.pollreactor.PollReactor'",
+                            NO_ISSUE,
                         ),
                     ),
                 )
@@ -553,7 +601,7 @@ CASES: Cases = (
                         path=path,
                     ),
                 )
-                for template, column, setting, value in zip_uneven_cycle(
+                for template, column, setting, value in zip_with_template(
                     (
                         ("settings.add_to_list('{setting}', {value})", 21),
                         (
@@ -576,7 +624,7 @@ CASES: Cases = (
                         path=path,
                     ),
                 )
-                for template, column, setting in zip_uneven_cycle(
+                for template, column, setting in zip_with_template(
                     (
                         (
                             "settings.replace_in_component_priority_dict('{setting}', Old, New, 200)",
@@ -639,15 +687,13 @@ CASES: Cases = (
                     "settings.get('DOWNLOADER', foo)",
                 )
             ),
-            # SCP40 unneeded setting get: alternative call syntaxes
-            # …
             # Setting value checks
             *(
                 (
                     template.format_map(SafeDict(setting=setting, value=value)),
                     NO_ISSUE,
                 )
-                for template, setting, value in zip_uneven_cycle(
+                for template, setting, value in zip_with_template(
                     (
                         *(
                             (template,)
@@ -655,17 +701,24 @@ CASES: Cases = (
                         ),
                     ),
                     (
-                        # Valid values
+                        # SCP36 invalid setting value (valid values)
+                        ("AWS_ACCESS_KEY_ID", "foo"),
+                        ("AWS_ACCESS_KEY_ID", "foo()"),
                         ("AWS_ACCESS_KEY_ID", '"AKIAIOSFODNN7EXAMPLE"'),
                         ("AWS_ACCESS_KEY_ID", "None"),
+                        ("BOT_NAME", "foo"),
+                        ("BOT_NAME", "foo()"),
                         ("BOT_NAME", '"mybot"'),
+                        ("BOT_NAME", '"mybot"'),
+                        ("CONCURRENT_REQUESTS", "foo"),
+                        ("CONCURRENT_REQUESTS", "foo()"),
                         ("CONCURRENT_REQUESTS", '"1"'),
                         ("CONCURRENT_REQUESTS", 'b"1"'),
                         ("CONCURRENT_REQUESTS", "1.0"),
                         ("CONCURRENT_REQUESTS", "1"),
                         ("CONCURRENT_REQUESTS", "True"),
-                        ("CONCURRENT_REQUESTS", "foo"),
                         ("DEFAULT_REQUEST_HEADERS", "foo"),
+                        ("DEFAULT_REQUEST_HEADERS", "foo()"),
                         ("DEFAULT_REQUEST_HEADERS", "None"),
                         ("DEFAULT_REQUEST_HEADERS", "{}"),
                         ("DEFAULT_REQUEST_HEADERS", "'{}'"),
@@ -678,12 +731,17 @@ CASES: Cases = (
                             "{1: 'keys do not have to be str'}",
                         ),
                         ("DOWNLOAD_HANDLERS", "foo"),
+                        ("DOWNLOAD_HANDLERS", "foo()"),
                         ("DOWNLOAD_HANDLERS", "None"),
                         ("DOWNLOAD_HANDLERS", "{}"),
                         ("DOWNLOAD_HANDLERS", "'{}'"),
                         ("DOWNLOAD_HANDLERS", "{a: b}"),
+                        ("DOWNLOAD_HANDLERS", "{'http': None}"),
                         ("DOWNLOAD_HANDLERS", "{'websocket': WebSocketHandler}"),
+                        ("DOWNLOAD_HANDLERS", "dict(http=None)"),
+                        ("DOWNLOAD_HANDLERS", "dict(websocket=WebSocketHandler)"),
                         ("DOWNLOAD_SLOTS", "foo"),
+                        ("DOWNLOAD_SLOTS", "foo()"),
                         ("DOWNLOAD_SLOTS", '"{}"'),
                         ("DOWNLOAD_SLOTS", "{a: b}"),
                         ("DOWNLOAD_SLOTS", "{a: {b: c}}"),
@@ -696,14 +754,19 @@ CASES: Cases = (
                         ("DOWNLOAD_SLOTS", '{"toscrape.com": {}}'),
                         ("DOWNLOAD_SLOTS", '\'{"toscrape.com": {"concurrency": 1}}\''),
                         ("DOWNLOAD_SLOTS", "{}"),
+                        ("DOWNLOADER_CLIENT_TLS_METHOD", "foo"),
+                        ("DOWNLOADER_CLIENT_TLS_METHOD", "foo()"),
                         ("DOWNLOADER_CLIENT_TLS_METHOD", '"TLS"'),
                         ("DOWNLOADER_CLIENT_TLS_METHOD", '"TLSv1.2"'),
-                        ("DOWNLOADER_CLIENT_TLS_METHOD", "foo"),
+                        ("DOWNLOADER_MIDDLEWARES", "foo"),
+                        ("DOWNLOADER_MIDDLEWARES", "foo()"),
                         ("DOWNLOADER_MIDDLEWARES", "{}"),
                         ("DOWNLOADER_MIDDLEWARES", "'{}'"),
                         ("DOWNLOADER_MIDDLEWARES", "{a: b}"),
                         ("DOWNLOADER_MIDDLEWARES", "{Foo: 100}"),
                         ("DOWNLOADER_MIDDLEWARES", "{'foo.Foo': 100}"),
+                        ("FEED_EXPORT_FIELDS", "foo"),
+                        ("FEED_EXPORT_FIELDS", "foo()"),
                         ("FEED_EXPORT_FIELDS", '"foo"'),
                         ("FEED_EXPORT_FIELDS", "()"),
                         ("FEED_EXPORT_FIELDS", "[]"),
@@ -714,11 +777,14 @@ CASES: Cases = (
                         ("FEED_EXPORT_INDENT", "1"),
                         ("FEED_EXPORT_INDENT", "None"),
                         ("FEED_EXPORT_INDENT", "True"),
+                        ("FEED_URI_PARAMS", "foo"),
+                        ("FEED_URI_PARAMS", "foo()"),
                         ("FEED_URI_PARAMS", '"myproject.utils.get_uri_params"'),
                         ("FEED_URI_PARAMS", "None"),
                         ("FEED_URI_PARAMS", "uri_params"),
                         ("FEED_URI_PARAMS", "my_project.feeds.uri_params"),
                         ("FEEDS", "foo"),
+                        ("FEEDS", "foo()"),
                         ("FEEDS", '"{}"'),
                         (
                             "FEEDS",
@@ -741,15 +807,20 @@ CASES: Cases = (
                         ("FEEDS", "{}"),
                         ("FEEDS", "{a: b}"),
                         ("FEEDS", "{a: {b: c}}"),
+                        ("JOBDIR", "foo"),
+                        ("JOBDIR", "foo()"),
                         ("JOBDIR", '"/tmp/foo"'),
                         ("JOBDIR", 'Path("/tmp/foo")'),
                         ("JOBDIR", "None"),
                         ("LOG_LEVEL", "foo"),
+                        ("LOG_LEVEL", "foo()"),
                         ("LOG_LEVEL", '"debug"'),
                         ("LOG_LEVEL", '"INFO"'),
                         ("LOG_LEVEL", "0"),
                         ("LOG_LEVEL", "20"),
                         ("LOG_LEVEL", "25"),
+                        ("LOG_VERSIONS", "foo"),
+                        ("LOG_VERSIONS", "foo()"),
                         ("LOG_VERSIONS", '"foo,bar"'),
                         ("LOG_VERSIONS", '"foo"'),
                         ("LOG_VERSIONS", '["foo", "bar"]'),
@@ -761,13 +832,15 @@ CASES: Cases = (
                         ("LOG_VERSIONS", "range(2)"),
                         ("LOG_VERSIONS", "set()"),
                         ("LOG_VERSIONS", "None"),
+                        ("LOGSTATS_INTERVAL", "foo"),
+                        ("LOGSTATS_INTERVAL", "foo()"),
                         ("LOGSTATS_INTERVAL", '"1.0"'),
                         ("LOGSTATS_INTERVAL", 'b"1.0"'),
                         ("LOGSTATS_INTERVAL", "1.0"),
                         ("LOGSTATS_INTERVAL", "1"),
                         ("LOGSTATS_INTERVAL", "True"),
-                        ("LOGSTATS_INTERVAL", "foo"),
                         ("PERIODIC_LOG_DELTA", "foo"),
+                        ("PERIODIC_LOG_DELTA", "foo()"),
                         ("PERIODIC_LOG_DELTA", "None"),
                         ("PERIODIC_LOG_DELTA", "True"),
                         ("PERIODIC_LOG_DELTA", "{}"),
@@ -784,18 +857,24 @@ CASES: Cases = (
                         ),
                         ("PERIODIC_LOG_DELTA", '{"include": ["stats"]}'),
                         ("PERIODIC_LOG_DELTA", '{"include": []}'),
+                        ("SCHEDULER", "foo"),
+                        ("SCHEDULER", "foo()"),
                         ("SCHEDULER", "CustomScheduler"),
                         ("SCHEDULER", "my_project.schedulers.CustomScheduler"),
+                        ("SPIDER_CONTRACTS", "foo"),
+                        ("SPIDER_CONTRACTS", "foo()"),
                         ("SPIDER_CONTRACTS", '"{}"'),
                         ("SPIDER_CONTRACTS", "{}"),
                         ("SPIDER_CONTRACTS", "None"),
                         # Unknown setting type
                         ("SERVICE_ROOT", "foo"),
+                        ("SERVICE_ROOT", "foo()"),
                         # SCP39 no contact info (valid values)
                         *(
                             ("USER_AGENT", value)
                             for value in (
                                 "foo",
+                                "foo()",
                                 '"https://jane.doe.example"',
                                 '"Jane Doe (https://jane.doe.example)"',
                                 '"Jane Doe (+https://jane.doe.example)"',
@@ -819,7 +898,7 @@ CASES: Cases = (
                         path=path,
                     ),
                 )
-                for template, template_column, issue, setting, value, value_offset in zip_uneven_cycle(
+                for template, template_column, issue, setting, value, value_offset in zip_with_template(
                     (
                         *(
                             (template, value_column)
@@ -849,6 +928,10 @@ CASES: Cases = (
                                 ("DOWNLOAD_HANDLERS", "'invalid json'"),
                                 ("DOWNLOAD_HANDLERS", "'[]'"),
                                 ("DOWNLOAD_HANDLERS", "{1: 'keys must be str'}"),
+                                ("DOWNLOAD_HANDLERS", '{"a": 1}'),
+                                ("DOWNLOAD_HANDLERS", '{"a": "not an import path"}'),
+                                ("DOWNLOAD_HANDLERS", "dict(a=1)"),
+                                ("DOWNLOAD_HANDLERS", 'dict(a="not an import path")'),
                                 ("DOWNLOAD_SLOTS", '"not_a_dict"'),
                                 ("DOWNLOAD_SLOTS", "[]"),
                                 ("DOWNLOAD_SLOTS", '"[]"'),
@@ -872,7 +955,9 @@ CASES: Cases = (
                                 ("DOWNLOADER_CLIENT_TLS_METHOD", "'TLSv1.3'"),
                                 ("DOWNLOADER_CLIENT_TLS_METHOD", "None"),
                                 ("DOWNLOADER_CLIENT_TLS_METHOD", "{}"),
+                                ("DOWNLOADER_MIDDLEWARES", "1"),
                                 ("DOWNLOADER_MIDDLEWARES", "{1: 100}"),
+                                ("DOWNLOADER_MIDDLEWARES", "'{1: 100}'"),
                                 ("DOWNLOADER_MIDDLEWARES", "{'module': 100}"),
                                 ("DOWNLOADER_MIDDLEWARES", "{Foo: []}"),
                                 ("DOWNLOADER_MIDDLEWARES", "{Foo: 'bar'}"),
@@ -1346,6 +1431,7 @@ CASES: Cases = (
                     "{'myaddons': 100}",
                     "{Addon: 'foo'}",
                     "{Addon: {}}",
+                    "1",
                 )
             ),
         )
@@ -1897,15 +1983,180 @@ CASES: Cases = (
                     (("2.3.0", "2.4.0"), '{"output.json": {"overwrite": False}}'),
                     (
                         ("2.5.0", "2.6.0"),
-                        '{"output.json": {"item_classes": ["myproject.items.Item"]}}',
+                        '{"output.json": {"item_classes": [MyItem]}}',
                     ),
                     (
                         ("2.5.0", "2.6.0"),
-                        '{"output.json": {"item_filter": "myproject.filters.Filter"}}',
+                        '{"output.json": {"item_filter": MyFilter}}',
                     ),
                     (("2.5.0", "2.6.0"), '{"output.json": {"postprocessing": []}}'),
                 )
                 for version, has_issue in zip(versions, (True, False))
+            ),
+        )
+    ),
+    *(
+        (
+            [
+                File("", path="scrapy.cfg"),
+                File(requirements, path="requirements.txt"),
+                File(code, path=path),
+            ],
+            (
+                Issue(
+                    "SCP13 incomplete requirements freeze",
+                    path="requirements.txt",
+                ),
+                Issue(
+                    "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
+                    path="requirements.txt",
+                ),
+                *iter_issues(issues),
+            ),
+            {},
+        )
+        for path in ["a.py"]
+        for requirements, code, issues in (
+            *(
+                (
+                    requirements,
+                    template.format_map(SafeDict(setting=setting, value=value)),
+                    Issue(
+                        issue,
+                        column=template_column + len(setting) + value_offset,
+                        path=path,
+                    )
+                    if issue
+                    else NO_ISSUE,
+                )
+                for template, template_column, requirements, issue, setting, value, value_offset in zip_with_template(
+                    (
+                        *(
+                            (template, value_column)
+                            for template, _, value_column in SETTING_VALUE_CHECK_TEMPLATES
+                        ),
+                    ),
+                    (
+                        # SCP41 unneeded import path
+                        *(
+                            (requirements, NO_ISSUE, settings, value, 0)
+                            for requirements in ("scrapy==2.3.0", "scrapy==2.4.0")
+                            for settings, value in (
+                                # Object
+                                ("DEFAULT_ITEM_CLASS", "MyItem"),
+                                # Optional object
+                                ("FEED_URI_PARAMS", "feed_uri_params"),
+                                # Based object dict
+                                (
+                                    "FEED_EXPORTERS",
+                                    '{"json": None, "csv": MyCSVExporter}',
+                                ),
+                                (
+                                    "FEED_EXPORTERS",
+                                    "dict(json=None, csv=MyCSVExporter)",
+                                ),
+                                # Based component priority dict
+                                (
+                                    "DOWNLOADER_MIDDLEWARES",
+                                    '{Foo: 0, Bar: 1000, "scrapy.downloadermiddlewares.httpauth.HttpAuthMiddleware": None}',
+                                ),
+                                # Special settings.
+                                (
+                                    "FEEDS",
+                                    '{foo: {"uri_params": None}}',
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{foo: {"uri_params": uri_params}}',
+                                ),
+                            )
+                        ),
+                        *(
+                            (requirements, issues, settings, value, value_offset)
+                            for requirements, issues in (
+                                ("scrapy==2.3.0", NO_ISSUE),
+                                ("scrapy==2.4.0", "SCP41 unneeded import path"),
+                            )
+                            for settings, value, value_offset in (
+                                # Callable.
+                                ("DEFAULT_ITEM_CLASS", "'my_project.items.MyItem'", 0),
+                                # Optional callable.
+                                ("FEED_URI_PARAMS", "'custom.feed_uri_params'", 0),
+                                # Based object dict
+                                ("FEED_EXPORTERS", '{"csv": "custom.CSVExporter"}', 8),
+                                ("FEED_EXPORTERS", 'dict(csv="custom.CSVExporter")', 9),
+                                # Based component priority dict
+                                (
+                                    "DOWNLOADER_MIDDLEWARES",
+                                    '{"custom.Middleware": 42}',
+                                    1,
+                                ),
+                                # Special settings.
+                                (
+                                    "FEEDS",
+                                    '{foo: {"uri_params": "custom.uri_params"}}',
+                                    21,
+                                ),
+                            )
+                        ),
+                        *(
+                            (requirements, issues, settings, value, value_offset)
+                            for requirements, settings, value, value_offset, issues in (
+                                # Special settings.
+                                (
+                                    "scrapy==2.6.0",
+                                    "FEEDS",
+                                    '{foo: {"item_classes": [MyItem]}}',
+                                    0,
+                                    NO_ISSUE,
+                                ),
+                                (
+                                    "scrapy==2.6.0",
+                                    "FEEDS",
+                                    '{foo: {"item_filter": MyFilter}}',
+                                    0,
+                                    NO_ISSUE,
+                                ),
+                                (
+                                    "scrapy==2.6.0",
+                                    "FEEDS",
+                                    '{foo: {"postprocessing": [MyPlugin]}}',
+                                    0,
+                                    NO_ISSUE,
+                                ),
+                                (
+                                    "scrapy==2.6.0",
+                                    "FEEDS",
+                                    '{foo: {"item_classes": ["custom.Item"]}}',
+                                    24,
+                                    "SCP41 unneeded import path",
+                                ),
+                                (
+                                    "scrapy==2.6.0",
+                                    "FEEDS",
+                                    '{foo: {"item_filter": "custom.Filter"}}',
+                                    22,
+                                    "SCP41 unneeded import path",
+                                ),
+                                (
+                                    "scrapy==2.6.0",
+                                    "FEEDS",
+                                    '{foo: {"postprocessing": ["custom.Plugin"]}}',
+                                    26,
+                                    "SCP41 unneeded import path",
+                                ),
+                                # Unknown base key
+                                (
+                                    "scrapy==2.4.0",
+                                    "DOWNLOADER_MIDDLEWARES",
+                                    '{"custom.Middleware": 42}',
+                                    1,
+                                    "SCP41 unneeded import path",
+                                ),
+                            )
+                        ),
+                    ),
+                )
             ),
         )
     ),
@@ -1918,15 +2169,9 @@ CASES: Cases = (
                 File(code, path=path),
             ),
             (
-                *(
-                    issues
-                    if isinstance(issues, Sequence)
-                    else (issues,)
-                    if issues
-                    else ()
-                ),
                 *default_issues(path),
                 Issue("SCP13 incomplete requirements freeze", path="requirements.txt"),
+                *iter_issues(issues),
             ),
             {},
         )
@@ -1947,10 +2192,17 @@ CASES: Cases = (
             (
                 ("scrapy==2.13.0",),
                 "TWISTED_REACTOR = 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'",
-                Issue(
-                    "SCP17 redundant setting value",
-                    column=18,
-                    path=path,
+                (
+                    Issue(
+                        "SCP17 redundant setting value",
+                        column=18,
+                        path=path,
+                    ),
+                    Issue(
+                        "SCP41 unneeded import path",
+                        column=18,
+                        path=path,
+                    ),
                 ),
             ),
             (
@@ -1972,12 +2224,165 @@ CASES: Cases = (
             (
                 ("scrapy==2.12.0",),
                 'TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"',
-                NO_ISSUE,
+                Issue(
+                    "SCP41 unneeded import path",
+                    column=18,
+                    path=path,
+                ),
             ),
             (
                 ("scrapy==2.12.0",),
                 'TWISTED_REACTOR = "custom.reactor"',
-                NO_ISSUE,
+                Issue(
+                    "SCP41 unneeded import path",
+                    column=18,
+                    path=path,
+                ),
+            ),
+            # SCP41 unneeded import path (non-based component priority dict)
+            (
+                ("scrapy==2.10.0",),
+                "ADDONS = {ScrapyPoetAddon: 300}",
+                (
+                    Issue(
+                        (
+                            "SCP15 insecure requirement: scrapy 2.11.2 "
+                            "implements security fixes"
+                        ),
+                        path="requirements.txt",
+                    ),
+                    Issue(
+                        (
+                            "SCP34 missing changing setting: TWISTED_REACTOR "
+                            "changes from None to "
+                            "'twisted.internet.asyncioreactor.AsyncioSelectorReactor' "
+                            "in scrapy 2.13.0"
+                        ),
+                        path=path,
+                    ),
+                ),
+            ),
+            (
+                ("scrapy==2.10.0",),
+                'ADDONS = {"scrapy_poet.addons.Addon": 300}',
+                (
+                    Issue(
+                        (
+                            "SCP15 insecure requirement: scrapy 2.11.2 "
+                            "implements security fixes"
+                        ),
+                        path="requirements.txt",
+                    ),
+                    Issue(
+                        (
+                            "SCP34 missing changing setting: TWISTED_REACTOR "
+                            "changes from None to "
+                            "'twisted.internet.asyncioreactor.AsyncioSelectorReactor' "
+                            "in scrapy 2.13.0"
+                        ),
+                        path=path,
+                    ),
+                    Issue(
+                        "SCP41 unneeded import path",
+                        column=10,
+                        path=path,
+                    ),
+                ),
+            ),
+            # SCP41 unneeded import path (base setting)
+            (
+                ("scrapy==2.4.0",),
+                'EXTENSIONS_BASE = {"custom.Extension": 42}',
+                (
+                    Issue(
+                        (
+                            "SCP15 insecure requirement: scrapy 2.11.2 "
+                            "implements security fixes"
+                        ),
+                        path="requirements.txt",
+                    ),
+                    Issue("SCP33 base setting use", path=path),
+                    Issue(
+                        (
+                            "SCP34 missing changing setting: TWISTED_REACTOR "
+                            "changes from None to "
+                            "'twisted.internet.asyncioreactor.AsyncioSelectorReactor' "
+                            "in scrapy 2.13.0"
+                        ),
+                        path=path,
+                    ),
+                ),
+            ),
+            # SCP41 unneeded import path: added base key
+            (
+                ("scrapy==2.11.2",),
+                'SPIDER_CONTRACTS = {"scrapy.contracts.default.MetadataContract": None}',
+                (
+                    Issue(
+                        (
+                            "SCP34 missing changing setting: TWISTED_REACTOR "
+                            "changes from None to "
+                            "'twisted.internet.asyncioreactor.AsyncioSelectorReactor' "
+                            "in scrapy 2.13.0"
+                        ),
+                        path=path,
+                    ),
+                    Issue("SCP41 unneeded import path", column=20, path=path),
+                ),
+            ),
+            (
+                ("scrapy==2.12.0",),
+                'SPIDER_CONTRACTS = {"scrapy.contracts.default.MetadataContract": None}',
+                (
+                    Issue(
+                        (
+                            "SCP34 missing changing setting: TWISTED_REACTOR "
+                            "changes from None to "
+                            "'twisted.internet.asyncioreactor.AsyncioSelectorReactor' "
+                            "in scrapy 2.13.0"
+                        ),
+                        path=path,
+                    ),
+                ),
+            ),
+            # SCP41 unneeded import path: removed base key
+            (
+                ("scrapy==2.11.1",),
+                'SPIDER_MIDDLEWARES = {"scrapy.spidermiddlewares.offsite.OffsiteMiddleware": 10}',
+                (
+                    Issue(
+                        (
+                            "SCP15 insecure requirement: scrapy 2.11.2 "
+                            "implements security fixes"
+                        ),
+                        path="requirements.txt",
+                    ),
+                    Issue(
+                        (
+                            "SCP34 missing changing setting: TWISTED_REACTOR "
+                            "changes from None to "
+                            "'twisted.internet.asyncioreactor.AsyncioSelectorReactor' "
+                            "in scrapy 2.13.0"
+                        ),
+                        path=path,
+                    ),
+                ),
+            ),
+            (
+                ("scrapy==2.11.2",),
+                'SPIDER_MIDDLEWARES = {"scrapy.spidermiddlewares.offsite.OffsiteMiddleware": 10}',
+                (
+                    Issue(
+                        (
+                            "SCP34 missing changing setting: TWISTED_REACTOR "
+                            "changes from None to "
+                            "'twisted.internet.asyncioreactor.AsyncioSelectorReactor' "
+                            "in scrapy 2.13.0"
+                        ),
+                        path=path,
+                    ),
+                    Issue("SCP41 unneeded import path", column=22, path=path),
+                ),
             ),
         )
     ),

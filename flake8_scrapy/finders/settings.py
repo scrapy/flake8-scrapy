@@ -74,6 +74,7 @@ from flake8_scrapy.issues import (
     ROBOTS_TXT_IGNORED_BY_DEFAULT,
     SETTING_NEEDS_UPGRADE,
     UNKNOWN_SETTING,
+    UNNEEDED_IMPORT_PATH,
     UNNEEDED_SETTING_GET,
     WRONG_SETTING_METHOD,
     Issue,
@@ -89,6 +90,7 @@ from flake8_scrapy.settings import (
     UNKNOWN_FUTURE_VERSION,
     UNKNOWN_SETTING_VALUE,
     UNKNOWN_UNSUPPORTED_VERSION,
+    Setting,
     SettingType,
     UnknownSettingValue,
     UnknownUnsupportedVersion,
@@ -99,7 +101,7 @@ from flake8_scrapy.utils import extend_sys_path
 if TYPE_CHECKING:
     from collections.abc import Generator
 
-    from flake8_scrapy.context import Context
+    from flake8_scrapy.context import Context, Project
     from flake8_scrapy.typing import LineNumber
 
 IssueNode = Union[Constant, Name, keyword, ClassDef, FunctionDef, Import, ImportFrom]
@@ -193,36 +195,18 @@ def is_getdict_compatible(node: expr, **kwargs) -> bool:
             return False
     try:
         dict(value)
-    except ValueError:
+    except (TypeError, ValueError):
         return False
     else:
         return True
 
 
-def is_getdict_compatible_comp_prio(node: expr, **kwargs) -> bool:
-    if not isinstance(node, Dict):
-        return is_getdict_compatible(node, **kwargs)
-    for key_node in node.keys:
-        if not isinstance(key_node, Constant):
-            continue
-        key = key_node.value
-        if not isinstance(key, str):
-            return False
-        if not is_import_path(key):
-            return False
-    for value_node in node.values:
-        if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
-            return False
-        if not isinstance(value_node, Constant):
-            continue
-        value = value_node.value
-        if not isinstance(value, int):
-            return False
-    return True
+def is_getwithbase_compatible(node: expr, **kwargs) -> bool:
+    # All callers already handle Dict nodes.
+    # If we ever handle dict here, we should also check that keys are strings.
+    assert not isinstance(node, Dict)
 
-
-def is_getwithbase_compatible(node: expr, **kwargs) -> bool:  # noqa: PLR0911
-    if not isinstance(node, (Constant, Dict)):
+    if not isinstance(node, Constant):
         return True
     if isinstance(node, Constant):
         value = node.value
@@ -235,36 +219,6 @@ def is_getwithbase_compatible(node: expr, **kwargs) -> bool:  # noqa: PLR0911
         except ValueError:
             return False
         if not isinstance(data, dict):
-            return False
-        node = ast.parse(repr(data), mode="eval").body
-    assert isinstance(node, Dict)
-    for key_node in node.keys:
-        if not isinstance(key_node, Constant):
-            continue
-        key = key_node.value
-        if not isinstance(key, str):
-            return False
-    return True
-
-
-def is_getwithbase_compatible_comp_prio(node: expr, **kwargs) -> bool:
-    if not isinstance(node, Dict):
-        return is_getwithbase_compatible(node, **kwargs)
-    for key_node in node.keys:
-        if not isinstance(key_node, Constant):
-            continue
-        key = key_node.value
-        if not isinstance(key, str):
-            return False
-        if not is_import_path(key):
-            return False
-    for value_node in node.values:
-        if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
-            return False
-        if not isinstance(value_node, Constant):
-            continue
-        value = value_node.value
-        if value is not None and not isinstance(value, int):
             return False
     return True
 
@@ -300,24 +254,6 @@ def is_import_path(value: str, **kwargs) -> bool:
     return bool(parts and all(part.isidentifier() for part in parts) and len(parts) > 1)
 
 
-def is_callable(node: expr, **kwargs) -> bool:
-    if isinstance(node, (Dict, List, Set, Tuple)):
-        return False
-    if not isinstance(node, Constant):
-        return True
-    value = node.value
-    return isinstance(value, str) and is_import_path(value)
-
-
-def is_opt_callable(node: expr, **kwargs) -> bool:
-    if isinstance(node, (Dict, List, Set, Tuple)):
-        return False
-    if not isinstance(node, Constant):
-        return True
-    value = node.value
-    return value is None or (isinstance(value, str) and is_import_path(value))
-
-
 def is_log_level(node: expr, **kwargs) -> bool:
     if isinstance(node, (Dict, Lambda, List, Set, Tuple)):
         return False
@@ -348,8 +284,7 @@ def is_log_level(node: expr, **kwargs) -> bool:
     }
 
 
-def is_enum_str(node: expr, name: str, **kwargs) -> bool:
-    setting = SETTINGS[name]
+def is_enum_str(node: expr, setting: Setting, **kwargs) -> bool:
     assert setting.values
     if isinstance(node, (Dict, Lambda, List, Set, Tuple)):
         return False
@@ -393,33 +328,63 @@ def is_opt_int(node: expr, **kwargs) -> bool:
     return is_getint_compatible(node, **kwargs)
 
 
-def is_download_slots(node: expr, **kwargs) -> bool:  # noqa: PLR0911
+INVALID_UA_SUBSTRINGS = (
+    "(+http://www.yourdomain.com)",
+    "(+https://scrapy.org)",
+)
+INVALID_UA_PATTERNS = (
+    r"Mozilla/\d+\.\d+",
+    r"Chrome/\d+\.\d+",
+    r"Safari/\d+\.\d+",
+    r"Firefox/\d+\.\d+",
+    r"AppleWebKit/\d+\.\d+",
+    r"Gecko/\d+",
+)
+REQUIRED_UA_PATTERNS = (
+    # URL
+    r"https?://[a-zA-Z0-9.-]+|www\.[a-zA-Z0-9.-]+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
+    # email
+    r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
+    # international phone number
+    r"\+\d{1,3}[\s\-\.]?\(?\d+\)?([\s\-\.]?\d+)+",
+)
+
+
+def check_download_slots(node: expr, **kwargs) -> Generator[Issue, None, None]:  # noqa: PLR0911,PLR0912
+    if not is_getdict_compatible(node, **kwargs):
+        return
+    issue = Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
     if isinstance(node, (Lambda, List, Set, Tuple)):
-        return False
+        yield issue
+        return
     if isinstance(node, Constant):
         value = node.value
         if not isinstance(value, str):
-            return False
+            yield issue
+            return
         data = json.loads(value)
         if not isinstance(data, dict):
-            return False
+            yield issue
+            return
         node = ast.parse(repr(data), mode="eval").body
     if not isinstance(node, Dict):
-        return True
+        return
     for key_node in node.keys:
         if not isinstance(key_node, Constant):
             continue
         key = key_node.value
         if not isinstance(key, str):
-            return False
+            yield issue
+            return
     for value_node in node.values:
         if isinstance(value_node, (Constant, Lambda, List, Set, Tuple)):
-            return False
+            yield issue
+            return
         if not isinstance(value_node, Dict):
             continue
         if not is_slot_config(value_node):
-            return False
-    return True
+            yield issue
+            return
 
 
 def is_slot_config(node: Dict) -> bool:
@@ -453,36 +418,44 @@ def is_slot_config(node: Dict) -> bool:
     return True
 
 
-def is_feeds(node: expr, context: Context, **kwargs) -> bool:  # noqa: PLR0911
+def check_feeds(node: expr, context: Context, **kwargs) -> Generator[Issue, None, None]:  # noqa: PLR0911
+    if not is_getdict_compatible(node, **kwargs):
+        return
+    issue = Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
     if isinstance(node, (Lambda, List, Set, Tuple)):
-        return False
+        yield issue
+        return
     if isinstance(node, Constant):
         value = node.value
         if not isinstance(value, str):
-            return False
+            yield issue
+            return
         data = json.loads(value)
         if not isinstance(data, dict):
-            return False
+            yield issue
+            return
         node = ast.parse(repr(data), mode="eval").body
     if not isinstance(node, Dict):
-        return True
+        return
     for key_node in node.keys:
         if not isinstance(key_node, Constant):
             continue
         key = key_node.value
         if not isinstance(key, str):
-            return False
+            yield issue
+            return
     for value_node in node.values:
         if isinstance(value_node, (Constant, Lambda, List, Set, Tuple)):
-            return False
+            yield issue
+            return
         if not isinstance(value_node, Dict):
             continue
-        if not is_feed_config(value_node, context):
-            return False
-    return True
+        yield from check_feed_config(value_node, context, issue)
 
 
-def is_feed_config(node: Dict, context: Context) -> bool:  # noqa: PLR0911, PLR0912
+def check_feed_config(  # noqa: PLR0911,PLR0912,PLR0915
+    node: Dict, context: Context, issue: Issue
+) -> Generator[Issue, None, None]:
     for key_node, value_node in zip(node.keys, node.values):
         if not isinstance(key_node, Constant):
             continue
@@ -490,117 +463,110 @@ def is_feed_config(node: Dict, context: Context) -> bool:  # noqa: PLR0911, PLR0
         if key in FEEDS_KEY_VERSION_ADDED:
             scrapy_version = context.project.frozen_requirements.get("scrapy")
             if scrapy_version and scrapy_version < FEEDS_KEY_VERSION_ADDED[key]:
-                return False
+                yield issue
+                return
         if key == "format":
             if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
-                return False
+                yield issue
+                return
             if isinstance(value_node, Constant) and not isinstance(
                 value_node.value, str
             ):
-                return False
+                yield issue
+                return
         elif key in {"overwrite", "store_empty"}:
             if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
-                return False
+                yield issue
+                return
             if isinstance(value_node, Constant) and not isinstance(
                 value_node.value, bool
             ):
-                return False
+                yield issue
+                return
         elif key in {"batch_item_count", "indent"}:
             if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
-                return False
+                yield issue
+                return
             if isinstance(value_node, Constant) and (
                 not isinstance(value_node.value, int) or value_node.value < 0
             ):
-                return False
+                yield issue
+                return
             if isinstance(value_node, UnaryOp) and isinstance(value_node.op, USub):
-                return False
+                yield issue
+                return
         elif key == "encoding":
             if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
-                return False
+                yield issue
+                return
             if (
                 isinstance(value_node, Constant)
                 and not isinstance(value_node.value, str)
                 and value_node.value is not None
             ):
-                return False
+                yield issue
+                return
         elif key in {"item_filter", "uri_params"}:
             if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
-                return False
-            if isinstance(value_node, Constant) and (
-                not isinstance(value_node.value, str)
-                or not is_import_path(value_node.value)
+                yield issue
+                return
+            if not isinstance(value_node, Constant) or value_node.value is None:
+                continue
+            if not isinstance(value_node.value, str) or not is_import_path(
+                value_node.value
             ):
-                return False
+                yield issue
+                return
+            else:
+                yield from check_import_path_need(value_node, context.project)
         elif key == "item_export_kwargs":
             if isinstance(value_node, (Constant, Lambda, List, Set, Tuple)):
-                return False
+                yield issue
+                return
             if isinstance(value_node, Dict):
                 for key_elt in value_node.keys:
                     if not isinstance(key_elt, Constant) or not isinstance(
                         key_elt.value, str
                     ):
-                        return False
+                        yield issue
+                        return
         elif key in {"item_classes", "postprocessing"}:
             if isinstance(value_node, (Constant, Dict, Lambda)):
-                return False
+                yield issue
+                return
             if isinstance(value_node, (List, Set, Tuple)):
                 for elt in value_node.elts:
                     if isinstance(elt, (Dict, Lambda, List, Set, Tuple)):
-                        return False
-                    if isinstance(elt, Constant) and (
-                        not isinstance(elt.value, str) or not is_import_path(elt.value)
-                    ):
-                        return False
+                        yield issue
+                        return
+                    if not isinstance(elt, Constant):
+                        continue
+                    if not isinstance(elt.value, str) or not is_import_path(elt.value):
+                        yield issue
+                        return
+                    else:
+                        yield from check_import_path_need(elt, context.project)
         elif key == "fields":
             if isinstance(value_node, Constant):
                 if value_node.value is not None:
-                    return False
+                    yield issue
+                    return
             elif isinstance(value_node, (List, Set, Tuple)):
                 for elt in value_node.elts:
                     if isinstance(elt, Constant) and not isinstance(elt.value, str):
-                        return False
+                        yield issue
+                        return
             elif isinstance(value_node, Dict):
                 for elt in chain(value_node.keys, value_node.values):  # type: ignore[assignment]
                     if isinstance(elt, Constant) and not isinstance(elt.value, str):
-                        return False
+                        yield issue
+                        return
         else:
-            return False
-    return True
+            yield issue
+            return
 
 
-class SettingValidityChecker(Protocol):
-    def __call__(self, node: expr, *, context: Context) -> bool: ...
-
-
-SETTING_VALIDITY_CHECKERS: dict[str, SettingValidityChecker] = {
-    "DOWNLOAD_SLOTS": is_download_slots,
-    "FEEDS": is_feeds,
-}
-
-
-INVALID_UA_SUBSTRINGS = (
-    "(+http://www.yourdomain.com)",
-    "(+https://scrapy.org)",
-)
-INVALID_UA_PATTERNS = (
-    r"Mozilla/\d+\.\d+",
-    r"Chrome/\d+\.\d+",
-    r"Safari/\d+\.\d+",
-    r"Firefox/\d+\.\d+",
-    r"AppleWebKit/\d+\.\d+",
-    r"Gecko/\d+",
-)
-REQUIRED_UA_PATTERNS = (
-    # URL
-    r"https?://[a-zA-Z0-9.-]+|www\.[a-zA-Z0-9.-]+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
-    # email
-    r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}",
-    # international phone number
-    r"\+\d{1,3}[\s\-\.]?\(?\d+\)?([\s\-\.]?\d+)+",
-)
-
-
-def check_user_agent(node: expr) -> Generator[Issue, None, None]:
+def check_user_agent(node: expr, **kwargs) -> Generator[Issue, None, None]:
     if isinstance(node, Constant) and (
         node.value is None
         or (
@@ -618,39 +584,201 @@ def check_user_agent(node: expr) -> Generator[Issue, None, None]:
         yield Issue(NO_CONTACT_INFO, Pos.from_node(node))
 
 
-class SettingValueChecker(Protocol):
-    def __call__(self, node: expr) -> Generator[Issue, None, None]: ...
+class ValueChecker(Protocol):
+    def __call__(
+        self, node: expr, *, context: Context
+    ) -> Generator[Issue, None, None]: ...
 
 
-SETTING_VALUE_CHECKERS: dict[str, SettingValueChecker] = {
+VALUE_CHECKERS: dict[str, ValueChecker] = {
+    "DOWNLOAD_SLOTS": check_download_slots,
+    "FEEDS": check_feeds,
     "USER_AGENT": check_user_agent,
 }
 
 
-class SettingTypeChecker(Protocol):
-    def __call__(self, node: expr, *, name: str) -> bool: ...
+class IsTypeFunction(Protocol):
+    def __call__(self, node: expr, *, setting: Setting) -> bool: ...
 
 
-SETTING_TYPE_CHECKERS: dict[SettingType, SettingTypeChecker] = {
-    SettingType.BOOL: is_getbool_compatible,
-    SettingType.INT: is_getint_compatible,
-    SettingType.FLOAT: is_getfloat_compatible,
-    SettingType.LIST: is_getlist_compatible,
-    SettingType.DICT: is_getdict_compatible,
-    SettingType.DICT_OR_LIST: is_getdictorlist_compatible,
-    SettingType.BASED_DICT: is_getwithbase_compatible,
-    SettingType.OPT_STR: is_opt_str,
-    SettingType.STR: is_str,
-    SettingType.CALLABLE: is_callable,
-    SettingType.PATH: is_str,
-    SettingType.OPT_PATH: is_opt_str,
-    SettingType.LOG_LEVEL: is_log_level,
-    SettingType.ENUM_STR: is_enum_str,
-    SettingType.PERIODIC_LOG_CONFIG: is_periodic_log_config,
-    SettingType.OPT_CALLABLE: is_opt_callable,
-    SettingType.OPT_INT: is_opt_int,
-    SettingType.COMP_PRIO_DICT: is_getdict_compatible_comp_prio,
-    SettingType.BASED_COMP_PRIO_DICT: is_getwithbase_compatible_comp_prio,
+class TypeChecker(Protocol):
+    def __call__(
+        self, node: expr, *, setting: Setting, project: Project
+    ) -> Generator[Issue, None, None]: ...
+
+
+def check_type(is_type: IsTypeFunction) -> TypeChecker:
+    def wrapper(
+        node: expr, *, setting: Setting, **kwargs
+    ) -> Generator[Issue, None, None]:
+        if not is_type(node, setting=setting):
+            yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+
+    return wrapper
+
+
+def check_import_path_need(
+    node: Constant, project: Project, allowed: set[str] | None = None
+) -> Generator[Issue, None, None]:
+    frozen_version = project.frozen_requirements.get("scrapy")
+    if not frozen_version or frozen_version < Version("2.4.0"):
+        return
+    allowed = allowed or set()
+    if node.value not in allowed:
+        yield Issue(UNNEEDED_IMPORT_PATH, Pos.from_node(node))
+
+
+def check_import_path(node: Constant, project: Project) -> Generator[Issue, None, None]:
+    if not isinstance(node.value, str):
+        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+        return
+    if not is_import_path(node.value):
+        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+        return
+    yield from check_import_path_need(node, project)
+
+
+def check_based_comp_prio(
+    node: expr, *, setting: Setting, project: Project, **kwargs
+) -> Generator[Issue, None, None]:
+    if isinstance(node, Dict):
+        for key, value in zip(node.keys, node.values):
+            if isinstance(key, Constant):
+                if not isinstance(key.value, str) or not is_import_path(key.value):
+                    yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+                    return
+                default_value = setting.base.get_default_value(project)
+                if default_value is not UNKNOWN_SETTING_VALUE:
+                    base_import_paths = set(default_value.keys())
+                    yield from check_import_path_need(key, project, base_import_paths)
+            if isinstance(value, (Dict, Lambda, List, Set, Tuple)):
+                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+                return
+            if not isinstance(value, Constant):
+                continue
+            if value.value is not None and not isinstance(value.value, int):
+                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+                return
+        return
+
+    if not is_getwithbase_compatible(node, **kwargs):
+        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+        return
+
+
+def check_based_obj_dict(  # noqa: PLR0912
+    node: expr, *, setting: Setting, project: Project, **kwargs
+) -> Generator[Issue, None, None]:
+    if isinstance(node, Dict):
+        for key, value in zip(node.keys, node.values):
+            if isinstance(key, Constant) and not isinstance(key.value, str):
+                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+                return
+            if isinstance(value, Constant):
+                if value.value is None:
+                    continue
+                if not isinstance(value.value, str) or not is_import_path(value.value):
+                    yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+                    return
+                yield from check_import_path_need(value, project)
+        return
+    if isinstance(node, Call):
+        if getattr(node.func, "id", None) != "dict":
+            return
+        for kw in node.keywords:
+            if isinstance(kw.value, Constant):
+                if kw.value.value is None:
+                    continue
+                if not isinstance(kw.value.value, str) or not is_import_path(
+                    kw.value.value
+                ):
+                    yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+                    return
+                yield from check_import_path_need(kw.value, project)
+        return
+    if not is_getwithbase_compatible(node):
+        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+
+
+def check_comp_prio(
+    node: expr, project: Project, **kwargs
+) -> Generator[Issue, None, None]:
+    issue = Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+    if not isinstance(node, Dict):
+        if not is_getdict_compatible(node, **kwargs):
+            yield issue
+        return
+    for key_node in node.keys:
+        if not isinstance(key_node, Constant):
+            continue
+        key = key_node.value
+        if not isinstance(key, str):
+            yield issue
+            return
+        if not is_import_path(key):
+            yield issue
+            return
+        else:
+            yield from check_import_path_need(key_node, project)
+    for value_node in node.values:
+        if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
+            yield issue
+            return
+        if not isinstance(value_node, Constant):
+            continue
+        value = value_node.value
+        if not isinstance(value, int):
+            yield issue
+            return
+
+
+def check_obj(
+    node: expr, *, setting: Setting, project: Project, **kwargs
+) -> Generator[Issue, None, None]:
+    if isinstance(node, (Dict, List, Set, Tuple)):
+        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+        return
+    if not isinstance(node, Constant):
+        return
+    yield from check_import_path(node, project)
+
+
+def check_opt_obj(
+    node: expr, *, setting: Setting, project: Project, **kwargs
+) -> Generator[Issue, None, None]:
+    if isinstance(node, (Dict, List, Set, Tuple)):
+        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+        return
+    if not isinstance(node, Constant) or node.value is None:
+        return
+    yield from check_import_path(node, project)
+
+
+TYPE_CHECKERS: dict[SettingType, TypeChecker] = {
+    **{
+        type: check_type(is_type)
+        for type, is_type in (
+            (SettingType.BOOL, is_getbool_compatible),
+            (SettingType.DICT_OR_LIST, is_getdictorlist_compatible),
+            (SettingType.DICT, is_getdict_compatible),
+            (SettingType.ENUM_STR, is_enum_str),
+            (SettingType.FLOAT, is_getfloat_compatible),
+            (SettingType.INT, is_getint_compatible),
+            (SettingType.LIST, is_getlist_compatible),
+            (SettingType.LOG_LEVEL, is_log_level),
+            (SettingType.OPT_INT, is_opt_int),
+            (SettingType.OPT_PATH, is_opt_str),
+            (SettingType.OPT_STR, is_opt_str),
+            (SettingType.PATH, is_str),
+            (SettingType.PERIODIC_LOG_CONFIG, is_periodic_log_config),
+            (SettingType.STR, is_str),
+        )
+    },
+    SettingType.BASED_COMP_PRIO_DICT: check_based_comp_prio,
+    SettingType.BASED_OBJ_DICT: check_based_obj_dict,
+    SettingType.COMP_PRIO_DICT: check_comp_prio,
+    SettingType.OBJ: check_obj,
+    SettingType.OPT_OBJ: check_opt_obj,
 }
 
 
@@ -873,23 +1001,18 @@ class SettingChecker:
             yield Issue(NO_OP_SETTING_UPDATE, Pos.from_node(node, column))
 
     def check_value(self, name: str, node: expr) -> Generator[Issue, None, None]:
+        if name in VALUE_CHECKERS:
+            yield from VALUE_CHECKERS[name](node, context=self.context)
         for child in ast.walk(node):
             if isinstance(child, (GeneratorExp, Lambda)):
                 yield Issue(NON_PICKLABLE_SETTING, Pos.from_node(child))
         if name not in SETTINGS:
             return
-        pos = Pos.from_node(node)
         setting = SETTINGS[name]
-        if (
-            setting.type is not None
-            and not SETTING_TYPE_CHECKERS[setting.type](node, name=name)
-        ) or (
-            name in SETTING_VALIDITY_CHECKERS
-            and not SETTING_VALIDITY_CHECKERS[name](node, context=self.context)
-        ):
-            yield Issue(INVALID_SETTING_VALUE, pos)
-        elif name in SETTING_VALUE_CHECKERS:
-            yield from SETTING_VALUE_CHECKERS[name](node)
+        if setting.type is not None:
+            yield from TYPE_CHECKERS[setting.type](
+                node, setting=setting, project=self.project
+            )
 
 
 class SettingIssueFinder:
@@ -1213,7 +1336,7 @@ class SettingsModuleSettingsProcessor:
 
     def validate_missing_changing_settings(self) -> None:
         for name, setting in SETTINGS.items():
-            if name in self.seen_settings:
+            if name in self.seen_settings or name.endswith("_BASE"):
                 continue
             default = setting.default_value
             if isinstance(default, UnknownSettingValue):

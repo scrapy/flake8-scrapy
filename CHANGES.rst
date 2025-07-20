@@ -9,7 +9,7 @@ Release notes
 
 -   Requires Scrapy 2.0.1+.
 
--   Added 36 new rules:
+-   Added new rules:
 
     | :ref:`scp05`
     | :ref:`scp06`
@@ -47,6 +47,7 @@ Release notes
     | :ref:`scp38`
     | :ref:`scp39`
     | :ref:`scp40`
+    | :ref:`scp41`
 
 -   Added `documentation <https://flake8-scrapy.readthedocs.io/en/latest/>`_.
 

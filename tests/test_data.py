@@ -29,6 +29,7 @@ def test_canonical_package_names():
 
 def test_default_value_history():
     for data in SETTINGS.values():
+        assert isinstance(data.name, str)
         default_value = data.default_value
         if isinstance(default_value, UnknownSettingValue):
             continue
@@ -36,7 +37,10 @@ def test_default_value_history():
         if not history:
             continue
         assert UNKNOWN_UNSUPPORTED_VERSION in history
-        assert len(history) == 2
+        # The following is an expectation of the check for “changing settings”,
+        # i.e. SCP34. SCP34 logic needs to be updated to support more than 2
+        # default value history entries in non-base settings.
+        assert len(history) == 2 or data.name.endswith("_BASE")
 
 
 def test_enum_setting_values():
