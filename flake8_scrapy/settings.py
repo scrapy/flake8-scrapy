@@ -82,9 +82,7 @@ def getbool(value: Any) -> bool:
 
 class SettingType(Enum):
     BASED_COMP_PRIO_DICT = "based_comp_prio_dict"
-    BASED_DICT = "based_dict"
     BOOL = "bool"
-    CALLABLE = "callable"
     COMP_PRIO_DICT = "comp_prio_dict"
     DICT = "dict"
     DICT_OR_LIST = "dict_or_list"
@@ -93,13 +91,17 @@ class SettingType(Enum):
     INT = "int"
     LIST = "list"
     LOG_LEVEL = "log_level"
-    OPT_CALLABLE = "opt_callable"
     OPT_INT = "opt_int"
     OPT_PATH = "opt_path"
     OPT_STR = "opt_str"
     PATH = "path"
     PERIODIC_LOG_CONFIG = "periodic_log_config"
     STR = "str"
+    # OBJ stands for a Python object (e.g. class, function, module) or its
+    # import path.
+    OBJ = "obj"
+    OPT_OBJ = "opt_obj"  # Can be None
+    BASED_OBJ_DICT = "based_obj_dict"  # Values are objects, import paths or None
 
 
 # Missing types use the `get` method.
@@ -111,7 +113,7 @@ SETTING_TYPE_GETTERS = {
     SettingType.DICT: "getdict",
     SettingType.COMP_PRIO_DICT: "getdict",
     SettingType.DICT_OR_LIST: "getdictorlist",
-    SettingType.BASED_DICT: "getwithbase",
+    SettingType.BASED_OBJ_DICT: "getwithbase",
     SettingType.BASED_COMP_PRIO_DICT: "getwithbase",
 }
 SETTING_UPDATER_TYPES = {
@@ -162,17 +164,25 @@ class VersionedValue:
 
 @dataclass
 class Setting:
-    added_in: Version | None = None
-    deprecated_in: Version | UnknownUnsupportedVersion | None = None
-    removed_in: Version | None = None
+    name: str | None = None
     type: SettingType | None = None
-    package: str = "scrapy"
     values: tuple[Any, ...] | None = None
-    sunset_guidance: str | None = None
     default_value: VersionedValue | UnknownSettingValue = field(
         default_factory=lambda: UNKNOWN_SETTING_VALUE
     )
     is_pre_crawler: bool = False
+
+    package: str = "scrapy"
+    added_in: Version | None = None
+    deprecated_in: Version | UnknownUnsupportedVersion | None = None
+    removed_in: Version | None = None
+    sunset_guidance: str | None = None
+
+    @property
+    def base(self) -> Setting:
+        from flake8_scrapy.data.settings import SETTINGS
+
+        return SETTINGS[f"{self.name}_BASE"]
 
     def get_default_value(self, project: Project) -> Any:
         if self.default_value is UNKNOWN_SETTING_VALUE:
@@ -195,7 +205,7 @@ class Setting:
             return str(value)
         if self.type in {
             SettingType.DICT,
-            SettingType.BASED_DICT,
+            SettingType.BASED_OBJ_DICT,
             SettingType.COMP_PRIO_DICT,
             SettingType.BASED_COMP_PRIO_DICT,
         } and isinstance(value, str):
