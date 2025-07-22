@@ -14,6 +14,7 @@ from ruamel.yaml.error import YAMLError
 from flake8_scrapy.requirements import iter_requirement_lines
 
 if TYPE_CHECKING:
+    import argparse
     from ast import AST
     from collections.abc import Sequence
 
@@ -145,15 +146,19 @@ class Project:
 class Context:
     file: Flake8File
     project: Project
+    flake8_options: argparse.Namespace
 
     @classmethod
     def from_flake8_params(
         cls,
         tree: AST | None,
         file_path: str,
-        lines: Sequence[str] | None = None,
-        requirements_file_path: str = "",
+        options: argparse.Namespace,
+        lines: Sequence[str] | None,
     ):
         file = Flake8File.from_params(tree, file_path, lines)
+        requirements_file_path = options.scrapy_requirements_file or getattr(
+            options, "requirements_file", ""
+        )
         project = Project.from_file(file, requirements_file_path)
-        return cls(file, project)
+        return cls(file, project, options)

@@ -50,6 +50,7 @@ Release notes
     | :ref:`scp41`
     | :ref:`scp42`
     | :ref:`scp43`
+    | :ref:`scp44`
 
 -   Added `documentation <https://flake8-scrapy.readthedocs.io/en/latest/>`_.
 

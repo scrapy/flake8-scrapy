@@ -4,7 +4,7 @@ from packaging.version import Version
 from flake8_scrapy.data.packages import PACKAGES
 from flake8_scrapy.finders.requirements import RequirementsIssueFinder
 
-from . import NO_ISSUE, Cases, File, Issue, cases
+from . import HAS_FLAKE8_REQUIREMENTS, NO_ISSUE, Cases, File, Issue, cases
 from .helpers import check_project
 
 SCRAPY_FUTURE_VERSION = Version("3.0.0")
@@ -13,6 +13,43 @@ SCRAPY_LOWEST_SAFE = PACKAGES["scrapy"].lowest_safe_version
 SCRAPY_INSECURE_VERSION = Version("2.11.1")
 SCRAPY_LOWEST_SUPPORTED = PACKAGES["scrapy"].lowest_supported_version
 SCRAPY_ANCIENT_VERSION = Version("2.0.0")
+
+ALL_DEPS = "\n".join(
+    [
+        "aiohttp==3.8.4",
+        "awscli==1.29.0",
+        "boto==2.49.0",
+        "boto3==1.28.0",
+        "jinja2==3.1.2",
+        "lxml==4.9.3",
+        "monkeylearn==3.5.0",
+        "pillow==10.0.0",
+        "pyyaml==6.0.1",
+        "requests==2.31.0",
+        "scrapinghub==2.4.0",
+        "scrapinghub-entrypoint-scrapy==0.12.0",
+        f"scrapy=={SCRAPY_HIGHEST_KNOWN}",
+        "scrapy-deltafetch==2.0.1",
+        "scrapy-dotpersistence==0.3.0",
+        "scrapy-magicfields==1.1.0",
+        "scrapy-pagestorage==0.2.3",
+        "scrapy-querycleaner==0.1.0",
+        "scrapy-splitvariants==0.1.0",
+        "scrapy-zyte-smartproxy==2.1.0",
+        "spidermon==1.20.0",
+        "twisted==23.8.0",
+        "urllib3==2.0.4",
+        "cryptography==41.0.4",
+        "cssselect==1.2.0",
+        "parsel==1.8.1",
+        "protego==0.3.0",
+        "pyOpenSSL==23.2.0",
+        "queuelib==1.7.0",
+        "service-identity==23.1.0",
+        "w3lib==2.1.2",
+        "zope.interface==6.0",
+    ]
+)
 
 CASES: Cases = (
     # No scrapy.cfg file
@@ -126,42 +163,7 @@ CASES: Cases = (
         for requirements, issues in (
             # All stack dependencies present
             (
-                "\n".join(
-                    [
-                        "aiohttp==3.8.4",
-                        "awscli==1.29.0",
-                        "boto==2.49.0",
-                        "boto3==1.28.0",
-                        "jinja2==3.1.2",
-                        "lxml==4.9.3",
-                        "monkeylearn==3.5.0",
-                        "pillow==10.0.0",
-                        "pyyaml==6.0.1",
-                        "requests==2.31.0",
-                        "scrapinghub==2.4.0",
-                        "scrapinghub-entrypoint-scrapy==0.12.0",
-                        f"scrapy=={SCRAPY_HIGHEST_KNOWN}",
-                        "scrapy-deltafetch==2.0.1",
-                        "scrapy-dotpersistence==0.3.0",
-                        "scrapy-magicfields==1.1.0",
-                        "scrapy-pagestorage==0.2.3",
-                        "scrapy-querycleaner==0.1.0",
-                        "scrapy-splitvariants==0.1.0",
-                        "scrapy-zyte-smartproxy==2.1.0",
-                        "spidermon==1.20.0",
-                        "twisted==23.8.0",
-                        "urllib3==2.0.4",
-                        "cryptography==41.0.4",
-                        "cssselect==1.2.0",
-                        "parsel==1.8.1",
-                        "protego==0.3.0",
-                        "pyOpenSSL==23.2.0",
-                        "queuelib==1.7.0",
-                        "service-identity==23.1.0",
-                        "w3lib==2.1.2",
-                        "zope.interface==6.0",
-                    ]
-                ),
+                ALL_DEPS,
                 NO_ISSUE,
             ),
             # Missing some stack dependencies
@@ -332,6 +334,58 @@ CASES: Cases = (
                 ),
             ),
         )
+    ),
+    # SCP44 requirements_file mismatch
+    (
+        (
+            File("", path="scrapy.cfg"),
+            File(ALL_DEPS, path="requirements.txt"),
+        ),
+        NO_ISSUE,
+        {},
+    ),
+    (
+        (
+            File("", path="scrapy.cfg"),
+            File(ALL_DEPS, path="requirements.txt"),
+        ),
+        NO_ISSUE,
+        {
+            "scrapy_requirements_file": "requirements.txt",
+        },
+    ),
+    (
+        (
+            File("", path="scrapy.cfg"),
+            File(ALL_DEPS, path="custom-requirements.txt"),
+        ),
+        NO_ISSUE,
+        {
+            "requirements_file": "custom-requirements.txt",
+        },
+    ),
+    (
+        (
+            File("", path="scrapy.cfg"),
+            File(ALL_DEPS, path="custom-requirements.txt"),
+        ),
+        Issue("SCP44 requirements_file mismatch", path="custom-requirements.txt")
+        if HAS_FLAKE8_REQUIREMENTS
+        else NO_ISSUE,
+        {
+            "scrapy_requirements_file": "custom-requirements.txt",
+        },
+    ),
+    (
+        (
+            File("", path="scrapy.cfg"),
+            File(ALL_DEPS, path="custom-requirements.txt"),
+        ),
+        NO_ISSUE,
+        {
+            "requirements_file": "custom-requirements.txt",
+            "scrapy_requirements_file": "custom-requirements.txt",
+        },
     ),
 )
 

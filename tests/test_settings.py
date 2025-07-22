@@ -1213,14 +1213,8 @@ CASES: Cases = (
                 File(code, path=path),
             ],
             (
-                *(
-                    issues
-                    if isinstance(issues, Sequence)
-                    else (issues,)
-                    if issues
-                    else ()
-                ),
                 *default_issues(path),
+                *iter_issues(issues),
             ),
             {},
         )

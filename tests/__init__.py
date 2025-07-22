@@ -6,6 +6,7 @@ import sys
 from collections.abc import Generator, Iterable, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
+from importlib.util import find_spec
 from pathlib import Path
 from typing import Any, Callable, Union
 
@@ -18,6 +19,7 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import TypeAlias
 
+HAS_FLAKE8_REQUIREMENTS = bool(find_spec("flake8_requirements"))
 NO_ISSUE = None
 
 pytest.register_assert_rewrite("tests.helpers")
@@ -57,7 +59,7 @@ def run_checker(
     original_class_dict = ScrapyStyleChecker.__dict__.copy()
     mock_options = MockOptions(flake8_options)
     try:
-        ScrapyStyleChecker.parse_options(mock_options)
+        ScrapyStyleChecker.parse_options(mock_options)  # type: ignore[arg-type]
         checker = ScrapyStyleChecker(tree, file_path, lines)
         return tuple(checker.run())
     finally:
