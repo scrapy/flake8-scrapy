@@ -1,6 +1,6 @@
 from collections.abc import Sequence
 
-from . import NO_ISSUE, File, Issue, cases, iter_issues
+from . import HAS_FLAKE8_REQUIREMENTS, NO_ISSUE, File, Issue, cases, iter_issues
 from .helpers import check_project
 
 
@@ -424,6 +424,11 @@ CASES = [
         (
             *default_issues("requirements-dev.txt"),
             issue("SCP26 requirements.file mismatch", line=3, column=8),
+            *(
+                issue("SCP44 requirements_file mismatch", path="requirements-dev.txt")
+                for _ in range(1)
+                if HAS_FLAKE8_REQUIREMENTS
+            ),
         ),
         {"scrapy_requirements_file": "requirements-dev.txt"},
     ),
@@ -442,7 +447,14 @@ CASES = [
             File("", "scrapy.cfg"),
             File("", "requirements-dev.txt"),
         ),
-        default_issues("requirements-dev.txt"),
+        (
+            *default_issues("requirements-dev.txt"),
+            *(
+                issue("SCP44 requirements_file mismatch", path="requirements-dev.txt")
+                for _ in range(1)
+                if HAS_FLAKE8_REQUIREMENTS
+            ),
+        ),
         {"scrapy_requirements_file": "requirements-dev.txt"},
     ),
 ]

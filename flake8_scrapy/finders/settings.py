@@ -898,10 +898,13 @@ TYPE_CHECKERS: dict[SettingType, TypeChecker] = {
 
 
 class SettingChecker:
-    def __init__(self, context: Context, additional_known_settings: set[str]):
+    def __init__(self, context: Context):
         self.context = context
         self.project = context.project
-        self.additional_known_settings = additional_known_settings
+        known_settings = getattr(context.flake8_options, "scrapy_known_settings", "")
+        self.additional_known_settings = {
+            s.strip() for s in known_settings.split(",") if s.strip()
+        }
         self.allow_pre_crawler_settings = False
 
     def is_known_setting(self, name: str) -> bool:

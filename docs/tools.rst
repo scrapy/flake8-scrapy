@@ -26,16 +26,3 @@ ruff_                Duplicate settings in dicts like custom_settings_ (F601_)
 .. _ruff: https://docs.astral.sh/ruff/
 .. _start_urls: https://docs.scrapy.org/en/latest/topics/spiders.html#scrapy.Spider.start_urls
 .. _W0231: https://pylint.readthedocs.io/en/stable/user_guide/messages/warning/super-init-not-called.html
-
-flake8-requirements
-===================
-
-When using flake8-requirements_, make sure to set the ``requirements-file``
-option in your `Flake8 configuration`_, e.g. ``.flake8``:
-
-.. _Flake8 configuration: https://flake8.pycqa.org/en/latest/user/configuration.html
-
-.. code-block:: ini
-
-    [flake8]
-    requirements-file = requirements.txt

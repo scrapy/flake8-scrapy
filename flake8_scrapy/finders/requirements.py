@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 from packaging.version import InvalidVersion, Version
 
 from flake8_scrapy.data.packages import PACKAGES
 from flake8_scrapy.issues import (
+    FLAKE8_REQUIREMENTS_FILE_MISMATCH,
     INSECURE_REQUIREMENT,
     MISSING_STACK_REQUIREMENTS,
     PARTIAL_FREEZE,
@@ -74,6 +76,7 @@ class RequirementsIssueFinder:
         return self.context.file.path == self.context.project.requirements_file_path
 
     def check(self) -> Generator[Issue, None, None]:
+        yield from self.check_flake8_requirements_options()
         packages: set[str] = set()
         assert self.context.file.lines is not None
         for line_number, name, requirement in iter_requirement_lines(
@@ -91,6 +94,20 @@ class RequirementsIssueFinder:
         if missing_deps or not packages:
             yield Issue(PARTIAL_FREEZE)
         yield from self.check_scrapy_cloud_stack_requirements(packages)
+
+    def check_flake8_requirements_options(self) -> Generator[Issue, None, None]:
+        if not find_spec("flake8_requirements"):
+            return
+        scrapy_requirements_file = getattr(
+            self.context.flake8_options, "scrapy_requirements_file", None
+        )
+        if not scrapy_requirements_file:
+            return
+        flake8_requirements_file = getattr(
+            self.context.flake8_options, "requirements_file", "requirements.txt"
+        )
+        if scrapy_requirements_file != flake8_requirements_file:
+            yield Issue(FLAKE8_REQUIREMENTS_FILE_MISMATCH)
 
     @staticmethod
     def requirement_version(requirement: Requirement) -> Version | None:

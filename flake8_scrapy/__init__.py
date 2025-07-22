@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from ast import AST, NodeVisitor
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from .context import Context
 from .finders.domains import (
@@ -26,6 +26,7 @@ from .finders.unsupported import LambdaCallbackIssueFinder
 __version__ = "0.0.2"
 
 if TYPE_CHECKING:
+    import argparse
     from collections.abc import Sequence
 
     from flake8_scrapy.issues import Issue
@@ -89,8 +90,7 @@ class ScrapyStyleChecker:
     options = None
     name = "flake8-scrapy"
     version = __version__
-    requirements_file_path: ClassVar[str] = ""
-    known_settings: ClassVar[set[str]] = set()
+    flake8_options: argparse.Namespace
 
     @classmethod
     def add_options(cls, parser):
@@ -108,22 +108,18 @@ class ScrapyStyleChecker:
         )
 
     @classmethod
-    def parse_options(cls, options):
-        cls.requirements_file_path = options.scrapy_requirements_file or getattr(
-            options, "requirements_file", ""
-        )
-        known = getattr(options, "scrapy_known_settings", "")
-        if known:
-            cls.known_settings = {s.strip() for s in known.split(",") if s.strip()}
-        else:
-            cls.known_settings = set()
+    def parse_options(cls, options: argparse.Namespace):
+        cls.flake8_options = options
 
     def __init__(
         self, tree: AST | None, filename: str, lines: Sequence[str] | None = None
     ):
         self.tree = tree
         self.context = Context.from_flake8_params(
-            tree, filename, lines, self.requirements_file_path
+            tree=tree,
+            file_path=filename,
+            lines=lines,
+            options=self.flake8_options,
         )
 
     def run(self):
@@ -132,9 +128,7 @@ class ScrapyStyleChecker:
 
     def run_checks(self):
         if self.tree:
-            setting_checker = SettingChecker(
-                self.context, additional_known_settings=self.known_settings
-            )
+            setting_checker = SettingChecker(self.context)
             setting_module_finder = SettingModuleIssueFinder(
                 self.context, setting_checker
             )
