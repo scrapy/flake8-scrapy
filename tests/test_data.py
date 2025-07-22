@@ -5,6 +5,7 @@ from packaging.version import Version
 
 from flake8_scrapy.data.packages import PACKAGES
 from flake8_scrapy.data.settings import SETTINGS
+from flake8_scrapy.finders.settings import PATH_SUPPORT_VERSIONS
 from flake8_scrapy.settings import (
     UNKNOWN_UNSUPPORTED_VERSION,
     SettingType,
@@ -48,6 +49,14 @@ def test_enum_setting_values():
         if data.type != SettingType.ENUM_STR:
             continue
         assert data.values, f"Enum setting {name} has no values"
+
+
+def test_path_support():
+    for name, data in SETTINGS.items():
+        if data.type is not SettingType.OPT_PATH:
+            assert name not in PATH_SUPPORT_VERSIONS
+        else:
+            assert name in PATH_SUPPORT_VERSIONS
 
 
 def test_sunset_guidance():
