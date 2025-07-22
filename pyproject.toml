@@ -82,6 +82,11 @@ omit = [
 check_untyped_defs = true
 exclude = "samples"
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    "error",
+]
+
 [tool.ruff.lint]
 extend-select = [
     # flake8-bugbear
