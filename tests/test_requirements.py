@@ -376,6 +376,17 @@ CASES: Cases = (
             "scrapy_requirements_file": "custom-requirements.txt",
         },
     ),
+    (
+        (
+            File("", path="scrapy.cfg"),
+            File(ALL_DEPS, path="custom-requirements.txt"),
+        ),
+        NO_ISSUE,
+        {
+            "requirements_file": "custom-requirements.txt",
+            "scrapy_requirements_file": "custom-requirements.txt",
+        },
+    ),
 )
 
 
