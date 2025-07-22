@@ -92,6 +92,13 @@ def zip_with_template(
 ) -> tuple[tuple[str, int, str, str, Sequence[Issue] | Issue | None], ...]: ...
 
 
+@overload
+def zip_with_template(
+    a: tuple[tuple[str, int], ...],
+    b: tuple[tuple[str, str, Sequence[tuple[str, int]]], ...],
+) -> tuple[tuple[str, int, str, str, Sequence[tuple[str, int]]], ...]: ...
+
+
 def zip_with_template(a, b):
     return tuple((*ta, *tb) for ta, tb in zip(cycle(a), b))
 
@@ -717,6 +724,9 @@ CASES: Cases = (
                         ("CONCURRENT_REQUESTS", "1.0"),
                         ("CONCURRENT_REQUESTS", "1"),
                         ("CONCURRENT_REQUESTS", "True"),
+                        ("DEFAULT_ITEM_CLASS", "foo"),
+                        ("DEFAULT_ITEM_CLASS", "foo()"),
+                        ("DEFAULT_ITEM_CLASS", "MyItem"),
                         ("DEFAULT_REQUEST_HEADERS", "foo"),
                         ("DEFAULT_REQUEST_HEADERS", "foo()"),
                         ("DEFAULT_REQUEST_HEADERS", "None"),
@@ -777,6 +787,12 @@ CASES: Cases = (
                         ("FEED_EXPORT_INDENT", "1"),
                         ("FEED_EXPORT_INDENT", "None"),
                         ("FEED_EXPORT_INDENT", "True"),
+                        ("FEED_URI", "foo"),
+                        ("FEED_URI", "foo()"),
+                        ("FEED_URI", "Path(foo)"),
+                        ("FEED_URI", "Path(foo())"),
+                        ("FEED_URI", "Path()"),  # Bad, but not Scrapy-specific
+                        ("FEED_URI", "Path(1)"),  # Bad, but not Scrapy-specific
                         ("FEED_URI_PARAMS", "foo"),
                         ("FEED_URI_PARAMS", "foo()"),
                         ("FEED_URI_PARAMS", '"myproject.utils.get_uri_params"'),
@@ -788,20 +804,20 @@ CASES: Cases = (
                         ("FEEDS", '"{}"'),
                         (
                             "FEEDS",
-                            '{"output.csv": {"format": "csv", "fields": ["name", "price"], "encoding": "utf-8"}}',
+                            '{f: {"format": "csv", "fields": ["name", "price"], "encoding": "utf-8"}}',
                         ),
                         (
                             "FEEDS",
-                            '{"output.json": {"format": "json", "batch_item_count": 0, "indent": 0, "fields": None}}',
+                            '{f: {"format": "json", "batch_item_count": 0, "indent": 0, "fields": None}}',
                         ),
-                        ("FEEDS", '{"output.json": {"format": "json"}}'),
+                        ("FEEDS", '{f: {"format": "json"}}'),
                         (
                             "FEEDS",
-                            '{"output.jsonl":{"item_classes":[ProductItem],"item_filter":MyFilter,"uri_params":get_uri_params,}}',
+                            '{f:{"item_classes":[ProductItem],"item_filter":MyFilter,"uri_params":get_uri_params,}}',
                         ),
                         (
                             "FEEDS",
-                            '{"output.xml": {"format": "xml", "batch_item_count": 100, "encoding": None, "fields": {"name": "product_name", "price": "product_price"}, "item_classes": ["myproject.items.ProductItem"], "item_filter": "myproject.filters.MyFilter", "indent": 2, "item_export_kwargs": {"root_element": "products"}, "overwrite": True, "store_empty": False, "uri_params": "myproject.utils.get_uri_params"}}',
+                            '{f: {"format": "xml", "batch_item_count": 100, "encoding": None, "fields": {"name": "product_name", "price": "product_price"}, "item_classes": ["myproject.items.ProductItem"], "item_filter": "myproject.filters.MyFilter", "indent": 2, "item_export_kwargs": {"root_element": "products"}, "overwrite": True, "store_empty": False, "uri_params": "myproject.utils.get_uri_params"}}',
                         ),
                         ("FEEDS", '\'{"output.json": {"format": "json"}}\''),
                         ("FEEDS", "{}"),
@@ -886,6 +902,21 @@ CASES: Cases = (
                                 '"Jane Doe (+tel:+15559292"',
                             )
                         ),
+                        # SCP42 unneeded path string (valid values)
+                        #
+                        # FEED_URI supports Path since Scrapy 2.0.0+.
+                        ("FEED_URI", 'Path("output.jsonl")'),
+                        # URI params require a string, though:
+                        # https://github.com/scrapy/scrapy/issues/6425
+                        ("FEED_URI", '"output-%(time)s.jsonl"'),
+                        ("FEED_URI", '"file:///home/user/output-%(time)s.jsonl"'),
+                        # The value of LOG_FILE is directly passed to the
+                        # Python API, and should support Path objects on Python
+                        # 3.6+.
+                        ("LOG_FILE", 'Path("scrapy.log")'),
+                        # FEED_URI and LOG_FILE can be None
+                        ("FEED_URI", "None"),
+                        ("LOG_FILE", "None"),
                     ),
                 )
             ),
@@ -916,6 +947,7 @@ CASES: Cases = (
                                 ("BOT_NAME", "[]"),
                                 ("CONCURRENT_REQUESTS", "None"),
                                 ("CONCURRENT_REQUESTS", "{}"),
+                                ("DEFAULT_ITEM_CLASS", "None"),
                                 ("DEFAULT_ITEM_CLASS", "[]"),
                                 ("DEFAULT_ITEM_CLASS", '""'),
                                 ("DEFAULT_ITEM_CLASS", '"mymodule"'),
@@ -963,6 +995,7 @@ CASES: Cases = (
                                 ("DOWNLOADER_MIDDLEWARES", "{Foo: 'bar'}"),
                                 ("FEED_EXPORT_FIELDS", "0"),
                                 ("FEED_EXPORT_INDENT", '"not_int"'),
+                                ("FEED_URI", "{}"),
                                 ("FEED_URI_PARAMS", '"invalid"'),
                                 ("FEED_URI_PARAMS", "123"),
                                 ("FEED_URI_PARAMS", "[]"),
@@ -970,67 +1003,63 @@ CASES: Cases = (
                                 ("FEEDS", "[]"),
                                 ("FEEDS", '"[]"'),
                                 ("FEEDS", "None"),
-                                ("FEEDS", "{1: {}}"),
-                                ("FEEDS", '{"output.json": "not_a_dict"}'),
-                                ("FEEDS", '{"output.json": 123}'),
-                                ("FEEDS", '{"output.json": []}'),
-                                ("FEEDS", '{"output.json": "[]"}'),
-                                ("FEEDS", '{"output.json": {"foo": "bar"}}'),
-                                ("FEEDS", '{"output.json": {"format": 123}}'),
-                                ("FEEDS", '{"output.json": {"format": {}}}'),
-                                ("FEEDS", '{"output.json": {"batch_item_count": -1}}'),
+                                ("FEEDS", '{f: "not_a_dict"}'),
+                                ("FEEDS", "{f: 123}"),
+                                ("FEEDS", "{f: []}"),
+                                ("FEEDS", '{f: "[]"}'),
+                                ("FEEDS", '{f: {"foo": "bar"}}'),
+                                ("FEEDS", '{f: {"format": 123}}'),
+                                ("FEEDS", '{f: {"format": {}}}'),
+                                ("FEEDS", '{f: {"batch_item_count": -1}}'),
                                 (
                                     "FEEDS",
-                                    '{"output.json": {"batch_item_count": "not_int"}}',
+                                    '{f: {"batch_item_count": "not_int"}}',
                                 ),
-                                ("FEEDS", '{"output.json": {"batch_item_count": {}}}'),
-                                ("FEEDS", '{"output.json": {"encoding": 123}}'),
-                                ("FEEDS", '{"output.json": {"encoding": {}}}'),
+                                ("FEEDS", '{f: {"batch_item_count": {}}}'),
+                                ("FEEDS", '{f: {"encoding": 123}}'),
+                                ("FEEDS", '{f: {"encoding": {}}}'),
                                 (
                                     "FEEDS",
-                                    '{"output.json": {"fields": "not_list_or_dict"}}',
+                                    '{f: {"fields": "not_list_or_dict"}}',
                                 ),
-                                ("FEEDS", '{"output.json": {"fields": [123]}}'),
-                                ("FEEDS", '{"output.json": {"fields": {"key": 123}}}'),
+                                ("FEEDS", '{f: {"fields": [123]}}'),
+                                ("FEEDS", '{f: {"fields": {"key": 123}}}'),
                                 (
                                     "FEEDS",
-                                    '{"output.json": {"item_classes": "not_list"}}',
+                                    '{f: {"item_classes": "not_list"}}',
                                 ),
-                                ("FEEDS", '{"output.json": {"item_classes": [[]]}}'),
+                                ("FEEDS", '{f: {"item_classes": [[]]}}'),
                                 (
                                     "FEEDS",
-                                    '{"output.json": {"item_classes": ["invalid_path"]}}',
-                                ),
-                                (
-                                    "FEEDS",
-                                    '{"output.json": {"item_filter": "invalid_path"}}',
-                                ),
-                                ("FEEDS", '{"output.json": {"indent": -1}}'),
-                                ("FEEDS", '{"output.json": {"indent": "not_int"}}'),
-                                (
-                                    "FEEDS",
-                                    '{"output.json": {"item_export_kwargs": "not_dict"}}',
+                                    '{f: {"item_classes": ["invalid_path"]}}',
                                 ),
                                 (
                                     "FEEDS",
-                                    '{"output.json": {"item_export_kwargs": {1: "key is invalid"}}}',
+                                    '{f: {"item_filter": "invalid_path"}}',
                                 ),
-                                ("FEEDS", '{"output.json": {"overwrite": "not_bool"}}'),
-                                ("FEEDS", '{"output.json": {"overwrite": {}}}'),
+                                ("FEEDS", '{f: {"indent": -1}}'),
+                                ("FEEDS", '{f: {"indent": "not_int"}}'),
                                 (
                                     "FEEDS",
-                                    '{"output.json": {"store_empty": "not_bool"}}',
-                                ),
-                                ("FEEDS", '{"output.json": {"uri_params": "invalid"}}'),
-                                ("FEEDS", '{"output.json": {"uri_params": {}}}'),
-                                (
-                                    "FEEDS",
-                                    '{"output.json": {"postprocessing": ["invalid_path"]}}',
+                                    '{f: {"item_export_kwargs": "not_dict"}}',
                                 ),
                                 (
                                     "FEEDS",
-                                    '{"item_classes": [ProductItem], "item_filter": MyFilter, "uri_params": get_uri_params}',
+                                    '{f: {"item_export_kwargs": {1: "key is invalid"}}}',
                                 ),
+                                ("FEEDS", '{f: {"overwrite": "not_bool"}}'),
+                                ("FEEDS", '{f: {"overwrite": {}}}'),
+                                (
+                                    "FEEDS",
+                                    '{f: {"store_empty": "not_bool"}}',
+                                ),
+                                ("FEEDS", '{f: {"uri_params": "invalid"}}'),
+                                ("FEEDS", '{f: {"uri_params": {}}}'),
+                                (
+                                    "FEEDS",
+                                    '{f: {"postprocessing": ["invalid_path"]}}',
+                                ),
+                                ("JOBDIR", "1"),
                                 ("JOBDIR", "[]"),
                                 ("LOG_LEVEL", "'FOO'"),
                                 ("LOG_LEVEL", "None"),
@@ -1050,6 +1079,13 @@ CASES: Cases = (
                             )
                         ),
                         *(
+                            ("SCP36 invalid setting value", setting, value, column)
+                            for setting, value, column in (
+                                ("FEEDS", "{1: {}}", 1),
+                                ("FEEDS", "{None: {}}", 1),
+                            )
+                        ),
+                        *(
                             ("SCP37 unpicklable setting value", setting, value, 0)
                             for setting, value in (
                                 ("FEED_URI_PARAMS", "lambda params, spider: {}"),
@@ -1061,12 +1097,12 @@ CASES: Cases = (
                             for setting, value, column in (
                                 (
                                     "FEEDS",
-                                    '{"output.jsonl":{"item_classes": (cls for cls in item_classes)}}',
-                                    33,
+                                    '{f:{"item_classes": (cls for cls in item_classes)}}',
+                                    20,
                                 ),
                             )
                         ),
-                        # SCP39 no contact info (valid values)
+                        # SCP39 no contact info
                         *(
                             ("SCP39 no contact info", "USER_AGENT", value, 0)
                             for value in (
@@ -1082,6 +1118,50 @@ CASES: Cases = (
                         *(
                             ("SCP36 invalid setting value", "USER_AGENT", value, 0)
                             for value in ("5559292",)
+                        ),
+                        # SCP42 unneeded path string
+                        ("SCP42 unneeded path string", "FEED_URI", "'output.jsonl'", 0),
+                        (
+                            "SCP42 unneeded path string",
+                            "FEED_URI",
+                            "'file:///home/user/output.jsonl'",
+                            0,
+                        ),
+                        ("SCP42 unneeded path string", "LOG_FILE", "'scrapy.log'", 0),
+                    ),
+                )
+            ),
+            *(
+                (
+                    template.format_map(SafeDict(setting=setting, value=value)),
+                    (
+                        *(
+                            Issue(
+                                msg,
+                                column=template_column + len(setting) + col,
+                                path=path,
+                            )
+                            for msg, col in value_issues
+                        ),
+                    ),
+                )
+                for template, template_column, setting, value, value_issues in zip_with_template(
+                    (
+                        *(
+                            (template, value_column)
+                            for template, _, value_column in SETTING_VALUE_CHECK_TEMPLATES
+                        ),
+                    ),
+                    (
+                        (
+                            "FEEDS",
+                            '{"item_classes": [ProductItem], "item_filter": MyFilter, "uri_params": get_uri_params}',
+                            (
+                                ("SCP36 invalid setting value", 0),
+                                ("SCP42 unneeded path string", 1),
+                                ("SCP42 unneeded path string", 32),
+                                ("SCP42 unneeded path string", 57),
+                            ),
                         ),
                     ),
                 )
@@ -1978,18 +2058,18 @@ CASES: Cases = (
                     ),
                 )
                 for versions, value in (
-                    (("2.2.0", "2.3.0"), '{"output.json": {"batch_item_count": 100}}'),
-                    (("2.3.0", "2.4.0"), '{"output.json": {"item_export_kwargs": {}}}'),
-                    (("2.3.0", "2.4.0"), '{"output.json": {"overwrite": False}}'),
+                    (("2.2.0", "2.3.0"), '{f: {"batch_item_count": 100}}'),
+                    (("2.3.0", "2.4.0"), '{f: {"item_export_kwargs": {}}}'),
+                    (("2.3.0", "2.4.0"), '{f: {"overwrite": False}}'),
                     (
                         ("2.5.0", "2.6.0"),
-                        '{"output.json": {"item_classes": [MyItem]}}',
+                        '{f: {"item_classes": [MyItem]}}',
                     ),
                     (
                         ("2.5.0", "2.6.0"),
-                        '{"output.json": {"item_filter": MyFilter}}',
+                        '{f: {"item_filter": MyFilter}}',
                     ),
-                    (("2.5.0", "2.6.0"), '{"output.json": {"postprocessing": []}}'),
+                    (("2.5.0", "2.6.0"), '{f: {"postprocessing": []}}'),
                 )
                 for version, has_issue in zip(versions, (True, False))
             ),
@@ -2152,6 +2232,99 @@ CASES: Cases = (
                                     '{"custom.Middleware": 42}',
                                     1,
                                     "SCP41 unneeded import path",
+                                ),
+                            )
+                        ),
+                        # SCP42 unneeded path string
+                        # SCP43 unsupported Path object
+                        *(
+                            (f"scrapy=={version}", issues, setting, value, 0)
+                            for setting, old_version, new_version in (
+                                ("HTTPCACHE_DIR", "2.7.1", "2.8.0"),
+                                ("TEMPLATES_DIR", "2.7.1", "2.8.0"),
+                                ("FEED_TEMPDIR", "2.7.1", "2.8.0"),
+                                ("JOBDIR", "2.7.1", "2.8.0"),
+                                ("FILES_STORE", "2.8.0", "2.9.0"),
+                                ("IMAGES_STORE", "2.8.0", "2.9.0"),
+                            )
+                            for value, version, issues in (
+                                ("'path'", old_version, NO_ISSUE),
+                                (
+                                    "Path('path')",
+                                    old_version,
+                                    "SCP43 unsupported Path object",
+                                ),
+                                ("'path'", new_version, "SCP42 unneeded path string"),
+                                ("Path('path')", new_version, NO_ISSUE),
+                            )
+                        ),
+                        *(
+                            (f"scrapy=={version}", issues, "FEEDS", value, 1)
+                            for old_version, new_version in (("2.5.1", "2.6.0"),)
+                            for value, version, issues in (
+                                # No path support, no URI params
+                                (
+                                    "{'output.json': {'format': 'json'}}",
+                                    old_version,
+                                    NO_ISSUE,
+                                ),
+                                (
+                                    "{'file:///home/user/output.json': {'format': 'json'}}",
+                                    old_version,
+                                    NO_ISSUE,
+                                ),
+                                (
+                                    "{Path('output.json'): {'format': 'json'}}",
+                                    old_version,
+                                    "SCP43 unsupported Path object: requires Scrapy 2.6.0+",
+                                ),
+                                # Path support, no URI params
+                                (
+                                    "{'output.json': {'format': 'json'}}",
+                                    new_version,
+                                    "SCP42 unneeded path string",
+                                ),
+                                (
+                                    "{'file:///home/user/output.json': {'format': 'json'}}",
+                                    new_version,
+                                    "SCP42 unneeded path string",
+                                ),
+                                (
+                                    "{Path('output.json'): {'format': 'json'}}",
+                                    new_version,
+                                    NO_ISSUE,
+                                ),
+                                # No path support, URI params
+                                (
+                                    "{'output-%(time)s.json': {'format': 'json'}}",
+                                    old_version,
+                                    NO_ISSUE,
+                                ),
+                                (
+                                    "{'file:///home/user/output-%(time)s.json': {'format': 'json'}}",
+                                    old_version,
+                                    NO_ISSUE,
+                                ),
+                                (
+                                    "{Path('output-%(time)s.json'): {'format': 'json'}}",
+                                    old_version,
+                                    "SCP43 unsupported Path object: requires Scrapy 2.6.0+",
+                                ),
+                                # Path support, URI params
+                                (
+                                    "{'output-%(time)s.json': {'format': 'json'}}",
+                                    new_version,
+                                    NO_ISSUE,
+                                ),
+                                (
+                                    "{'file:///home/user/output-%(time)s.json': {'format': 'json'}}",
+                                    new_version,
+                                    NO_ISSUE,
+                                ),
+                                (
+                                    "{Path('output-%(time)s.json'): {'format': 'json'}}",
+                                    new_version,
+                                    "SCP43 unsupported Path object: has URI params",
                                 ),
                             )
                         ),

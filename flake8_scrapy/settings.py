@@ -94,7 +94,6 @@ class SettingType(Enum):
     OPT_INT = "opt_int"
     OPT_PATH = "opt_path"
     OPT_STR = "opt_str"
-    PATH = "path"
     PERIODIC_LOG_CONFIG = "periodic_log_config"
     STR = "str"
     # OBJ stands for a Python object (e.g. class, function, module) or its

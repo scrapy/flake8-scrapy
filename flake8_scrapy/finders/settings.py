@@ -38,6 +38,7 @@ from ast import walk as iter_nodes
 from collections.abc import Generator, Iterable
 from contextlib import suppress
 from difflib import SequenceMatcher
+from functools import partial
 from importlib.util import find_spec
 from itertools import chain
 from pathlib import Path
@@ -75,7 +76,9 @@ from flake8_scrapy.issues import (
     SETTING_NEEDS_UPGRADE,
     UNKNOWN_SETTING,
     UNNEEDED_IMPORT_PATH,
+    UNNEEDED_PATH_STRING,
     UNNEEDED_SETTING_GET,
+    UNSUPPORTED_PATH_OBJECT,
     WRONG_SETTING_METHOD,
     Issue,
     Pos,
@@ -418,13 +421,72 @@ def is_slot_config(node: Dict) -> bool:
     return True
 
 
-def check_feeds(node: expr, context: Context, **kwargs) -> Generator[Issue, None, None]:  # noqa: PLR0911
+def has_feed_uri_params(value: str) -> bool:
+    return bool(re.search(r"%\([^)]+\)[sdifouxXeEgGcr]", value))
+
+
+def is_path_obj(node: Call) -> bool:
+    return getattr(node.func, "id", None) in {
+        "Path",
+        "PurePath",
+        "PurePosixPath",
+        "PureWindowsPath",
+        "PosixPath",
+        "WindowsPath",
+    }
+
+
+def check_feed_uri(
+    node: expr,
+    allow_none: bool = True,
+    path_obj_support: bool | None = True,
+    unsupported_path_obj_detail: str | None = None,
+    **kwargs,
+) -> Generator[Issue, None, None]:
+    if isinstance(node, (Dict, Lambda, List, Set, Tuple)):
+        return  # Already reported as bad type
+    pos = Pos.from_node(node)
+    invalid = Issue(INVALID_SETTING_VALUE, pos)
+    unneeded_str = Issue(UNNEEDED_PATH_STRING, pos)
+    if isinstance(node, Call):
+        if not (
+            is_path_obj(node) and node.args and isinstance(node.args[0], Constant)
+        ) or not isinstance(node.args[0].value, str):
+            pass
+        elif path_obj_support is False:
+            assert unsupported_path_obj_detail is not None
+            yield Issue(UNSUPPORTED_PATH_OBJECT, pos, unsupported_path_obj_detail)
+        elif has_feed_uri_params(node.args[0].value):
+            yield Issue(UNSUPPORTED_PATH_OBJECT, pos, "has URI params")
+        return
+    if not isinstance(node, Constant) or (allow_none and node.value is None):
+        return
+    if not isinstance(node.value, str):
+        yield invalid
+        return
+    try:
+        protocol, path = node.value.split("://", 1)
+    except ValueError:
+        if path_obj_support is not False and not has_feed_uri_params(node.value):
+            yield unneeded_str
+    else:
+        if (
+            protocol == "file"
+            and path_obj_support is not False
+            and not has_feed_uri_params(path)
+        ):
+            yield unneeded_str
+
+
+def check_feeds(node: expr, context: Context, **kwargs) -> Generator[Issue, None, None]:
     if not is_getdict_compatible(node, **kwargs):
         return
     issue = Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
     if isinstance(node, (Lambda, List, Set, Tuple)):
         yield issue
         return
+    version = context.project.frozen_requirements.get("scrapy")
+    path_obj_support = None if version is None else version >= Version("2.6.0")
     if isinstance(node, Constant):
         value = node.value
         if not isinstance(value, str):
@@ -435,15 +497,18 @@ def check_feeds(node: expr, context: Context, **kwargs) -> Generator[Issue, None
             yield issue
             return
         node = ast.parse(repr(data), mode="eval").body
+        path_obj_support = False
     if not isinstance(node, Dict):
         return
     for key_node in node.keys:
-        if not isinstance(key_node, Constant):
-            continue
-        key = key_node.value
-        if not isinstance(key, str):
-            yield issue
-            return
+        assert key_node is not None
+        yield from check_feed_uri(
+            key_node,
+            allow_none=False,
+            path_obj_support=path_obj_support,
+            unsupported_path_obj_detail="requires Scrapy 2.6.0+",
+            context=context,
+        )
     for value_node in node.values:
         if isinstance(value_node, (Constant, Lambda, List, Set, Tuple)):
             yield issue
@@ -592,6 +657,7 @@ class ValueChecker(Protocol):
 
 VALUE_CHECKERS: dict[str, ValueChecker] = {
     "DOWNLOAD_SLOTS": check_download_slots,
+    "FEED_URI": check_feed_uri,
     "FEEDS": check_feeds,
     "USER_AGENT": check_user_agent,
 }
@@ -733,25 +799,75 @@ def check_comp_prio(
 
 
 def check_obj(
-    node: expr, *, setting: Setting, project: Project, **kwargs
+    node: expr,
+    *,
+    allow_none: bool = False,
+    setting: Setting,
+    project: Project,
+    **kwargs,
 ) -> Generator[Issue, None, None]:
+    issue = Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
     if isinstance(node, (Dict, List, Set, Tuple)):
-        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+        yield issue
         return
     if not isinstance(node, Constant):
         return
+    if node.value is None:
+        if not allow_none:
+            yield issue
+        return
     yield from check_import_path(node, project)
 
 
-def check_opt_obj(
-    node: expr, *, setting: Setting, project: Project, **kwargs
+PATH_SUPPORT_VERSIONS: dict[str, Version | UnknownUnsupportedVersion] = {
+    "FEED_TEMPDIR": Version("2.8.0"),
+    "FILES_STORE": Version("2.9.0"),
+    "HTTPCACHE_DIR": Version("2.8.0"),
+    "IMAGES_STORE": Version("2.9.0"),
+    "JOBDIR": Version("2.8.0"),
+    "LOG_FILE": UNKNOWN_UNSUPPORTED_VERSION,
+    "TEMPLATES_DIR": Version("2.8.0"),
+}
+
+
+def check_opt_path(
+    node: expr,
+    *,
+    setting: Setting,
+    project: Project,
+    **kwargs,
 ) -> Generator[Issue, None, None]:
-    if isinstance(node, (Dict, List, Set, Tuple)):
-        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+    pos = Pos.from_node(node)
+    invalid = Issue(INVALID_SETTING_VALUE, pos)
+    if isinstance(node, (Dict, Lambda, List, Set, Tuple)):
+        yield invalid
         return
-    if not isinstance(node, Constant) or node.value is None:
+    if isinstance(node, Call):
+        if not is_path_obj(node):
+            return
+        is_path_obj_ = True
+    elif isinstance(node, Constant):
+        if node.value is None:
+            return
+        if not isinstance(node.value, str):
+            yield invalid
+            return
+        is_path_obj_ = False
+    else:
         return
-    yield from check_import_path(node, project)
+    version = project.frozen_requirements.get(setting.package)
+    assert setting.name in PATH_SUPPORT_VERSIONS
+    path_support_version = PATH_SUPPORT_VERSIONS[setting.name]
+    if isinstance(path_support_version, UnknownUnsupportedVersion):
+        supports_path_obj = True
+    elif version is None:
+        return
+    else:
+        supports_path_obj = version >= path_support_version
+    if is_path_obj_ and not supports_path_obj:
+        yield Issue(UNSUPPORTED_PATH_OBJECT, pos)
+    elif not is_path_obj_ and supports_path_obj:
+        yield Issue(UNNEEDED_PATH_STRING, pos)
 
 
 TYPE_CHECKERS: dict[SettingType, TypeChecker] = {
@@ -767,9 +883,7 @@ TYPE_CHECKERS: dict[SettingType, TypeChecker] = {
             (SettingType.LIST, is_getlist_compatible),
             (SettingType.LOG_LEVEL, is_log_level),
             (SettingType.OPT_INT, is_opt_int),
-            (SettingType.OPT_PATH, is_opt_str),
             (SettingType.OPT_STR, is_opt_str),
-            (SettingType.PATH, is_str),
             (SettingType.PERIODIC_LOG_CONFIG, is_periodic_log_config),
             (SettingType.STR, is_str),
         )
@@ -778,7 +892,8 @@ TYPE_CHECKERS: dict[SettingType, TypeChecker] = {
     SettingType.BASED_OBJ_DICT: check_based_obj_dict,
     SettingType.COMP_PRIO_DICT: check_comp_prio,
     SettingType.OBJ: check_obj,
-    SettingType.OPT_OBJ: check_opt_obj,
+    SettingType.OPT_OBJ: partial(check_obj, allow_none=True),
+    SettingType.OPT_PATH: check_opt_path,
 }
 
 
