@@ -815,6 +815,9 @@ CASES: Cases = (
                         ("FEEDS", "foo"),
                         ("FEEDS", "foo()"),
                         ("FEEDS", '"{}"'),
+                        ("FEEDS", "[]"),
+                        ("FEEDS", '"[]"'),
+                        ("FEEDS", "None"),
                         (
                             "FEEDS",
                             '{f: {"format": "csv", "fields": ["name", "price"], "encoding": "utf-8"}}',
@@ -996,65 +999,6 @@ CASES: Cases = (
                                 ("FEED_URI_PARAMS", "123"),
                                 ("FEED_URI_PARAMS", "[]"),
                                 ("FEEDS", '"not_a_dict"'),
-                                ("FEEDS", "[]"),
-                                ("FEEDS", '"[]"'),
-                                ("FEEDS", "None"),
-                                ("FEEDS", '{f: "not_a_dict"}'),
-                                ("FEEDS", "{f: 123}"),
-                                ("FEEDS", "{f: []}"),
-                                ("FEEDS", '{f: "[]"}'),
-                                ("FEEDS", '{f: {"foo": "bar"}}'),
-                                ("FEEDS", '{f: {"format": 123}}'),
-                                ("FEEDS", '{f: {"format": {}}}'),
-                                ("FEEDS", '{f: {"batch_item_count": -1}}'),
-                                (
-                                    "FEEDS",
-                                    '{f: {"batch_item_count": "not_int"}}',
-                                ),
-                                ("FEEDS", '{f: {"batch_item_count": {}}}'),
-                                ("FEEDS", '{f: {"encoding": 123}}'),
-                                ("FEEDS", '{f: {"encoding": {}}}'),
-                                (
-                                    "FEEDS",
-                                    '{f: {"fields": "not_list_or_dict"}}',
-                                ),
-                                ("FEEDS", '{f: {"fields": [123]}}'),
-                                ("FEEDS", '{f: {"fields": {"key": 123}}}'),
-                                (
-                                    "FEEDS",
-                                    '{f: {"item_classes": "not_list"}}',
-                                ),
-                                ("FEEDS", '{f: {"item_classes": [[]]}}'),
-                                (
-                                    "FEEDS",
-                                    '{f: {"item_classes": ["invalid_path"]}}',
-                                ),
-                                (
-                                    "FEEDS",
-                                    '{f: {"item_filter": "invalid_path"}}',
-                                ),
-                                ("FEEDS", '{f: {"indent": -1}}'),
-                                ("FEEDS", '{f: {"indent": "not_int"}}'),
-                                (
-                                    "FEEDS",
-                                    '{f: {"item_export_kwargs": "not_dict"}}',
-                                ),
-                                (
-                                    "FEEDS",
-                                    '{f: {"item_export_kwargs": {1: "key is invalid"}}}',
-                                ),
-                                ("FEEDS", '{f: {"overwrite": "not_bool"}}'),
-                                ("FEEDS", '{f: {"overwrite": {}}}'),
-                                (
-                                    "FEEDS",
-                                    '{f: {"store_empty": "not_bool"}}',
-                                ),
-                                ("FEEDS", '{f: {"uri_params": "invalid"}}'),
-                                ("FEEDS", '{f: {"uri_params": {}}}'),
-                                (
-                                    "FEEDS",
-                                    '{f: {"postprocessing": ["invalid_path"]}}',
-                                ),
                                 ("JOBDIR", "1"),
                                 ("JOBDIR", "[]"),
                                 ("LOG_LEVEL", "'FOO'"),
@@ -1104,8 +1048,7 @@ CASES: Cases = (
                                     17,
                                     (
                                         "DOWNLOAD_SLOTS values must be "
-                                        "dictionaries of download slot "
-                                        "parameters"
+                                        "dicts of download slot parameters"
                                     ),
                                 ),
                                 (
@@ -1143,6 +1086,186 @@ CASES: Cases = (
                                     '{"toscrape.com": {"randomize_delay": 1}}',
                                     37,
                                     "randomize_delay must be a boolean",
+                                ),
+                                *(
+                                    (
+                                        "FEEDS",
+                                        value,
+                                        4,
+                                        "FEEDS dict values must be dicts of "
+                                        "feed configurations",
+                                    )
+                                    for value in (
+                                        '{f: "not_a_dict"}',
+                                        "{f: 123}",
+                                        "{f: []}",
+                                        '{f: "[]"}',
+                                    )
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"foo": "bar"}}',
+                                    5,
+                                    "unknown feed config key",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"format": 123}}',
+                                    15,
+                                    "'format' must be a string",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"format": {}}}',
+                                    15,
+                                    "'format' must be a string",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"batch_item_count": -1}}',
+                                    25,
+                                    "'batch_item_count' must be >= 0",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"batch_item_count": "not_int"}}',
+                                    25,
+                                    "'batch_item_count' must be an integer",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"batch_item_count": {}}}',
+                                    25,
+                                    "'batch_item_count' must be an integer",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"encoding": 123}}',
+                                    17,
+                                    "'encoding' must be a string or None",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"encoding": {}}}',
+                                    17,
+                                    "'encoding' must be a string or None",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"fields": ""}}',
+                                    15,
+                                    "'fields' must be a list or a dict",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"fields": [123]}}',
+                                    16,
+                                    "fields[0] (123) must be a string",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"fields": {1: ["foo", "bar"]}}}',
+                                    16,
+                                    "'fields' keys must be strings, not int (1)",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"fields": {"key": 123}}}',
+                                    23,
+                                    "fields['key'] (123) must be a string",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"item_classes": "not_list"}}',
+                                    21,
+                                    "'item_classes' must be a list",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"item_classes": [[]]}}',
+                                    22,
+                                    "item_classes[0] is neither a Python object of the expected type nor its import path as a string",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"item_classes": [1]}}',
+                                    22,
+                                    "item_classes[0] (1) is neither a Python object of the expected type nor its import path as a string",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"item_classes": ["foo"]}}',
+                                    22,
+                                    "item_classes[0] ('foo') does not look like a valid import path",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"item_filter": "foo"}}',
+                                    20,
+                                    "'item_filter' ('foo') does not look like a valid import path",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"indent": -1}}',
+                                    15,
+                                    "'indent' must be >= 0",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"indent": "not_int"}}',
+                                    15,
+                                    "'indent' must be an integer",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"item_export_kwargs": "not_dict"}}',
+                                    27,
+                                    "'item_export_kwargs' must be a dict",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"item_export_kwargs": {1: "key is invalid"}}}',
+                                    27,
+                                    "'item_export_kwargs' keys must be strings, not int (1)",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"overwrite": "not_bool"}}',
+                                    18,
+                                    "'overwrite' must be a boolean",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"overwrite": {}}}',
+                                    18,
+                                    "'overwrite' must be a boolean",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"store_empty": "not_bool"}}',
+                                    20,
+                                    "'store_empty' must be a boolean",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"uri_params": "foo"}}',
+                                    19,
+                                    "'uri_params' ('foo') does not look like "
+                                    "a valid import path",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"uri_params": {}}}',
+                                    19,
+                                    "'uri_params' must be a Python object or "
+                                    "its import path as a string",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '{f: {"postprocessing": ["foo"]}}',
+                                    24,
+                                    "postprocessing[0] ('foo') does not look "
+                                    "like a valid import path",
                                 ),
                             )
                         ),
@@ -1224,12 +1347,39 @@ CASES: Cases = (
                         ),
                         (
                             "FEEDS",
-                            '{"item_classes": [ProductItem], "item_filter": MyFilter, "uri_params": get_uri_params}',
                             (
-                                ("SCP36 invalid setting value", 0),
+                                '{"item_classes": [ProductItem], '
+                                '"item_filter": MyFilter, '
+                                '"uri_params": get_uri_params}'
+                            ),
+                            (
+                                (
+                                    (
+                                        "SCP36 invalid setting value: FEEDS "
+                                        "dict values must be dicts of feed "
+                                        "configurations"
+                                    ),
+                                    17,
+                                ),
                                 ("SCP42 unneeded path string", 1),
                                 ("SCP42 unneeded path string", 32),
                                 ("SCP42 unneeded path string", 57),
+                            ),
+                        ),
+                        (
+                            "FEEDS",
+                            '{f: {"fields": {1: 2}}}',
+                            (
+                                (
+                                    "SCP36 invalid setting value: 'fields' "
+                                    "keys must be strings, not int (1)",
+                                    16,
+                                ),
+                                (
+                                    "SCP36 invalid setting value: 'fields' "
+                                    "dict values must be strings, not int (2)",
+                                    19,
+                                ),
                             ),
                         ),
                     ),
@@ -2114,25 +2264,44 @@ CASES: Cases = (
                             path="requirements.txt",
                         ),
                         *(
-                            Issue("SCP36 invalid setting value", column=20, path=path)
+                            Issue(
+                                f"SCP29 setting needs upgrade: {key!r} "
+                                f"requires Scrapy {versions[1]}+",
+                                column=25,
+                                path=path,
+                            )
                             for _ in range(1)
                             if has_issue
                         ),
                     ),
                 )
-                for versions, value in (
-                    (("2.2.0", "2.3.0"), '{f: {"batch_item_count": 100}}'),
-                    (("2.3.0", "2.4.0"), '{f: {"item_export_kwargs": {}}}'),
-                    (("2.3.0", "2.4.0"), '{f: {"overwrite": False}}'),
+                for key, versions, value in (
                     (
+                        "batch_item_count",
+                        ("2.2.0", "2.3.0"),
+                        '{f: {"batch_item_count": 100}}',
+                    ),
+                    (
+                        "item_export_kwargs",
+                        ("2.3.0", "2.4.0"),
+                        '{f: {"item_export_kwargs": {}}}',
+                    ),
+                    ("overwrite", ("2.3.0", "2.4.0"), '{f: {"overwrite": False}}'),
+                    (
+                        "item_classes",
                         ("2.5.0", "2.6.0"),
                         '{f: {"item_classes": [MyItem]}}',
                     ),
                     (
+                        "item_filter",
                         ("2.5.0", "2.6.0"),
                         '{f: {"item_filter": MyFilter}}',
                     ),
-                    (("2.5.0", "2.6.0"), '{f: {"postprocessing": []}}'),
+                    (
+                        "postprocessing",
+                        ("2.5.0", "2.6.0"),
+                        '{f: {"postprocessing": []}}',
+                    ),
                 )
                 for version, has_issue in zip(versions, (True, False))
             ),
