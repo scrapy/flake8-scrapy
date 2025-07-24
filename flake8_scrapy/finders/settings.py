@@ -1064,8 +1064,10 @@ class SettingChecker:
             yield Issue(NO_OP_SETTING_UPDATE, Pos.from_node(node))
 
     def check_method(
-        self, name_node: Constant, func: Attribute
+        self, name_node: Constant, call: Call
     ) -> Generator[Issue, None, None]:
+        func = call.func
+        assert isinstance(func, Attribute)
         name = name_node.value
         if name not in SETTINGS:
             return
@@ -1077,21 +1079,40 @@ class SettingChecker:
             and not self.allow_pre_crawler_settings
         ):
             yield Issue(NO_OP_SETTING_UPDATE, name_pos)
+        yield from self.check_wrong_setting_method(setting, call, name_pos)
+
+    def check_wrong_setting_method(
+        self, setting: Setting, call: Call, name_pos: Pos
+    ) -> Generator[Issue, None, None]:
+        func = call.func
+        assert isinstance(func, Attribute)
         if (
             setting.type is not None
             and func.attr in SETTING_UPDATER_TYPES
             and setting.type not in SETTING_UPDATER_TYPES[func.attr]
         ):
             yield Issue(WRONG_SETTING_METHOD, name_pos)
-        if func.attr in SETTING_GETTERS and setting.type is not None:
-            assert isinstance(func.value, Name)
-            column = func.col_offset + len(func.value.id) + 1  # +1 for the dot
-            pos = Pos.from_node(func, column)
-            if setting.type in SETTING_TYPE_GETTERS:
-                expected = SETTING_TYPE_GETTERS[setting.type]
-                if func.attr != expected:
-                    yield Issue(WRONG_SETTING_METHOD, pos, f"use {expected}()")
-            elif func.attr not in {"get", "__getitem__"}:
+        if func.attr not in SETTING_GETTERS or setting.type is None:
+            return
+        assert isinstance(func.value, Name)
+        column = func.col_offset + len(func.value.id) + 1  # +1 for the dot
+        pos = Pos.from_node(func, column)
+        if setting.type in SETTING_TYPE_GETTERS:
+            expected = SETTING_TYPE_GETTERS[setting.type]
+            if func.attr != expected:
+                yield Issue(WRONG_SETTING_METHOD, pos, f"use {expected}()")
+        elif func.attr not in {"get", "__getitem__"}:
+            has_default = False
+            if len(call.args) > 1:
+                has_default = True
+            else:
+                for kw in call.keywords:
+                    if kw.arg == "default":
+                        has_default = True
+                        break
+            if has_default:
+                yield Issue(WRONG_SETTING_METHOD, pos, "use get()")
+            else:
                 yield Issue(WRONG_SETTING_METHOD, pos, "use []")
 
     def check_subscript(
@@ -1200,7 +1221,7 @@ class SettingIssueFinder:
             if not name:
                 return
             yield from self.setting_checker.check_name(name)
-            yield from self.setting_checker.check_method(name, node.func)
+            yield from self.setting_checker.check_method(name, node)
             if node.func.attr in SETTING_SETTERS:
                 if isinstance(name.value, str) and value_or_default:
                     yield from self.setting_checker.check_value(

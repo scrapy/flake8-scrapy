@@ -491,6 +491,16 @@ CASES: Cases = (
                 "settings.getint('DEFAULT_DROPITEM_LOG_LEVEL')",
                 Issue("SCP32 wrong setting method: use []", column=9, path=path),
             ),
+            # SCP32 wrong setting method: get() recommendation due to positional default
+            (
+                "settings.getint('DEFAULT_DROPITEM_LOG_LEVEL', 5)",
+                Issue("SCP32 wrong setting method: use get()", column=9, path=path),
+            ),
+            # SCP32 wrong setting method: get() recommendation due to keyword default
+            (
+                "settings.getint('DEFAULT_DROPITEM_LOG_LEVEL', default=5)",
+                Issue("SCP32 wrong setting method: use get()", column=9, path=path),
+            ),
             # SCP32 wrong setting method: list
             (
                 "settings.add_to_list('LOG_SHORT_NAMES', 'foo')",
