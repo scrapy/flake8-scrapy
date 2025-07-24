@@ -186,6 +186,8 @@ def is_getlist_compatible(node: expr, **kwargs) -> bool:
 
 
 def is_getdict_compatible(node: expr, **kwargs) -> bool:
+    if isinstance(node, Lambda):
+        return False
     if not isinstance(node, Constant):
         return True
     value = node.value
@@ -353,55 +355,49 @@ REQUIRED_UA_PATTERNS = (
 )
 
 
-def check_download_slots(node: expr, **kwargs) -> Generator[Issue, None, None]:  # noqa: PLR0911,PLR0912
-    if not is_getdict_compatible(node, **kwargs):
-        return
-    issue = Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
-    if isinstance(node, (Lambda, List, Set, Tuple)):
-        yield issue
-        return
-    if isinstance(node, Constant):
-        value = node.value
-        if not isinstance(value, str):
-            yield issue
-            return
-        data = json.loads(value)
-        if not isinstance(data, dict):
-            yield issue
-            return
-        node = ast.parse(repr(data), mode="eval").body
-    if not isinstance(node, Dict):
+def check_download_slots(node: expr, **kwargs) -> Generator[Issue, None, None]:
+    if (
+        not is_getdict_compatible(node, **kwargs)
+        or isinstance(node, Constant)  # JSON string
+        or not isinstance(node, Dict)
+    ):
         return
     for key_node in node.keys:
         if not isinstance(key_node, Constant):
             continue
         key = key_node.value
         if not isinstance(key, str):
-            yield issue
-            return
+            detail = "DOWNLOAD_SLOTS keys must be download slot IDs as strings"
+            yield Issue(INVALID_SETTING_VALUE, Pos.from_node(key_node), detail=detail)
     for value_node in node.values:
         if isinstance(value_node, (Constant, Lambda, List, Set, Tuple)):
-            yield issue
+            detail = (
+                "DOWNLOAD_SLOTS values must be dictionaries of download slot parameters"
+            )
+            yield Issue(INVALID_SETTING_VALUE, Pos.from_node(value_node), detail=detail)
             return
         if not isinstance(value_node, Dict):
             continue
-        if not is_slot_config(value_node):
-            yield issue
-            return
+        yield from check_slot_config(value_node)
 
 
-def is_slot_config(node: Dict) -> bool:
+def check_slot_config(node: Dict) -> Generator[Issue, None, None]:
     for key_node, value_node in zip(node.keys, node.values):
         if not isinstance(key_node, Constant):
             continue
         key = key_node.value
+        value_pos = Pos.from_node(value_node)
         if key == "concurrency":
-            if isinstance(value_node, Constant) and (
-                not isinstance(value_node.value, int) or value_node.value < 1
-            ):
-                return False
-            if isinstance(value_node, UnaryOp) and isinstance(value_node.op, USub):
-                return False
+            if isinstance(value_node, Constant):
+                if not isinstance(value_node.value, int):
+                    detail = "concurrency must be an integer"
+                    yield Issue(INVALID_SETTING_VALUE, value_pos, detail=detail)
+                elif value_node.value < 1:
+                    detail = "concurrency must be >= 1"
+                    yield Issue(INVALID_SETTING_VALUE, value_pos, detail=detail)
+            elif isinstance(value_node, UnaryOp) and isinstance(value_node.op, USub):
+                detail = "concurrency must be >= 1"
+                yield Issue(INVALID_SETTING_VALUE, value_pos, detail=detail)
         elif key == "delay":
             if (
                 isinstance(value_node, UnaryOp)
@@ -410,15 +406,18 @@ def is_slot_config(node: Dict) -> bool:
                 and isinstance(value_node.operand.value, (int, float))
                 and value_node.operand.value > 0
             ):
-                return False
+                detail = "delay must be >= 0"
+                yield Issue(INVALID_SETTING_VALUE, value_pos, detail=detail)
         elif key == "randomize_delay":
             if isinstance(value_node, Constant) and not isinstance(
                 value_node.value, bool
             ):
-                return False
+                detail = "randomize_delay must be a boolean"
+                yield Issue(INVALID_SETTING_VALUE, value_pos, detail=detail)
         else:
-            return False
-    return True
+            detail = "unknown download slot parameter"
+            key_pos = Pos.from_node(key_node)
+            yield Issue(INVALID_SETTING_VALUE, key_pos, detail=detail)
 
 
 def has_feed_uri_params(value: str) -> bool:

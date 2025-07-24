@@ -774,6 +774,9 @@ CASES: Cases = (
                         ("DOWNLOAD_SLOTS", '{"toscrape.com": {}}'),
                         ("DOWNLOAD_SLOTS", '\'{"toscrape.com": {"concurrency": 1}}\''),
                         ("DOWNLOAD_SLOTS", "{}"),
+                        ("DOWNLOAD_SLOTS", "[]"),
+                        ("DOWNLOAD_SLOTS", '"[]"'),
+                        ("DOWNLOAD_SLOTS", "None"),
                         ("DOWNLOADER_CLIENT_TLS_METHOD", "foo"),
                         ("DOWNLOADER_CLIENT_TLS_METHOD", "foo()"),
                         ("DOWNLOADER_CLIENT_TLS_METHOD", '"TLS"'),
@@ -977,25 +980,6 @@ CASES: Cases = (
                                 ("DOWNLOAD_HANDLERS", "dict(a=1)"),
                                 ("DOWNLOAD_HANDLERS", 'dict(a="not an import path")'),
                                 ("DOWNLOAD_SLOTS", '"not_a_dict"'),
-                                ("DOWNLOAD_SLOTS", "[]"),
-                                ("DOWNLOAD_SLOTS", '"[]"'),
-                                ("DOWNLOAD_SLOTS", "None"),
-                                ("DOWNLOAD_SLOTS", "{1: {}}"),
-                                ("DOWNLOAD_SLOTS", '{"toscrape.com": []}'),
-                                ("DOWNLOAD_SLOTS", '{"toscrape.com": {"foo": "bar"}}'),
-                                (
-                                    "DOWNLOAD_SLOTS",
-                                    '{"toscrape.com": {"concurrency": -1}}',
-                                ),
-                                (
-                                    "DOWNLOAD_SLOTS",
-                                    '{"toscrape.com": {"concurrency": 0}}',
-                                ),
-                                ("DOWNLOAD_SLOTS", '{"toscrape.com": {"delay": -1}}'),
-                                (
-                                    "DOWNLOAD_SLOTS",
-                                    '{"toscrape.com": {"randomize_delay": 1}}',
-                                ),
                                 ("DOWNLOADER_CLIENT_TLS_METHOD", "'TLSv1.3'"),
                                 ("DOWNLOADER_CLIENT_TLS_METHOD", "None"),
                                 ("DOWNLOADER_CLIENT_TLS_METHOD", "{}"),
@@ -1098,6 +1082,71 @@ CASES: Cases = (
                             )
                         ),
                         *(
+                            (
+                                f"SCP36 invalid setting value: {detail}",
+                                setting,
+                                value,
+                                column,
+                            )
+                            for setting, value, column, detail in (
+                                (
+                                    "DOWNLOAD_SLOTS",
+                                    "{1: {}}",
+                                    1,
+                                    (
+                                        "DOWNLOAD_SLOTS keys must be download "
+                                        "slot IDs as strings"
+                                    ),
+                                ),
+                                (
+                                    "DOWNLOAD_SLOTS",
+                                    '{"toscrape.com": []}',
+                                    17,
+                                    (
+                                        "DOWNLOAD_SLOTS values must be "
+                                        "dictionaries of download slot "
+                                        "parameters"
+                                    ),
+                                ),
+                                (
+                                    "DOWNLOAD_SLOTS",
+                                    '{"toscrape.com": {"foo": "bar"}}',
+                                    18,
+                                    "unknown download slot parameter",
+                                ),
+                                (
+                                    "DOWNLOAD_SLOTS",
+                                    '{"toscrape.com": {"concurrency": -1}}',
+                                    33,
+                                    "concurrency must be >= 1",
+                                ),
+                                (
+                                    "DOWNLOAD_SLOTS",
+                                    '{"toscrape.com": {"concurrency": 0}}',
+                                    33,
+                                    "concurrency must be >= 1",
+                                ),
+                                (
+                                    "DOWNLOAD_SLOTS",
+                                    '{"toscrape.com": {"concurrency": 1.5}}',
+                                    33,
+                                    "concurrency must be an integer",
+                                ),
+                                (
+                                    "DOWNLOAD_SLOTS",
+                                    '{"toscrape.com": {"delay": -1}}',
+                                    27,
+                                    "delay must be >= 0",
+                                ),
+                                (
+                                    "DOWNLOAD_SLOTS",
+                                    '{"toscrape.com": {"randomize_delay": 1}}',
+                                    37,
+                                    "randomize_delay must be a boolean",
+                                ),
+                            )
+                        ),
+                        *(
                             ("SCP37 unpicklable setting value", setting, value, 0)
                             for setting, value in (
                                 ("FEED_URI_PARAMS", "lambda params, spider: {}"),
@@ -1165,6 +1214,14 @@ CASES: Cases = (
                         ),
                     ),
                     (
+                        (
+                            "DOWNLOAD_SLOTS",
+                            "lambda: foo",
+                            (
+                                ("SCP36 invalid setting value", 0),
+                                ("SCP37 unpicklable setting value", 0),
+                            ),
+                        ),
                         (
                             "FEEDS",
                             '{"item_classes": [ProductItem], "item_filter": MyFilter, "uri_params": get_uri_params}',
