@@ -885,6 +885,8 @@ CASES: Cases = (
                         # Unknown setting type
                         ("SERVICE_ROOT", "foo"),
                         ("SERVICE_ROOT", "foo()"),
+                        # SCP37 unpicklable setting value (valid values)
+                        ("LOG_VERSIONS", "list((k for k in deps))"),
                         # SCP39 no contact info (valid values)
                         *(
                             ("USER_AGENT", value)

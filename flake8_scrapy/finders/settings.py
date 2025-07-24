@@ -1118,12 +1118,27 @@ class SettingChecker:
             column = getattr(node.slice, "col_offset", node.col_offset + 1)
             yield Issue(NO_OP_SETTING_UPDATE, Pos.from_node(node, column))
 
+    def is_materializer_call(self, parent, child):
+        if not isinstance(parent, Call):
+            return False
+        func = parent.func
+        return isinstance(func, Name) and func.id in {"list", "tuple", "set"}
+
+    def check_non_picklable(self, node, parent=None):
+        if isinstance(node, Lambda) or (
+            isinstance(node, GeneratorExp)
+            and not self.is_materializer_call(parent, node)
+        ):
+            yield Issue(NON_PICKLABLE_SETTING, Pos.from_node(node))
+        for child in ast.iter_child_nodes(node):
+            yield from self.check_non_picklable(child, node)
+
     def check_value(self, name: str, node: expr) -> Generator[Issue, None, None]:
         if name in VALUE_CHECKERS:
             yield from VALUE_CHECKERS[name](node, context=self.context)
-        for child in ast.walk(node):
-            if isinstance(child, (GeneratorExp, Lambda)):
-                yield Issue(NON_PICKLABLE_SETTING, Pos.from_node(child))
+
+        yield from self.check_non_picklable(node)
+
         if name not in SETTINGS:
             return
         setting = SETTINGS[name]
