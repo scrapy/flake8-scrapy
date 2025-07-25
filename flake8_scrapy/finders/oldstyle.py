@@ -13,7 +13,7 @@ from . import IssueFinder
 
 
 class UrlJoinIssueFinder(IssueFinder):
-    def find_issues(self, node) -> Generator[Issue, None, None]:
+    def find_issues(self, node) -> Generator[Issue]:
         if not (
             isinstance(node.func, ast.Name) and node.func.id == "urljoin" and node.args
         ):
@@ -69,7 +69,7 @@ class OldSelectorIssueFinder(IssueFinder):
             and node.value.func.id == "Selector"
         )
 
-    def find_issues(self, node) -> Generator[Issue, None, None]:
+    def find_issues(self, node) -> Generator[Issue]:
         if not self.issue_applies(node):
             return
 
@@ -88,7 +88,7 @@ class OldSelectorIssueFinder(IssueFinder):
 
 
 class GetFirstByIndexIssueFinder(IssueFinder):
-    def find_issues(self, node) -> Generator[Issue, None, None]:
+    def find_issues(self, node) -> Generator[Issue]:
         node_func = node.func
         if not (
             isinstance(node_func, ast.Attribute)
@@ -122,7 +122,7 @@ class GetFirstByIndexIssueFinder(IssueFinder):
 
 
 class ExtractThenIndexIssueFinder(GetFirstByIndexIssueFinder):
-    def find_issues(self, node) -> Generator[Issue, None, None]:
+    def find_issues(self, node) -> Generator[Issue]:
         if not isinstance(node.slice, ast.Constant):
             return
         if node.slice.value != 0:

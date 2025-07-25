@@ -96,15 +96,13 @@ class LambdaCallbackIssueFinder(IssueFinder):
         """Check if this looks like a FormRequest.from_response() call."""
         return isinstance(func, Attribute) and func.attr == "from_response"
 
-    def find_issues(self, node: Call | Assign) -> Generator[Issue, None, None]:
+    def find_issues(self, node: Call | Assign) -> Generator[Issue]:
         if isinstance(node, Call):
             yield from self._find_issues_in_call(node)
         elif isinstance(node, Assign):
             yield from self._find_issues_in_assign(node)
 
-    def _check_lambda_callbacks_positional(
-        self, node: Call
-    ) -> Generator[Issue, None, None]:
+    def _check_lambda_callbacks_positional(self, node: Call) -> Generator[Issue]:
         """Check for lambda callbacks in positional arguments."""
         for position in (
             1,  # callback
@@ -115,22 +113,18 @@ class LambdaCallbackIssueFinder(IssueFinder):
                 if isinstance(arg, ast.Lambda):
                     yield Issue(LAMBDA_CALLBACK, Pos.from_node(arg))
 
-    def _check_lambda_callbacks_keyword_only(
-        self, node: Call
-    ) -> Generator[Issue, None, None]:
+    def _check_lambda_callbacks_keyword_only(self, node: Call) -> Generator[Issue]:
         """Check for lambda callbacks in keyword arguments only."""
         for kw in node.keywords:
             if kw.arg in {"callback", "errback"} and isinstance(kw.value, ast.Lambda):
                 yield Issue(LAMBDA_CALLBACK, Pos.from_node(kw.value))
 
-    def _check_lambda_callbacks_in_call(
-        self, node: Call
-    ) -> Generator[Issue, None, None]:
+    def _check_lambda_callbacks_in_call(self, node: Call) -> Generator[Issue]:
         """Check for lambda callbacks in call arguments (both positional and keyword)."""
         yield from self._check_lambda_callbacks_positional(node)
         yield from self._check_lambda_callbacks_keyword_only(node)
 
-    def _find_issues_in_call(self, node: Call) -> Generator[Issue, None, None]:
+    def _find_issues_in_call(self, node: Call) -> Generator[Issue]:
         if (
             self.looks_like_request(node.func)
             or self.looks_like_request_replace(node.func)
@@ -140,7 +134,7 @@ class LambdaCallbackIssueFinder(IssueFinder):
         elif self.looks_like_from_response(node.func):
             yield from self._check_lambda_callbacks_keyword_only(node)
 
-    def _find_issues_in_assign(self, node: Assign) -> Generator[Issue, None, None]:
+    def _find_issues_in_assign(self, node: Assign) -> Generator[Issue]:
         # Check for assignments like obj.callback = lambda x: x or obj.errback = lambda x: x
         if not isinstance(node.value, ast.Lambda):
             return

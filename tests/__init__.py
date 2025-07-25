@@ -135,7 +135,7 @@ def cases(test_cases: Cases) -> Callable:
     return decorator
 
 
-def iter_issues(issues: Iterable[Issue] | Issue | None) -> Generator[Issue, None, None]:
+def iter_issues(issues: Iterable[Issue] | Issue | None) -> Generator[Issue]:
     if issues is None:
         return
     if isinstance(issues, Issue):

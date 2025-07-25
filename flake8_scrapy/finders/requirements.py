@@ -75,7 +75,7 @@ class RequirementsIssueFinder:
             return False
         return self.context.file.path == self.context.project.requirements_file_path
 
-    def check(self) -> Generator[Issue, None, None]:
+    def check(self) -> Generator[Issue]:
         yield from self.check_flake8_requirements_options()
         packages: set[str] = set()
         assert self.context.file.lines is not None
@@ -95,7 +95,7 @@ class RequirementsIssueFinder:
             yield Issue(PARTIAL_FREEZE)
         yield from self.check_scrapy_cloud_stack_requirements(packages)
 
-    def check_flake8_requirements_options(self) -> Generator[Issue, None, None]:
+    def check_flake8_requirements_options(self) -> Generator[Issue]:
         if not find_spec("flake8_requirements"):
             return
         scrapy_requirements_file = getattr(
@@ -121,7 +121,7 @@ class RequirementsIssueFinder:
         except InvalidVersion:
             return None
 
-    def check_package_name(self, name: str, line: int) -> Generator[Issue, None, None]:
+    def check_package_name(self, name: str, line: int) -> Generator[Issue]:
         package = PACKAGES[name]
         if package.replacements:
             replacement = (
@@ -134,7 +134,7 @@ class RequirementsIssueFinder:
 
     def check_package_version(
         self, name: str, version: Version, line: int
-    ) -> Generator[Issue, None, None]:
+    ) -> Generator[Issue]:
         package = PACKAGES[name]
         pos = Pos(line)
         if (
@@ -149,7 +149,7 @@ class RequirementsIssueFinder:
 
     def check_scrapy_cloud_stack_requirements(
         self, packages: set[str]
-    ) -> Generator[Issue, None, None]:
+    ) -> Generator[Issue]:
         if (
             not self.context.project.root
             or not (self.context.project.root / "scrapinghub.yml").exists()

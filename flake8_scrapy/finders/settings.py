@@ -354,7 +354,7 @@ REQUIRED_UA_PATTERNS = (
 )
 
 
-def check_download_slots(node: expr, **kwargs) -> Generator[Issue, None, None]:
+def check_download_slots(node: expr, **kwargs) -> Generator[Issue]:
     if (
         not is_getdict_compatible(node, **kwargs)
         or isinstance(node, Constant)  # JSON string
@@ -378,7 +378,7 @@ def check_download_slots(node: expr, **kwargs) -> Generator[Issue, None, None]:
         yield from check_slot_config(value_node)
 
 
-def check_slot_config(node: Dict) -> Generator[Issue, None, None]:
+def check_slot_config(node: Dict) -> Generator[Issue]:
     for key_node, value_node in zip(node.keys, node.values):
         if not isinstance(key_node, Constant):
             continue
@@ -438,7 +438,7 @@ def check_feed_uri(
     path_obj_support: bool | None = True,
     unsupported_path_obj_detail: str | None = None,
     **kwargs,
-) -> Generator[Issue, None, None]:
+) -> Generator[Issue]:
     if isinstance(node, (Dict, Lambda, List, Set, Tuple)):
         return  # Already reported as bad type
     pos = Pos.from_node(node)
@@ -474,7 +474,7 @@ def check_feed_uri(
             yield unneeded_str
 
 
-def check_feeds(node: expr, context: Context, **kwargs) -> Generator[Issue, None, None]:
+def check_feeds(node: expr, context: Context, **kwargs) -> Generator[Issue]:
     if not is_getdict_compatible(node, **kwargs) or not isinstance(node, Dict):
         return
     version = context.project.frozen_requirements.get("scrapy")
@@ -500,7 +500,7 @@ def check_feeds(node: expr, context: Context, **kwargs) -> Generator[Issue, None
 
 def check_feed_config(  # noqa: PLR0912, PLR0915
     node: Dict, context: Context
-) -> Generator[Issue, None, None]:
+) -> Generator[Issue]:
     scrapy_version = context.project.frozen_requirements.get("scrapy")
     for key_node, value_node in zip(node.keys, node.values):
         if not isinstance(key_node, Constant):
@@ -663,7 +663,7 @@ def check_feed_config(  # noqa: PLR0912, PLR0915
             )
 
 
-def check_user_agent(node: expr, **kwargs) -> Generator[Issue, None, None]:
+def check_user_agent(node: expr, **kwargs) -> Generator[Issue]:
     if isinstance(node, Constant) and (
         node.value is None
         or (
@@ -682,9 +682,7 @@ def check_user_agent(node: expr, **kwargs) -> Generator[Issue, None, None]:
 
 
 class ValueChecker(Protocol):
-    def __call__(
-        self, node: expr, *, context: Context
-    ) -> Generator[Issue, None, None]: ...
+    def __call__(self, node: expr, *, context: Context) -> Generator[Issue]: ...
 
 
 VALUE_CHECKERS: dict[str, ValueChecker] = {
@@ -702,13 +700,11 @@ class IsTypeFunction(Protocol):
 class TypeChecker(Protocol):
     def __call__(
         self, node: expr, *, setting: Setting, project: Project
-    ) -> Generator[Issue, None, None]: ...
+    ) -> Generator[Issue]: ...
 
 
 def check_type(is_type: IsTypeFunction) -> TypeChecker:
-    def wrapper(
-        node: expr, *, setting: Setting, **kwargs
-    ) -> Generator[Issue, None, None]:
+    def wrapper(node: expr, *, setting: Setting, **kwargs) -> Generator[Issue]:
         if not is_type(node, setting=setting):
             yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
 
@@ -717,7 +713,7 @@ def check_type(is_type: IsTypeFunction) -> TypeChecker:
 
 def check_import_path_need(
     node: Constant, project: Project, allowed: set[str] | None = None
-) -> Generator[Issue, None, None]:
+) -> Generator[Issue]:
     frozen_version = project.frozen_requirements.get("scrapy")
     if not frozen_version or frozen_version < Version("2.4.0"):
         return
@@ -726,7 +722,7 @@ def check_import_path_need(
         yield Issue(UNNEEDED_IMPORT_PATH, Pos.from_node(node))
 
 
-def check_import_path(node: Constant, project: Project) -> Generator[Issue, None, None]:
+def check_import_path(node: Constant, project: Project) -> Generator[Issue]:
     if not isinstance(node.value, str):
         yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
         return
@@ -738,7 +734,7 @@ def check_import_path(node: Constant, project: Project) -> Generator[Issue, None
 
 def check_based_comp_prio(
     node: expr, *, setting: Setting, project: Project, **kwargs
-) -> Generator[Issue, None, None]:
+) -> Generator[Issue]:
     if isinstance(node, Dict):
         for key, value in zip(node.keys, node.values):
             if isinstance(key, Constant):
@@ -766,7 +762,7 @@ def check_based_comp_prio(
 
 def check_based_obj_dict(  # noqa: PLR0912
     node: expr, *, setting: Setting, project: Project, **kwargs
-) -> Generator[Issue, None, None]:
+) -> Generator[Issue]:
     if isinstance(node, Dict):
         for key, value in zip(node.keys, node.values):
             if isinstance(key, Constant) and not isinstance(key.value, str):
@@ -798,9 +794,7 @@ def check_based_obj_dict(  # noqa: PLR0912
         yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
 
 
-def check_comp_prio(
-    node: expr, project: Project, **kwargs
-) -> Generator[Issue, None, None]:
+def check_comp_prio(node: expr, project: Project, **kwargs) -> Generator[Issue]:
     issue = Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
     if not isinstance(node, Dict):
         if not is_getdict_compatible(node, **kwargs):
@@ -837,7 +831,7 @@ def check_obj(
     setting: Setting,
     project: Project,
     **kwargs,
-) -> Generator[Issue, None, None]:
+) -> Generator[Issue]:
     issue = Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
     if isinstance(node, (Dict, List, Set, Tuple)):
         yield issue
@@ -868,7 +862,7 @@ def check_opt_path(
     setting: Setting,
     project: Project,
     **kwargs,
-) -> Generator[Issue, None, None]:
+) -> Generator[Issue]:
     pos = Pos.from_node(node)
     invalid = Issue(INVALID_SETTING_VALUE, pos)
     if isinstance(node, (Dict, Lambda, List, Set, Tuple)):
@@ -981,7 +975,7 @@ class SettingChecker:
 
     def check_known_name(  # noqa: PLR0911, PLR0912
         self, name: str, pos: Pos
-    ) -> Generator[Issue, None, None]:
+    ) -> Generator[Issue]:
         if name.endswith("_BASE"):
             yield Issue(BASE_SETTING_USE, pos)
         if name not in SETTINGS:
@@ -1022,7 +1016,7 @@ class SettingChecker:
             detail += f"; {setting.sunset_guidance}"
         yield Issue(issue, pos, detail)
 
-    def check_dict(self, node: expr) -> Generator[Issue, None, None]:
+    def check_dict(self, node: expr) -> Generator[Issue]:
         if not isinstance(node, (Call, Dict)):
             return
         if isinstance(node, Call):
@@ -1051,7 +1045,7 @@ class SettingChecker:
         | ClassDef
         | FunctionDef
         | tuple[Import | ImportFrom, alias],
-    ) -> Generator[Issue, None, None]:
+    ) -> Generator[Issue]:
         resolved_node: IssueNode
         name: Any
         if isinstance(node, tuple):
@@ -1087,7 +1081,7 @@ class SettingChecker:
             return
         yield from self.check_known_name(name, pos)
 
-    def check_update(self, node: keyword | Constant) -> Generator[Issue, None, None]:
+    def check_update(self, node: keyword | Constant) -> Generator[Issue]:
         name = node.value if isinstance(node, Constant) else node.arg
         if name not in SETTINGS:
             return
@@ -1095,9 +1089,7 @@ class SettingChecker:
         if setting.is_pre_crawler and not self.allow_pre_crawler_settings:
             yield Issue(NO_OP_SETTING_UPDATE, Pos.from_node(node))
 
-    def check_method(
-        self, name_node: Constant, call: Call
-    ) -> Generator[Issue, None, None]:
+    def check_method(self, name_node: Constant, call: Call) -> Generator[Issue]:
         func = call.func
         assert isinstance(func, Attribute)
         name = name_node.value
@@ -1115,7 +1107,7 @@ class SettingChecker:
 
     def check_wrong_setting_method(
         self, setting: Setting, call: Call, name_pos: Pos
-    ) -> Generator[Issue, None, None]:
+    ) -> Generator[Issue]:
         func = call.func
         assert isinstance(func, Attribute)
         if (
@@ -1147,9 +1139,7 @@ class SettingChecker:
             else:
                 yield Issue(WRONG_SETTING_METHOD, pos, "use []")
 
-    def check_subscript(
-        self, name: str, node: Subscript
-    ) -> Generator[Issue, None, None]:
+    def check_subscript(self, name: str, node: Subscript) -> Generator[Issue]:
         if name not in SETTINGS:
             return
         setting = SETTINGS[name]
@@ -1186,7 +1176,7 @@ class SettingChecker:
         for child in ast.iter_child_nodes(node):
             yield from self.check_non_picklable(child, node)
 
-    def check_value(self, name: str, node: expr) -> Generator[Issue, None, None]:
+    def check_value(self, name: str, node: expr) -> Generator[Issue]:
         if name in VALUE_CHECKERS:
             yield from VALUE_CHECKERS[name](node, context=self.context)
 
@@ -1209,7 +1199,7 @@ class SettingIssueFinder:
 
     def find_issues(
         self, node: Assign | Call | Compare | FunctionDef | Subscript
-    ) -> Generator[Issue, None, None]:
+    ) -> Generator[Issue]:
         if isinstance(node, Call):
             yield from self.find_call_issues(node)
             return
@@ -1233,7 +1223,7 @@ class SettingIssueFinder:
                 self.setting_checker.allow_pre_crawler_settings = False
             return
 
-    def find_call_issues(self, node: Call) -> Generator[Issue, None, None]:  # noqa: PLR0912
+    def find_call_issues(self, node: Call) -> Generator[Issue]:  # noqa: PLR0912
         if self.looks_like_setting_method(node.func):
             assert isinstance(node.func, Attribute)
             name: Constant | None = None
@@ -1283,7 +1273,7 @@ class SettingIssueFinder:
                     return
             return
 
-    def find_assign_issues(self, node: Assign) -> Generator[Issue, None, None]:
+    def find_assign_issues(self, node: Assign) -> Generator[Issue]:
         for target in node.targets:
             if (
                 isinstance(target, Subscript)
@@ -1313,7 +1303,7 @@ class SettingIssueFinder:
             and self.looks_like_settings_variable(func.value)
         )
 
-    def find_compare_issues(self, node: Compare) -> Generator[Issue, None, None]:
+    def find_compare_issues(self, node: Compare) -> Generator[Issue]:
         if (
             node.ops
             and isinstance(node.ops[0], (In, NotIn))
@@ -1322,7 +1312,7 @@ class SettingIssueFinder:
         ):
             yield from self.setting_checker.check_name(node.left)
 
-    def find_subscript_issues(self, node: Subscript) -> Generator[Issue, None, None]:
+    def find_subscript_issues(self, node: Subscript) -> Generator[Issue]:
         if not self.looks_like_settings_variable(
             node.value
         ) or not self.looks_like_setting_constant(node.slice):
@@ -1361,7 +1351,7 @@ class SettingModuleIssueFinder(NodeVisitor):
                 return True
         return False
 
-    def check(self) -> Generator[Issue, None, None]:
+    def check(self) -> Generator[Issue]:
         assert self.context.file.tree is not None
         self.visit(self.context.file.tree)
         yield from self.issues

@@ -179,7 +179,7 @@ class Setting:
 
     @property
     def base(self) -> Setting:
-        from flake8_scrapy.data.settings import SETTINGS
+        from flake8_scrapy.data.settings import SETTINGS  # noqa: PLC0415
 
         return SETTINGS[f"{self.name}_BASE"]
 

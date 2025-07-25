@@ -7,7 +7,7 @@ from packaging.utils import canonicalize_name
 
 def iter_requirement_lines(
     lines: Iterable[str],
-) -> Generator[tuple[int, str, Requirement], None, None]:
+) -> Generator[tuple[int, str, Requirement]]:
     for line_number, line in enumerate(lines, start=1):
         clean_line = line.strip()
         if not clean_line or clean_line.startswith("#"):

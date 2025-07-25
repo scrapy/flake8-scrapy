@@ -33,7 +33,7 @@ class UnreachableDomainIssueFinder(IssueFinder):
         netloc = urlparse(url).netloc
         return any(domain in netloc for _, _, domain in self.allowed_domains)
 
-    def find_issues(self, node) -> Generator[Issue, None, None]:
+    def find_issues(self, node) -> Generator[Issue]:
         if is_list_assignment(node, var_name="allowed_domains"):
             self.allowed_domains = get_list_metadata(node)
 
@@ -62,7 +62,7 @@ class UrlInAllowedDomainsIssueFinder(IssueFinder):
         parts = urlparse(domain)
         return any(getattr(parts, comp, None) for comp in forbidden_components)
 
-    def find_issues(self, node) -> Generator[Issue, None, None]:
+    def find_issues(self, node) -> Generator[Issue]:
         if is_list_assignment(node, var_name="allowed_domains"):
             allowed_domains = get_list_metadata(node)
 

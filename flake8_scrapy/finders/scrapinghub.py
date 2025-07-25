@@ -34,7 +34,7 @@ class ScrapinghubIssueFinder:
             return False
         return self.context.file.path == self.context.project.root / "scrapinghub.yml"
 
-    def check(self) -> Generator[Issue, None, None]:
+    def check(self) -> Generator[Issue]:
         assert self.context.file.lines is not None
         content = "\n".join(self.context.file.lines)
         yaml_parser = YAML(typ="rt")
@@ -55,9 +55,7 @@ class ScrapinghubIssueFinder:
             yield Issue(NO_ROOT_REQUIREMENTS)
         yield from self.check_keys(data)
 
-    def check_keys(
-        self, data: CommentedMap, is_root: bool = True
-    ) -> Generator[Issue, None, None]:
+    def check_keys(self, data: CommentedMap, is_root: bool = True) -> Generator[Issue]:
         for key, value in data.items():
             if key == "stack":
                 if not is_root:
@@ -89,9 +87,7 @@ class ScrapinghubIssueFinder:
         line_info = data.lc.value(key)
         return Pos(line_info[0] + 1, line_info[1])
 
-    def _check_stack_value(
-        self, data: CommentedMap, key: str
-    ) -> Generator[Issue, None, None]:
+    def _check_stack_value(self, data: CommentedMap, key: str) -> Generator[Issue]:
         value = data[key]
         pos = self._get_value_position(data, key)
         if not isinstance(value, str):
@@ -102,7 +98,7 @@ class ScrapinghubIssueFinder:
 
     def _check_requirements_value(
         self, requirements_value: Any, pos: Pos
-    ) -> Generator[Issue, None, None]:
+    ) -> Generator[Issue]:
         if not isinstance(requirements_value, CommentedMap):
             yield Issue(INVALID_SCRAPINGHUB_YML, pos, "non-mapping requirements")
             return
