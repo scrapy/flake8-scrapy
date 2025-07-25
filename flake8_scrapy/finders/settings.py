@@ -297,35 +297,6 @@ def is_enum_str(node: expr, setting: Setting, **kwargs) -> bool:
     return node.value in setting.values
 
 
-def is_periodic_log_config(node: expr, **kwargs) -> bool:  # noqa: PLR0911, PLR0912
-    if isinstance(node, (Lambda, List, Set, Tuple)):
-        return False
-    if isinstance(node, Constant):
-        return node.value is None or node.value is True
-    if not isinstance(node, Dict):
-        return True
-    for key_node in node.keys:
-        if not isinstance(key_node, Constant):
-            continue
-        if not isinstance(key_node.value, str):
-            return False
-        if key_node.value not in {"include", "exclude"}:
-            return False
-    for value_node in node.values:
-        if isinstance(value_node, (Constant, Dict, Lambda)):
-            return False
-        if not isinstance(value_node, (List, Set, Tuple)):
-            continue
-        for item in value_node.elts:
-            if isinstance(item, (Dict, Lambda, List, Set, Tuple)):
-                return False
-            if not isinstance(item, Constant):
-                continue
-            if not isinstance(item.value, str):
-                return False
-    return True
-
-
 def is_opt_int(node: expr, **kwargs) -> bool:
     if isinstance(node, Constant) and node.value is None:
         return True
@@ -663,6 +634,45 @@ def check_feed_config(  # noqa: PLR0912, PLR0915
             )
 
 
+def check_periodic_log_config(node: expr, **kwargs) -> Generator[Issue]:  # noqa: PLR0912
+    detail = "must be True or a dict"
+    issue = Issue(INVALID_SETTING_VALUE, Pos.from_node(node), detail)
+    if isinstance(node, (Lambda, List, Set, Tuple)):
+        yield issue
+        return
+    if isinstance(node, Constant):
+        if node.value is not None and node.value is not True:
+            yield issue
+        return
+    if not isinstance(node, Dict):
+        return
+    for key_node, value_node in zip(node.keys, node.values):
+        if isinstance(key_node, Constant):
+            if not isinstance(key_node.value, str):
+                detail = (
+                    f"keys must be 'include' or 'exclude', not "
+                    f"{type(key_node.value).__name__} ({key_node.value!r})"
+                )
+                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(key_node), detail)
+            elif key_node.value not in {"include", "exclude"}:
+                detail = f"keys must be 'include' or 'exclude', not {key_node.value!r}"
+                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(key_node), detail)
+        if isinstance(value_node, (Constant, Dict, Lambda)):
+            detail = "dict values must be lists of stat name substrings"
+            yield Issue(INVALID_SETTING_VALUE, Pos.from_node(value_node), detail)
+        if not isinstance(value_node, (List, Set, Tuple)):
+            continue
+        for item in value_node.elts:
+            if isinstance(item, (Dict, Lambda, List, Set, Tuple)):
+                detail = "include/exclude list items must be strings"
+                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(item), detail)
+            if not isinstance(item, Constant):
+                continue
+            if not isinstance(item.value, str):
+                detail = "include/exclude list items must be strings"
+                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(item), detail)
+
+
 def check_user_agent(node: expr, **kwargs) -> Generator[Issue]:
     if isinstance(node, Constant) and (
         node.value is None
@@ -910,7 +920,6 @@ TYPE_CHECKERS: dict[SettingType, TypeChecker] = {
             (SettingType.LOG_LEVEL, is_log_level),
             (SettingType.OPT_INT, is_opt_int),
             (SettingType.OPT_STR, is_opt_str),
-            (SettingType.PERIODIC_LOG_CONFIG, is_periodic_log_config),
             (SettingType.STR, is_str),
         )
     },
@@ -920,6 +929,7 @@ TYPE_CHECKERS: dict[SettingType, TypeChecker] = {
     SettingType.OBJ: check_obj,
     SettingType.OPT_OBJ: partial(check_obj, allow_none=True),
     SettingType.OPT_PATH: check_opt_path,
+    SettingType.PERIODIC_LOG_CONFIG: check_periodic_log_config,
 }
 
 
