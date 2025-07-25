@@ -969,36 +969,15 @@ CASES: Cases = (
                                 ("DEFAULT_ITEM_CLASS", "[]"),
                                 ("DEFAULT_ITEM_CLASS", '""'),
                                 ("DEFAULT_ITEM_CLASS", '"mymodule"'),
-                                ("DEFAULT_REQUEST_HEADERS", "'invalid json'"),
-                                (
-                                    "DEFAULT_REQUEST_HEADERS",
-                                    "'[\"non-dict-compatible list\"]'",
-                                ),
-                                ("DOWNLOAD_HANDLERS", "42"),
-                                ("DOWNLOAD_HANDLERS", "'invalid json'"),
-                                ("DOWNLOAD_HANDLERS", "'[]'"),
-                                ("DOWNLOAD_HANDLERS", "{1: 'keys must be str'}"),
-                                ("DOWNLOAD_HANDLERS", '{"a": 1}'),
-                                ("DOWNLOAD_HANDLERS", '{"a": "not an import path"}'),
-                                ("DOWNLOAD_HANDLERS", "dict(a=1)"),
-                                ("DOWNLOAD_HANDLERS", 'dict(a="not an import path")'),
-                                ("DOWNLOAD_SLOTS", '"not_a_dict"'),
                                 ("DOWNLOADER_CLIENT_TLS_METHOD", "'TLSv1.3'"),
                                 ("DOWNLOADER_CLIENT_TLS_METHOD", "None"),
                                 ("DOWNLOADER_CLIENT_TLS_METHOD", "{}"),
-                                ("DOWNLOADER_MIDDLEWARES", "1"),
-                                ("DOWNLOADER_MIDDLEWARES", "{1: 100}"),
-                                ("DOWNLOADER_MIDDLEWARES", "'{1: 100}'"),
-                                ("DOWNLOADER_MIDDLEWARES", "{'module': 100}"),
-                                ("DOWNLOADER_MIDDLEWARES", "{Foo: []}"),
-                                ("DOWNLOADER_MIDDLEWARES", "{Foo: 'bar'}"),
                                 ("FEED_EXPORT_FIELDS", "0"),
                                 ("FEED_EXPORT_INDENT", '"not_int"'),
                                 ("FEED_URI", "{}"),
                                 ("FEED_URI_PARAMS", '"invalid"'),
                                 ("FEED_URI_PARAMS", "123"),
                                 ("FEED_URI_PARAMS", "[]"),
-                                ("FEEDS", '"not_a_dict"'),
                                 ("JOBDIR", "1"),
                                 ("JOBDIR", "[]"),
                                 ("LOG_LEVEL", "'FOO'"),
@@ -1025,6 +1004,72 @@ CASES: Cases = (
                                 column,
                             )
                             for setting, value, column, detail in (
+                                (
+                                    "DEFAULT_REQUEST_HEADERS",
+                                    "'invalid json'",
+                                    0,
+                                    "invalid JSON: Expecting value: line 1 column 1 (char 0)",
+                                ),
+                                (
+                                    "DEFAULT_REQUEST_HEADERS",
+                                    "'[\"non-dict-compatible list\"]'",
+                                    0,
+                                    "invalid JSON: must be a dict, not list (['non-dict-compatible list'])",
+                                ),
+                                (
+                                    "DOWNLOAD_HANDLERS",
+                                    "42",
+                                    0,
+                                    "must be a dict, not int",
+                                ),
+                                (
+                                    "DOWNLOAD_HANDLERS",
+                                    "'invalid json'",
+                                    0,
+                                    "invalid JSON: Expecting value: line 1 column 1 (char 0)",
+                                ),
+                                (
+                                    "DOWNLOAD_HANDLERS",
+                                    "'[]'",
+                                    0,
+                                    "invalid JSON: must be a dict, not list ([])",
+                                ),
+                                (
+                                    "DOWNLOAD_HANDLERS",
+                                    "{1: foo}",
+                                    1,
+                                    "keys must be strings, not int (1)",
+                                ),
+                                (
+                                    "DOWNLOAD_HANDLERS",
+                                    '{"a": 1}',
+                                    6,
+                                    "values must be import paths as strings, not int (1)",
+                                ),
+                                (
+                                    "DOWNLOAD_HANDLERS",
+                                    '{"a": "not an import path"}',
+                                    6,
+                                    "'not an import path' does not look like an import path",
+                                ),
+                                (
+                                    "DOWNLOAD_HANDLERS",
+                                    "dict(a=1)",
+                                    7,
+                                    "dict values must be Python objects or their import paths as strings",
+                                ),
+                                (
+                                    "DOWNLOAD_HANDLERS",
+                                    'dict(a="not an import path")',
+                                    7,
+                                    "'not an import path' does not look like an import path",
+                                ),
+                                (
+                                    "DOWNLOAD_SLOTS",
+                                    '"not_a_dict"',
+                                    0,
+                                    "invalid JSON: Expecting value: line 1 column 1 (char 0)",
+                                ),
                                 (
                                     "DOWNLOAD_SLOTS",
                                     "{1: {}}",
@@ -1078,6 +1123,48 @@ CASES: Cases = (
                                     '{"toscrape.com": {"randomize_delay": 1}}',
                                     37,
                                     "randomize_delay must be a boolean",
+                                ),
+                                (
+                                    "DOWNLOADER_MIDDLEWARES",
+                                    "1",
+                                    0,
+                                    "must be a dict, not int",
+                                ),
+                                (
+                                    "DOWNLOADER_MIDDLEWARES",
+                                    "{1: 100}",
+                                    1,
+                                    "keys must be strings, not int (1)",
+                                ),
+                                (
+                                    "DOWNLOADER_MIDDLEWARES",
+                                    "'{1: 100}'",
+                                    0,
+                                    "invalid JSON: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)",
+                                ),
+                                (
+                                    "DOWNLOADER_MIDDLEWARES",
+                                    "{'module': 100}",
+                                    1,
+                                    "'module' does not look like an import path",
+                                ),
+                                (
+                                    "DOWNLOADER_MIDDLEWARES",
+                                    "{Foo: []}",
+                                    6,
+                                    "dict values must be integers or None",
+                                ),
+                                (
+                                    "DOWNLOADER_MIDDLEWARES",
+                                    "{Foo: 'bar'}",
+                                    6,
+                                    "dict values must be integers or None, not str ('bar')",
+                                ),
+                                (
+                                    "FEEDS",
+                                    '"not_a_dict"',
+                                    0,
+                                    "invalid JSON: Expecting value: line 1 column 1 (char 0)",
                                 ),
                                 *(
                                     (
@@ -1381,7 +1468,7 @@ CASES: Cases = (
                             "DOWNLOAD_SLOTS",
                             "lambda: foo",
                             (
-                                ("SCP36 invalid setting value", 0),
+                                ("SCP36 invalid setting value: must be a dict", 0),
                                 ("SCP37 unpicklable setting value", 0),
                             ),
                         ),
@@ -1757,14 +1844,26 @@ CASES: Cases = (
             *(
                 (
                     f"ADDONS = {value}",
-                    Issue("SCP36 invalid setting value", column=9, path=path),
+                    Issue(
+                        f"SCP36 invalid setting value: {detail}",
+                        column=9 + offset,
+                        path=path,
+                    ),
                 )
-                for value in (
-                    "{1: 100}",
-                    "{'myaddons': 100}",
-                    "{Addon: 'foo'}",
-                    "{Addon: {}}",
-                    "1",
+                for value, detail, offset in (
+                    ("{1: 100}", "keys must be strings, not int (1)", 1),
+                    (
+                        "{'myaddons': 100}",
+                        "'myaddons' does not look like an import path",
+                        1,
+                    ),
+                    (
+                        "{Addon: 'foo'}",
+                        "dict values must be integers, not str ('foo')",
+                        8,
+                    ),
+                    ("{Addon: {}}", "dict values must be integers", 8),
+                    ("1", "must be a dict, not int (1)", 0),
                 )
             ),
         )

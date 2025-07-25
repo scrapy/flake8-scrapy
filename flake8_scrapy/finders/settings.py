@@ -184,47 +184,47 @@ def is_getlist_compatible(node: expr, **kwargs) -> bool:
     return isinstance(value, Iterable)
 
 
-def is_getdict_compatible(node: expr, **kwargs) -> bool:
+def check_getdict_compatible(node: expr, **kwargs) -> Generator[Issue]:
     if isinstance(node, Lambda):
-        return False
-    if not isinstance(node, Constant):
-        return True
+        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node), "must be a dict")
+        return
+    if not isinstance(node, Constant) or node.value is None:
+        return
     value = node.value
-    if value is None:
-        return True
     if isinstance(value, str):
         try:
             value = json.loads(value)
-        except ValueError:
-            return False
+        except ValueError as e:
+            detail = f"invalid JSON: {e}"
+            yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node), detail)
+            return
     try:
         dict(value)
     except (TypeError, ValueError):
-        return False
-    else:
-        return True
+        detail = f"must be a dict, not {type(value).__name__} ({value!r})"
+        if isinstance(node.value, str):
+            detail = f"invalid JSON: {detail}"
+        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node), detail)
 
 
-def is_getwithbase_compatible(node: expr, **kwargs) -> bool:
+def check_getwithbase_compatible(node: expr) -> Generator[Issue]:
     # All callers already handle Dict nodes.
     # If we ever handle dict here, we should also check that keys are strings.
-    assert not isinstance(node, Dict)
-
-    if not isinstance(node, Constant):
-        return True
-    if isinstance(node, Constant):
-        value = node.value
-        if value is None:
-            return True
-        if not isinstance(value, str):
-            return False
-        try:
-            data = json.loads(value)
-        except ValueError:
-            return False
-        if not isinstance(data, dict):
-            return False
-    return True
+    if not isinstance(node, Constant) or node.value is None:
+        return
+    if not isinstance(node.value, str):
+        detail = f"must be a dict, not {type(node.value).__name__}"
+        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node), detail)
+        return
+    try:
+        data = json.loads(node.value)
+    except ValueError as e:
+        detail = f"invalid JSON: {e}"
+        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node), detail)
+        return
+    if not isinstance(data, dict):
+        detail = f"invalid JSON: must be a dict, not {type(data).__name__} ({data!r})"
+        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node), detail)
 
 
 def is_getdictorlist_compatible(node: expr, **kwargs) -> bool:
@@ -326,11 +326,7 @@ REQUIRED_UA_PATTERNS = (
 
 
 def check_download_slots(node: expr, **kwargs) -> Generator[Issue]:
-    if (
-        not is_getdict_compatible(node, **kwargs)
-        or isinstance(node, Constant)  # JSON string
-        or not isinstance(node, Dict)
-    ):
+    if not isinstance(node, Dict):
         return
     for key_node in node.keys:
         if not isinstance(key_node, Constant):
@@ -446,7 +442,7 @@ def check_feed_uri(
 
 
 def check_feeds(node: expr, context: Context, **kwargs) -> Generator[Issue]:
-    if not is_getdict_compatible(node, **kwargs) or not isinstance(node, Dict):
+    if not isinstance(node, Dict):
         return
     version = context.project.frozen_requirements.get("scrapy")
     path_obj_support = None if version is None else version >= Version("2.6.0")
@@ -745,93 +741,95 @@ def check_import_path(node: Constant, project: Project) -> Generator[Issue]:
 def check_based_comp_prio(
     node: expr, *, setting: Setting, project: Project, **kwargs
 ) -> Generator[Issue]:
+    yield from check_getwithbase_compatible(node)
     if isinstance(node, Dict):
         for key, value in zip(node.keys, node.values):
             if isinstance(key, Constant):
-                if not isinstance(key.value, str) or not is_import_path(key.value):
-                    yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
-                    return
-                default_value = setting.base.get_default_value(project)
-                if default_value is not UNKNOWN_SETTING_VALUE:
-                    base_import_paths = set(default_value.keys())
-                    yield from check_import_path_need(key, project, base_import_paths)
+                if not isinstance(key.value, str):
+                    detail = f"keys must be strings, not {type(key.value).__name__} ({key.value!r})"
+                    yield Issue(INVALID_SETTING_VALUE, Pos.from_node(key), detail)
+                elif not is_import_path(key.value):
+                    detail = f"{key.value!r} does not look like an import path"
+                    yield Issue(INVALID_SETTING_VALUE, Pos.from_node(key), detail)
+                else:
+                    default_value = setting.base.get_default_value(project)
+                    if default_value is not UNKNOWN_SETTING_VALUE:
+                        base_import_paths = set(default_value.keys())
+                        yield from check_import_path_need(
+                            key, project, base_import_paths
+                        )
             if isinstance(value, (Dict, Lambda, List, Set, Tuple)):
-                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
-                return
-            if not isinstance(value, Constant):
-                continue
-            if value.value is not None and not isinstance(value.value, int):
-                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
-                return
-        return
-
-    if not is_getwithbase_compatible(node, **kwargs):
-        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
-        return
+                detail = "dict values must be integers or None"
+                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(value), detail)
+            elif (
+                isinstance(value, Constant)
+                and value.value is not None
+                and not isinstance(value.value, int)
+            ):
+                detail = f"dict values must be integers or None, not {type(value.value).__name__} ({value.value!r})"
+                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(value), detail)
 
 
 def check_based_obj_dict(  # noqa: PLR0912
-    node: expr, *, setting: Setting, project: Project, **kwargs
+    node: expr, *, project: Project, **kwargs
 ) -> Generator[Issue]:
+    yield from check_getwithbase_compatible(node)
     if isinstance(node, Dict):
         for key, value in zip(node.keys, node.values):
             if isinstance(key, Constant) and not isinstance(key.value, str):
-                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
-                return
-            if isinstance(value, Constant):
-                if value.value is None:
-                    continue
-                if not isinstance(value.value, str) or not is_import_path(value.value):
-                    yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
-                    return
-                yield from check_import_path_need(value, project)
-        return
-    if isinstance(node, Call):
+                detail = f"keys must be strings, not {type(key.value).__name__} ({key.value!r})"
+                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(key), detail)
+            if isinstance(value, Constant) and value.value is not None:
+                if not isinstance(value.value, str):
+                    detail = (
+                        f"values must be import paths as strings, not "
+                        f"{type(value.value).__name__} ({value.value!r})"
+                    )
+                    yield Issue(INVALID_SETTING_VALUE, Pos.from_node(value), detail)
+                elif not is_import_path(value.value):
+                    detail = f"{value.value!r} does not look like an import path"
+                    yield Issue(INVALID_SETTING_VALUE, Pos.from_node(value), detail)
+                else:
+                    yield from check_import_path_need(value, project)
+    elif isinstance(node, Call):
         if getattr(node.func, "id", None) != "dict":
             return
         for kw in node.keywords:
-            if isinstance(kw.value, Constant):
-                if kw.value.value is None:
-                    continue
-                if not isinstance(kw.value.value, str) or not is_import_path(
-                    kw.value.value
-                ):
-                    yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
-                    return
+            if not isinstance(kw.value, Constant) or kw.value.value is None:
+                continue
+            if not isinstance(kw.value.value, str):
+                detail = "dict values must be Python objects or their import paths as strings"
+                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(kw.value), detail)
+            elif not is_import_path(kw.value.value):
+                detail = f"{kw.value.value!r} does not look like an import path"
+                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(kw.value), detail)
+            else:
                 yield from check_import_path_need(kw.value, project)
-        return
-    if not is_getwithbase_compatible(node):
-        yield Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
 
 
 def check_comp_prio(node: expr, project: Project, **kwargs) -> Generator[Issue]:
-    issue = Issue(INVALID_SETTING_VALUE, Pos.from_node(node))
+    yield from check_getdict_compatible(node)
     if not isinstance(node, Dict):
-        if not is_getdict_compatible(node, **kwargs):
-            yield issue
         return
     for key_node in node.keys:
         if not isinstance(key_node, Constant):
             continue
         key = key_node.value
         if not isinstance(key, str):
-            yield issue
-            return
-        if not is_import_path(key):
-            yield issue
-            return
+            detail = f"keys must be strings, not {type(key).__name__} ({key!r})"
+            yield Issue(INVALID_SETTING_VALUE, Pos.from_node(key_node), detail)
+        elif not is_import_path(key):
+            detail = f"{key!r} does not look like an import path"
+            yield Issue(INVALID_SETTING_VALUE, Pos.from_node(key_node), detail)
         else:
             yield from check_import_path_need(key_node, project)
     for value_node in node.values:
         if isinstance(value_node, (Dict, Lambda, List, Set, Tuple)):
-            yield issue
-            return
-        if not isinstance(value_node, Constant):
-            continue
-        value = value_node.value
-        if not isinstance(value, int):
-            yield issue
-            return
+            detail = "dict values must be integers"
+            yield Issue(INVALID_SETTING_VALUE, Pos.from_node(value_node), detail)
+        elif isinstance(value_node, Constant) and not isinstance(value_node.value, int):
+            detail = f"dict values must be integers, not {type(value_node.value).__name__} ({value_node.value!r})"
+            yield Issue(INVALID_SETTING_VALUE, Pos.from_node(value_node), detail)
 
 
 def check_obj(
@@ -912,7 +910,6 @@ TYPE_CHECKERS: dict[SettingType, TypeChecker] = {
         for type, is_type in (
             (SettingType.BOOL, is_getbool_compatible),
             (SettingType.DICT_OR_LIST, is_getdictorlist_compatible),
-            (SettingType.DICT, is_getdict_compatible),
             (SettingType.ENUM_STR, is_enum_str),
             (SettingType.FLOAT, is_getfloat_compatible),
             (SettingType.INT, is_getint_compatible),
@@ -926,6 +923,7 @@ TYPE_CHECKERS: dict[SettingType, TypeChecker] = {
     SettingType.BASED_COMP_PRIO_DICT: check_based_comp_prio,
     SettingType.BASED_OBJ_DICT: check_based_obj_dict,
     SettingType.COMP_PRIO_DICT: check_comp_prio,
+    SettingType.DICT: check_getdict_compatible,
     SettingType.OBJ: check_obj,
     SettingType.OPT_OBJ: partial(check_obj, allow_none=True),
     SettingType.OPT_PATH: check_opt_path,
