@@ -36,7 +36,7 @@ authors = [{ name = "Valdir Stumm Junior", email = "stummjr@gmail.com" }]
 maintainers = [{ name = "Valdir Stumm Junior", email = "stummjr@gmail.com" }]
 
 [project.entry-points."flake8.extension"]
-SCP0 = "flake8_scrapy:ScrapyStyleChecker"
+SCP = "flake8_scrapy:ScrapyFlake8Plugin"
 
 [project.urls]
 Source = "https://github.com/scrapy/flake8-scrapy"

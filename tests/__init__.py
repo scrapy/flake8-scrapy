@@ -12,7 +12,7 @@ from typing import Any, Callable, Union
 
 import pytest
 
-from flake8_scrapy import ScrapyStyleChecker
+from flake8_scrapy import ScrapyFlake8Plugin
 
 if sys.version_info >= (3, 10):
     from typing import TypeAlias
@@ -38,7 +38,7 @@ class MockParser:
 class MockOptions:
     def __init__(self, options_dict: dict):
         parser = MockParser()
-        ScrapyStyleChecker.add_options(parser)
+        ScrapyFlake8Plugin.add_options(parser)
         for option_name, default_value in parser.options.items():
             setattr(self, option_name, default_value)
         for key, value in options_dict.items():
@@ -56,17 +56,17 @@ def run_checker(
         lines = code.splitlines()
     if flake8_options is None:
         flake8_options = {}
-    original_class_dict = ScrapyStyleChecker.__dict__.copy()
+    original_class_dict = ScrapyFlake8Plugin.__dict__.copy()
     mock_options = MockOptions(flake8_options)
     try:
-        ScrapyStyleChecker.parse_options(mock_options)  # type: ignore[arg-type]
-        checker = ScrapyStyleChecker(tree, file_path, lines)
+        ScrapyFlake8Plugin.parse_options(mock_options)  # type: ignore[arg-type]
+        checker = ScrapyFlake8Plugin(tree, file_path, lines)
         return tuple(checker.run())
     finally:
-        current_attrs = set(ScrapyStyleChecker.__dict__.keys())
+        current_attrs = set(ScrapyFlake8Plugin.__dict__.keys())
         original_attrs = set(original_class_dict.keys())
         for new_attr in current_attrs - original_attrs:
-            delattr(ScrapyStyleChecker, new_attr)
+            delattr(ScrapyFlake8Plugin, new_attr)
 
 
 @dataclass
