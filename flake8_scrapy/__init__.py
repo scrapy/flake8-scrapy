@@ -14,6 +14,7 @@ from .finders.oldstyle import (
     OldSelectorIssueFinder,
     UrlJoinIssueFinder,
 )
+from .finders.requests import RequestIssueFinder
 from .finders.requirements import RequirementsIssueFinder
 from .finders.scrapinghub import ScrapinghubIssueFinder
 from .finders.settings import (
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
     from flake8_scrapy.issues import Issue
 
 
-class ScrapyStyleIssueFinder(NodeVisitor):
+class PythonIssueFinder(NodeVisitor):
     def __init__(self, setting_checker: SettingChecker):
         super().__init__()
         self.issues: list[Issue] = []
@@ -50,6 +51,7 @@ class ScrapyStyleIssueFinder(NodeVisitor):
             "Call": [
                 GetFirstByIndexIssueFinder(),
                 lambda_callback_issue_finder,
+                RequestIssueFinder(),
                 setting_issue_finder,
                 UrlJoinIssueFinder(),
             ],
@@ -86,7 +88,7 @@ class ScrapyStyleIssueFinder(NodeVisitor):
             super().visit(node)
 
 
-class ScrapyStyleChecker:
+class ScrapyFlake8Plugin:
     options = None
     name = "flake8-scrapy"
     version = __version__
@@ -134,7 +136,7 @@ class ScrapyStyleChecker:
             )
             if setting_module_finder.in_setting_module():
                 yield from setting_module_finder.check()
-            finder = ScrapyStyleIssueFinder(setting_checker)
+            finder = PythonIssueFinder(setting_checker)
             finder.visit(self.tree)
             yield from finder.issues
             return
