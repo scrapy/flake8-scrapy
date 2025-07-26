@@ -79,6 +79,7 @@ from flake8_scrapy.issues import (
     UNNEEDED_SETTING_GET,
     UNSUPPORTED_PATH_OBJECT,
     WRONG_SETTING_METHOD,
+    ZYTE_RAW_PARAMS,
     Issue,
     Pos,
 )
@@ -963,6 +964,8 @@ class SettingChecker:
     ) -> Generator[Issue]:
         if name.endswith("_BASE"):
             yield Issue(BASE_SETTING_USE, pos)
+        elif name == "ZYTE_API_DEFAULT_PARAMS":
+            yield Issue(ZYTE_RAW_PARAMS, pos)
         if name not in SETTINGS:
             return
         setting = SETTINGS[name]
