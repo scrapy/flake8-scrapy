@@ -3053,6 +3053,31 @@ CASES: Cases = (
         ),
         {"scrapy_known_settings": "FOO_BAR"},
     ),
+    # SCP27 unknown setting: recommend scrapy_known_settings even when
+    # dependency versions need to be taken into account (assume they are met)
+    (
+        (
+            File("", path="scrapy.cfg"),
+            File("scrapy", path="requirements.txt"),
+            File(f"settings['SETING']", path="a.py"),
+        ),
+        (
+            Issue(
+                message='SCP13 incomplete requirements freeze',
+                line=1,
+                column=0,
+                path='requirements.txt',
+            ),
+            Issue(
+                "SCP27 unknown setting: did you mean: SETTING?",
+                column=9,
+                path="a.py",
+            ),
+        ),
+        {
+            "scrapy_known_settings": "SETTING",
+        },
+    )
 )
 
 

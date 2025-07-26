@@ -923,9 +923,8 @@ class SettingChecker:
         return name in SETTINGS or name in self.additional_known_settings
 
     def is_supported_setting(self, setting: str) -> bool:
-        if not self.project.packages:
+        if not self.project.packages or setting not in SETTINGS:
             return True
-        assert setting in SETTINGS
         setting_info = SETTINGS[setting]
         if setting_info.package not in self.project.frozen_requirements or (
             not setting_info.added_in and not setting_info.deprecated_in
