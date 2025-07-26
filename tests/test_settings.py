@@ -3097,6 +3097,54 @@ CASES: Cases = (
             "scrapy_known_settings": "SETTING",
         },
     ),
+    # SCP32 wrong setting method: do not trigger when not using getwithbase()
+    # in update_settings()
+    (
+        (
+            File(
+                "\n".join(
+                    (
+                        "from scrapy import Spider",
+                        "",
+                        "class MySpider(Spider):",
+                        "    name = 'my_spider'",
+                        "",
+                        "    @classmethod",
+                        "    def update_settings(cls, settings):",
+                        "        super().update_settings(settings)",
+                        '        dm = settings["DOWNLOADER_MIDDLEWARES"]',
+                        '        dm["custom.Middleware"] = 500',
+                    )
+                ),
+                path="a.py",
+            ),
+        ),
+        NO_ISSUE,
+        {},
+    ),
+    (
+        (
+            File(
+                "\n".join(
+                    (
+                        "from scrapy import Spider",
+                        "",
+                        "class MySpider(Spider):",
+                        "    name = 'my_spider'",
+                        "",
+                        "    @classmethod",
+                        "    def update_settings(cls, settings):",
+                        "        super().update_settings(settings)",
+                        '        dm = settings.get("DOWNLOADER_MIDDLEWARES")',
+                        '        dm["custom.Middleware"] = 500',
+                    )
+                ),
+                path="a.py",
+            ),
+        ),
+        Issue("SCP40 unneeded setting get", line=9, column=22, path="a.py"),
+        {},
+    ),
 )
 
 

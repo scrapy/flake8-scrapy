@@ -917,7 +917,8 @@ class SettingChecker:
         self.additional_known_settings = {
             s.strip() for s in known_settings.split(",") if s.strip()
         }
-        self.allow_pre_crawler_settings = False
+        self.in_update_pre_crawler_settings = False
+        self.in_update_settings = False
 
     def is_known_setting(self, name: str) -> bool:
         return name in SETTINGS or name in self.additional_known_settings
@@ -1064,7 +1065,7 @@ class SettingChecker:
         if name not in SETTINGS:
             return
         setting = SETTINGS[name]
-        if setting.is_pre_crawler and not self.allow_pre_crawler_settings:
+        if setting.is_pre_crawler and not self.in_update_pre_crawler_settings:
             yield Issue(NO_OP_SETTING_UPDATE, Pos.from_node(node))
 
     def check_method(self, name_node: Constant, call: Call) -> Generator[Issue]:
@@ -1078,7 +1079,7 @@ class SettingChecker:
         if (
             func.attr in SETTING_UPDATERS
             and setting.is_pre_crawler
-            and not self.allow_pre_crawler_settings
+            and not self.in_update_pre_crawler_settings
         ):
             yield Issue(NO_OP_SETTING_UPDATE, name_pos)
         yield from self.check_wrong_setting_method(setting, call, name_pos)
@@ -1101,7 +1102,9 @@ class SettingChecker:
         pos = Pos.from_node(func, column)
         if setting.type in SETTING_TYPE_GETTERS:
             expected = SETTING_TYPE_GETTERS[setting.type]
-            if func.attr != expected:
+            if func.attr != expected and (
+                expected != "getwithbase" or not self.in_update_settings
+            ):
                 yield Issue(WRONG_SETTING_METHOD, pos, f"use {expected}()")
         elif func.attr not in {"get", "__getitem__"}:
             has_default = False
@@ -1125,6 +1128,10 @@ class SettingChecker:
             isinstance(node.ctx, Load)
             and setting.type is not None
             and setting.type in SETTING_TYPE_GETTERS
+            and (
+                SETTING_TYPE_GETTERS[setting.type] != "getwithbase"
+                or not self.in_update_settings
+            )
         ):
             assert isinstance(node.value, Name)
             column = node.value.col_offset + len(node.value.id)
@@ -1134,7 +1141,7 @@ class SettingChecker:
         if (
             isinstance(node.ctx, (Store, Del))
             and setting.is_pre_crawler
-            and not self.allow_pre_crawler_settings
+            and not self.in_update_pre_crawler_settings
         ):
             column = getattr(node.slice, "col_offset", node.col_offset + 1)
             yield Issue(NO_OP_SETTING_UPDATE, Pos.from_node(node, column))
@@ -1192,13 +1199,17 @@ class SettingIssueFinder:
             return
         if isinstance(node, FunctionDef):
             if node.name == "update_pre_crawler_settings":
-                self.setting_checker.allow_pre_crawler_settings = True
+                self.setting_checker.in_update_pre_crawler_settings = True
+            elif node.name == "update_settings":
+                self.setting_checker.in_update_settings = True
             return
 
     def post_visit(self, node: Call | Compare | FunctionDef | Subscript) -> None:
         if isinstance(node, FunctionDef):
             if node.name == "update_pre_crawler_settings":
-                self.setting_checker.allow_pre_crawler_settings = False
+                self.setting_checker.in_update_pre_crawler_settings = False
+            elif node.name == "update_settings":
+                self.setting_checker.in_update_settings = False
             return
 
     def find_call_issues(self, node: Call) -> Generator[Issue]:  # noqa: PLR0912
@@ -1234,6 +1245,8 @@ class SettingIssueFinder:
                     and value_or_default.value is None
                 )
             ):
+                assert isinstance(node.func.value.end_lineno, int)
+                assert isinstance(node.func.value.end_col_offset, int)
                 pos = Pos(
                     node.func.value.end_lineno,
                     node.func.value.end_col_offset + 1,
