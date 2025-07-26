@@ -970,7 +970,7 @@ class SettingChecker:
         setting = SETTINGS[name]
         package = setting.package
         if package not in self.project.frozen_requirements:
-            if self.project.frozen_requirements:
+            if self.project.packages and package not in self.project.packages:
                 yield Issue(MISSING_SETTING_REQUIREMENT, pos, package)
             return
         added_in = setting.added_in

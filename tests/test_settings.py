@@ -2372,6 +2372,15 @@ CASES: Cases = (
             ),
             # SCP31 missing setting requirement
             (
+                ("scrapy",),
+                "SCRAPY_POET_CACHE",
+                Issue(
+                    "SCP31 missing setting requirement: scrapy-poet",
+                    path=path,
+                    column=column,
+                ),
+            ),
+            (
                 (f"scrapy=={SCRAPY_HIGHEST_KNOWN}",),
                 "SCRAPY_POET_CACHE",
                 Issue(
@@ -2379,6 +2388,16 @@ CASES: Cases = (
                     path=path,
                     column=column,
                 ),
+            ),
+            (
+                (f"scrapy=={SCRAPY_HIGHEST_KNOWN}", "scrapy-poet==0.26.0"),
+                "SCRAPY_POET_CACHE",
+                NO_ISSUE,
+            ),
+            (
+                ("scrapy", "scrapy-poet"),
+                "SCRAPY_POET_CACHE",
+                NO_ISSUE,
             ),
         )
     ),
