@@ -1793,6 +1793,7 @@ CASES: Cases = (
                     "AUTOTHROTTLE_DEBUG = True",
                     "JOBDIR = 'value'",
                     'ADDONS = {"addon1.Addon": True}',
+                    'ADDONS = {"addon1.Addon": 100}',
                     'SPIDER_MODULES = ["myproject.spiders"]',
                     "RETRY_HTTP_CODES = [500, 502]",
                     # Unparseable values
@@ -1851,7 +1852,8 @@ CASES: Cases = (
                     ),
                 )
                 for value, detail, offset in (
-                    ("{1: 100}", "keys must be strings, not int (1)", 1),
+                    ("1", "must be a dict, not int (1)", 0),
+                    ("{1: 100}", "keys must be components, not int (1)", 1),
                     (
                         "{'myaddons': 100}",
                         "'myaddons' does not look like an import path",
@@ -1862,8 +1864,12 @@ CASES: Cases = (
                         "dict values must be integers, not str ('foo')",
                         8,
                     ),
+                    (
+                        "{Addon: None}",
+                        "dict values must be integers, not NoneType (None)",
+                        8,
+                    ),
                     ("{Addon: {}}", "dict values must be integers", 8),
-                    ("1", "must be a dict, not int (1)", 0),
                 )
             ),
         )

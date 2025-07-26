@@ -816,7 +816,7 @@ def check_comp_prio(node: expr, project: Project, **kwargs) -> Generator[Issue]:
             continue
         key = key_node.value
         if not isinstance(key, str):
-            detail = f"keys must be strings, not {type(key).__name__} ({key!r})"
+            detail = f"keys must be components, not {type(key).__name__} ({key!r})"
             yield Issue(INVALID_SETTING_VALUE, Pos.from_node(key_node), detail)
         elif not is_import_path(key):
             detail = f"{key!r} does not look like an import path"
