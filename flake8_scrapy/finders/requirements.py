@@ -70,7 +70,7 @@ class RequirementsIssueFinder:
     def __init__(self, context: Context):
         self.context = context
 
-    def in_requirements_file(self) -> bool:
+    def in_target_file(self) -> bool:
         if not self.context.project.requirements_file_path:
             return False
         return self.context.file.path == self.context.project.requirements_file_path

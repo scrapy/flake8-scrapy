@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from ast import Attribute, Call, Name, expr
+from ast import Attribute, Call, Constant, Dict, Name, expr
 from typing import TYPE_CHECKING
 
+from flake8_scrapy.ast import is_dict, iter_dict
 from flake8_scrapy.issues import (
     UNSAFE_META_COPY,
+    ZYTE_RAW_PARAMS,
     Issue,
     Pos,
 )
@@ -48,8 +50,17 @@ class RequestIssueFinder:
         for arg in node.args:
             if is_response_meta(arg):
                 yield Issue(UNSAFE_META_COPY, Pos.from_node(arg))
-                return
+                break
         for kw in node.keywords:
             if is_response_meta(kw.value):
                 yield Issue(UNSAFE_META_COPY, Pos.from_node(kw.value))
-                return
+            elif kw.arg == "meta":
+                yield from self.check_meta(kw.value)
+
+    def check_meta(self, meta: expr) -> Generator[Issue]:
+        if not is_dict(meta):
+            return
+        assert isinstance(meta, (Call, Dict))
+        for key, _ in iter_dict(meta):
+            if isinstance(key, Constant) and key.value == "zyte_api":
+                yield Issue(ZYTE_RAW_PARAMS, Pos.from_node(key))

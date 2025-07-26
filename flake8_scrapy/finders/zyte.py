@@ -25,11 +25,11 @@ if TYPE_CHECKING:
     from flake8_scrapy.context import Context
 
 
-class ScrapinghubIssueFinder:
+class ZyteCloudConfigIssueFinder:
     def __init__(self, context: Context):
         self.context = context
 
-    def in_scrapinghub_file(self) -> bool:
+    def in_target_file(self) -> bool:
         if not self.context.project.root:
             return False
         return self.context.file.path == self.context.project.root / "scrapinghub.yml"

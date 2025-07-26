@@ -17,5 +17,6 @@ intersphinx_mapping = {
 }
 scrapy_intersphinx_enable = [
     "shub",
+    "scrapy-zyte-api",
     "zyte",
 ]

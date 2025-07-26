@@ -704,6 +704,11 @@ CASES: Cases = (
                     "settings.get('DOWNLOADER', foo)",
                 )
             ),
+            # SCP46 raw Zyte API params
+            (
+                "settings['ZYTE_API_DEFAULT_PARAMS'] = {'foo': 'bar'}",
+                Issue("SCP46 raw Zyte API params", column=9, path=path),
+            ),
             # Setting value checks
             *(
                 (

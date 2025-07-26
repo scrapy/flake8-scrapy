@@ -16,13 +16,13 @@ from .finders.oldstyle import (
 )
 from .finders.requests import RequestIssueFinder
 from .finders.requirements import RequirementsIssueFinder
-from .finders.scrapinghub import ScrapinghubIssueFinder
 from .finders.settings import (
     SettingChecker,
     SettingIssueFinder,
     SettingModuleIssueFinder,
 )
 from .finders.unsupported import LambdaCallbackIssueFinder
+from .finders.zyte import ZyteCloudConfigIssueFinder
 
 __version__ = "0.0.2"
 
@@ -142,11 +142,11 @@ class ScrapyFlake8Plugin:
             return
 
         requirements_finder = RequirementsIssueFinder(self.context)
-        if requirements_finder.in_requirements_file():
+        if requirements_finder.in_target_file():
             yield from requirements_finder.check()
             return
 
-        scrapinghub_finder = ScrapinghubIssueFinder(self.context)
-        if scrapinghub_finder.in_scrapinghub_file():
-            yield from scrapinghub_finder.check()
+        zyte_cloud_config_finder = ZyteCloudConfigIssueFinder(self.context)
+        if zyte_cloud_config_finder.in_target_file():
+            yield from zyte_cloud_config_finder.check()
             return
