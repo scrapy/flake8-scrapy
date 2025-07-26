@@ -401,10 +401,8 @@ def check_feed_uri(
     **kwargs,
 ) -> Generator[Issue]:
     if is_dict(node) or isinstance(node, (Lambda, List, Set, Tuple)):
-        return  # Already reported as bad type
+        return
     pos = Pos.from_node(node)
-    invalid = Issue(INVALID_SETTING_VALUE, pos)
-    unneeded_str = Issue(UNNEEDED_PATH_STRING, pos)
     if isinstance(node, Call):
         if not (
             is_path_obj(node) and node.args and isinstance(node.args[0], Constant)
@@ -419,8 +417,9 @@ def check_feed_uri(
     if not isinstance(node, Constant) or (allow_none and node.value is None):
         return
     if not isinstance(node.value, str):
-        yield invalid
+        yield Issue(INVALID_SETTING_VALUE, pos)
         return
+    unneeded_str = Issue(UNNEEDED_PATH_STRING, pos)
     try:
         protocol, path = node.value.split("://", 1)
     except ValueError:
@@ -876,7 +875,8 @@ def check_opt_path(
     else:
         supports_path_obj = version >= path_support_version
     if is_path_obj_ and not supports_path_obj:
-        yield Issue(UNSUPPORTED_PATH_OBJECT, pos)
+        detail = f"requires Scrapy {path_support_version}+"
+        yield Issue(UNSUPPORTED_PATH_OBJECT, pos, detail)
     elif not is_path_obj_ and supports_path_obj:
         yield Issue(UNNEEDED_PATH_STRING, pos)
 

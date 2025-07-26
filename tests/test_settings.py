@@ -2629,7 +2629,7 @@ CASES: Cases = (
                                 (
                                     "Path('path')",
                                     old_version,
-                                    "SCP43 unsupported Path object",
+                                    f"SCP43 unsupported Path object: requires Scrapy {new_version}+",
                                 ),
                                 ("'path'", new_version, "SCP42 unneeded path string"),
                                 ("Path('path')", new_version, NO_ISSUE),
