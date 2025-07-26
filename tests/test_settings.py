@@ -196,7 +196,7 @@ CASES: Cases = (
                             path=path,
                         ),
                         *(
-                            Issue("SCP40 unneeded setting get", column=8, path=path)
+                            Issue("SCP40 unneeded setting get", column=9, path=path)
                             for _ in range(1)
                             if method_name == "get"
                         ),
@@ -239,7 +239,7 @@ CASES: Cases = (
                             path=path,
                         ),
                         *(
-                            Issue("SCP40 unneeded setting get", column=8, path=path)
+                            Issue("SCP40 unneeded setting get", column=9, path=path)
                             for _ in range(1)
                             if not has_default
                         ),
@@ -476,7 +476,7 @@ CASES: Cases = (
                     Issue(
                         "SCP32 wrong setting method: use getint()", column=9, path=path
                     ),
-                    Issue("SCP40 unneeded setting get", column=8, path=path),
+                    Issue("SCP40 unneeded setting get", column=9, path=path),
                 ),
             ),
             # SCP32 wrong setting method: subscript
@@ -688,7 +688,7 @@ CASES: Cases = (
             *(
                 (
                     code,
-                    Issue("SCP40 unneeded setting get", column=8, path=path),
+                    Issue("SCP40 unneeded setting get", column=9, path=path),
                 )
                 for code in (
                     "settings.get('DOWNLOADER')",
@@ -3059,14 +3059,14 @@ CASES: Cases = (
         (
             File("", path="scrapy.cfg"),
             File("scrapy", path="requirements.txt"),
-            File(f"settings['SETING']", path="a.py"),
+            File("settings['SETING']", path="a.py"),
         ),
         (
             Issue(
-                message='SCP13 incomplete requirements freeze',
+                message="SCP13 incomplete requirements freeze",
                 line=1,
                 column=0,
-                path='requirements.txt',
+                path="requirements.txt",
             ),
             Issue(
                 "SCP27 unknown setting: did you mean: SETTING?",
@@ -3077,7 +3077,7 @@ CASES: Cases = (
         {
             "scrapy_known_settings": "SETTING",
         },
-    )
+    ),
 )
 
 

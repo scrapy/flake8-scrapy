@@ -1234,9 +1234,9 @@ class SettingIssueFinder:
                     and value_or_default.value is None
                 )
             ):
-                pos = Pos.from_node(
+                pos = Pos(
                     node.func.value.end_lineno,
-                    node.func.value.end_col_offset,
+                    node.func.value.end_col_offset + 1,
                 )
                 yield Issue(UNNEEDED_SETTING_GET, pos)
             return
