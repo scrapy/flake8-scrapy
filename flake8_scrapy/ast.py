@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from ast import Constant, Dict, List
-from typing import Any
+from ast import Call, Constant, Dict, List, Name, expr
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 def extract_literal_value(node) -> tuple[Any, bool]:
@@ -32,3 +35,26 @@ def extract_literal_value(node) -> tuple[Any, bool]:
             result[key] = value
         return result, True
     return None, False  # Not a literal
+
+
+def is_dict(node: expr) -> bool:
+    return isinstance(node, Dict) or (
+        isinstance(node, Call)
+        and isinstance(node.func, Name)
+        and node.func.id == "dict"
+    )
+
+
+def iter_dict(node: Dict | Call) -> Generator[tuple[expr, expr]]:
+    if isinstance(node, Dict):
+        yield from zip(node.keys, node.values)
+    elif (
+        isinstance(node, Call)
+        and isinstance(node.func, Name)
+        and node.func.id == "dict"
+    ):
+        for kw in node.keywords:
+            yield (
+                Constant(value=kw.arg, col_offset=kw.col_offset, lineno=kw.lineno),
+                kw.value,
+            )

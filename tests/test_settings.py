@@ -1042,21 +1042,21 @@ CASES: Cases = (
                                 ),
                                 (
                                     "DOWNLOAD_HANDLERS",
-                                    '{"a": 1}',
-                                    6,
-                                    "values must be import paths as strings, not int (1)",
-                                ),
-                                (
-                                    "DOWNLOAD_HANDLERS",
                                     '{"a": "not an import path"}',
                                     6,
                                     "'not an import path' does not look like an import path",
                                 ),
                                 (
                                     "DOWNLOAD_HANDLERS",
+                                    '{"a": 1}',
+                                    6,
+                                    "values must be Python objects or their import paths as strings, not int (1)",
+                                ),
+                                (
+                                    "DOWNLOAD_HANDLERS",
                                     "dict(a=1)",
                                     7,
-                                    "dict values must be Python objects or their import paths as strings",
+                                    "values must be Python objects or their import paths as strings, not int (1)",
                                 ),
                                 (
                                     "DOWNLOAD_HANDLERS",
