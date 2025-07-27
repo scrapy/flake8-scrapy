@@ -1443,6 +1443,12 @@ SETTINGS = {
         package="spidermon",
         type=SettingType.STR,
     ),
+    # spidermon: undocumented settings
+    "SPIDERMON_FIELD_COVERAGE_RULES": Setting(
+        package="spidermon",
+        type=SettingType.DICT,
+        default_value=VersionedValue({}),
+    ),
     # scrapy-zyte-api plugin settings, in order of appearance in
     # https://scrapy-zyte-api.readthedocs.io/en/latest/reference/settings.html
     "ZYTE_API_AUTO_FIELD_STATS": Setting(package="scrapy-zyte-api"),
