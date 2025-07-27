@@ -1097,8 +1097,8 @@ class SettingChecker:
             yield Issue(WRONG_SETTING_METHOD, name_pos)
         if func.attr not in SETTING_GETTERS or setting.type is None:
             return
-        assert isinstance(func.value, Name)
-        column = func.col_offset + len(func.value.id) + 1  # +1 for the dot
+        assert func.end_col_offset is not None
+        column = func.end_col_offset - len(func.attr)
         pos = Pos.from_node(func, column)
         if setting.type in SETTING_TYPE_GETTERS:
             expected = SETTING_TYPE_GETTERS[setting.type]
