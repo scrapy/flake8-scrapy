@@ -196,7 +196,7 @@ CASES: Cases = (
                             path=path,
                         ),
                         *(
-                            Issue("SCP40 unneeded setting get", column=8, path=path)
+                            Issue("SCP40 unneeded setting get", column=9, path=path)
                             for _ in range(1)
                             if method_name == "get"
                         ),
@@ -239,7 +239,7 @@ CASES: Cases = (
                             path=path,
                         ),
                         *(
-                            Issue("SCP40 unneeded setting get", column=8, path=path)
+                            Issue("SCP40 unneeded setting get", column=9, path=path)
                             for _ in range(1)
                             if not has_default
                         ),
@@ -476,7 +476,7 @@ CASES: Cases = (
                     Issue(
                         "SCP32 wrong setting method: use getint()", column=9, path=path
                     ),
-                    Issue("SCP40 unneeded setting get", column=8, path=path),
+                    Issue("SCP40 unneeded setting get", column=9, path=path),
                 ),
             ),
             # SCP32 wrong setting method: subscript
@@ -688,7 +688,7 @@ CASES: Cases = (
             *(
                 (
                     code,
-                    Issue("SCP40 unneeded setting get", column=8, path=path),
+                    Issue("SCP40 unneeded setting get", column=9, path=path),
                 )
                 for code in (
                     "settings.get('DOWNLOADER')",
@@ -2372,6 +2372,15 @@ CASES: Cases = (
             ),
             # SCP31 missing setting requirement
             (
+                ("scrapy",),
+                "SCRAPY_POET_CACHE",
+                Issue(
+                    "SCP31 missing setting requirement: scrapy-poet",
+                    path=path,
+                    column=column,
+                ),
+            ),
+            (
                 (f"scrapy=={SCRAPY_HIGHEST_KNOWN}",),
                 "SCRAPY_POET_CACHE",
                 Issue(
@@ -2379,6 +2388,16 @@ CASES: Cases = (
                     path=path,
                     column=column,
                 ),
+            ),
+            (
+                (f"scrapy=={SCRAPY_HIGHEST_KNOWN}", "scrapy-poet==0.26.0"),
+                "SCRAPY_POET_CACHE",
+                NO_ISSUE,
+            ),
+            (
+                ("scrapy", "scrapy-poet"),
+                "SCRAPY_POET_CACHE",
+                NO_ISSUE,
             ),
         )
     ),
@@ -3052,6 +3071,79 @@ CASES: Cases = (
             path="a.py",
         ),
         {"scrapy_known_settings": "FOO_BAR"},
+    ),
+    # SCP27 unknown setting: recommend scrapy_known_settings even when
+    # dependency versions need to be taken into account (assume they are met)
+    (
+        (
+            File("", path="scrapy.cfg"),
+            File("scrapy", path="requirements.txt"),
+            File("settings['SETING']", path="a.py"),
+        ),
+        (
+            Issue(
+                message="SCP13 incomplete requirements freeze",
+                line=1,
+                column=0,
+                path="requirements.txt",
+            ),
+            Issue(
+                "SCP27 unknown setting: did you mean: SETTING?",
+                column=9,
+                path="a.py",
+            ),
+        ),
+        {
+            "scrapy_known_settings": "SETTING",
+        },
+    ),
+    # SCP32 wrong setting method: do not trigger when not using getwithbase()
+    # in update_settings()
+    (
+        (
+            File(
+                "\n".join(
+                    (
+                        "from scrapy import Spider",
+                        "",
+                        "class MySpider(Spider):",
+                        "    name = 'my_spider'",
+                        "",
+                        "    @classmethod",
+                        "    def update_settings(cls, settings):",
+                        "        super().update_settings(settings)",
+                        '        dm = settings["DOWNLOADER_MIDDLEWARES"]',
+                        '        dm["custom.Middleware"] = 500',
+                    )
+                ),
+                path="a.py",
+            ),
+        ),
+        NO_ISSUE,
+        {},
+    ),
+    (
+        (
+            File(
+                "\n".join(
+                    (
+                        "from scrapy import Spider",
+                        "",
+                        "class MySpider(Spider):",
+                        "    name = 'my_spider'",
+                        "",
+                        "    @classmethod",
+                        "    def update_settings(cls, settings):",
+                        "        super().update_settings(settings)",
+                        '        dm = settings.get("DOWNLOADER_MIDDLEWARES")',
+                        '        dm["custom.Middleware"] = 500',
+                    )
+                ),
+                path="a.py",
+            ),
+        ),
+        Issue("SCP40 unneeded setting get", line=9, column=22, path="a.py"),
+        {},
     ),
 )
 

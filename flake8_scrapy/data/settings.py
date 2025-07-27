@@ -1031,7 +1031,7 @@ SETTINGS = {
     # scrapy-feedexporter-sftp plugin settings, in order of appearance in
     # https://github.com/scrapy-plugins/scrapy-feedexporter-sftp
     "FEED_STORAGE_SFTP_PKEY": Setting(package="scrapy-feedexporter-sftp"),
-    # spidermon plugin settings, in order of appearance in
+    # spidermon plugin settings, in order of appearance in the docs:
     # https://spidermon.readthedocs.io/en/latest/settings.html
     "SPIDERMON_ENABLED": Setting(package="spidermon", type=SettingType.BOOL),
     "SPIDERMON_EXPRESSIONS_MONITOR_CLASS": Setting(package="spidermon"),
@@ -1047,6 +1047,402 @@ SETTINGS = {
     "SPIDERMON_LIST_FIELDS_COVERAGE_LEVELS": Setting(package="spidermon"),
     "SPIDERMON_DICT_FIELDS_COVERAGE_LEVELS": Setting(package="spidermon"),
     "SPIDERMON_MONITOR_SKIPPING_RULES": Setting(package="spidermon"),
+    # https://spidermon.readthedocs.io/en/latest/monitors.html
+    "SPIDERMON_MAX_CRITICALS": Setting(package="spidermon", type=SettingType.INT),
+    "SPIDERMON_MAX_DOWNLOADER_EXCEPTIONS": Setting(
+        package="spidermon", type=SettingType.INT
+    ),
+    "SPIDERMON_MAX_ERRORS": Setting(package="spidermon", type=SettingType.INT),
+    "SPIDERMON_FIELD_COVERAGE_SKIP_IF_NO_ITEM": Setting(
+        package="spidermon", type=SettingType.BOOL, default_value=VersionedValue(False)
+    ),
+    "SPIDERMON_EXPECTED_FINISH_REASONS": Setting(
+        package="spidermon",
+        type=SettingType.LIST,
+        default_value=VersionedValue(["finished"]),
+    ),
+    "SPIDERMON_MIN_ITEMS": Setting(package="spidermon", type=SettingType.INT),
+    "SPIDERMON_MAX_ITEM_VALIDATION_ERRORS": Setting(
+        package="spidermon", type=SettingType.INT
+    ),
+    "SPIDERMON_MAX_EXECUTION_TIME": Setting(package="spidermon", type=SettingType.INT),
+    "SPIDERMON_ITEM_COUNT_INCREASE": Setting(package="spidermon", type=SettingType.INT),
+    "SPIDERMON_MAX_RETRIES": Setting(
+        package="spidermon", type=SettingType.INT, default_value=VersionedValue(-1)
+    ),
+    "SPIDERMON_MIN_SUCCESSFUL_REQUESTS": Setting(
+        package="spidermon", type=SettingType.INT, default_value=VersionedValue(0)
+    ),
+    "SPIDERMON_MAX_REQUESTS_ALLOWED": Setting(
+        package="spidermon", type=SettingType.INT, default_value=VersionedValue(-1)
+    ),
+    "SPIDERMON_UNWANTED_HTTP_CODES_MAX_COUNT": Setting(
+        package="spidermon", type=SettingType.INT, default_value=VersionedValue(10)
+    ),
+    "SPIDERMON_UNWANTED_HTTP_CODES": Setting(
+        package="spidermon",
+        type=SettingType.LIST,
+        default_value=VersionedValue(
+            [400, 407, 429, 500, 502, 503, 504, 523, 540, 541]
+        ),
+    ),
+    "SPIDERMON_MAX_WARNINGS": Setting(package="spidermon", type=SettingType.INT),
+    "SPIDERMON_JOBS_COMPARISON": Setting(
+        package="spidermon", type=SettingType.INT, default_value=VersionedValue(0)
+    ),
+    "SPIDERMON_JOBS_COMPARISON_THRESHOLD": Setting(
+        package="spidermon", type=SettingType.FLOAT
+    ),
+    "SPIDERMON_JOBS_COMPARISON_STATES": Setting(
+        package="spidermon",
+        type=SettingType.LIST,
+        default_value=VersionedValue(["finished"]),
+    ),
+    "SPIDERMON_JOBS_COMPARISON_TAGS": Setting(
+        package="spidermon", type=SettingType.LIST, default_value=VersionedValue([])
+    ),
+    "SPIDERMON_JOBS_COMPARISON_CLOSE_REASONS": Setting(
+        package="spidermon", type=SettingType.LIST, default_value=VersionedValue([])
+    ),
+    "SPIDERMON_JOBS_COMPARISON_ARGUMENTS": Setting(
+        package="spidermon", type=SettingType.DICT, default_value=VersionedValue({})
+    ),
+    "SPIDERMON_JOBS_COMPARISON_ARGUMENTS_ENABLED": Setting(
+        package="spidermon", type=SettingType.BOOL, default_value=VersionedValue(False)
+    ),
+    # https://spidermon.readthedocs.io/en/latest/item-validation.html
+    "SPIDERMON_VALIDATION_ADD_ERRORS_TO_ITEMS": Setting(
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
+    "SPIDERMON_VALIDATION_DROP_ITEMS_WITH_ERRORS": Setting(
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
+    "SPIDERMON_VALIDATION_ERRORS_FIELD": Setting(
+        package="spidermon",
+        type=SettingType.STR,
+        default_value=VersionedValue("_validation"),
+    ),
+    "SPIDERMON_VALIDATION_SCHEMAS": Setting(
+        package="spidermon",
+        type=SettingType.DICT_OR_LIST,
+        default_value=VersionedValue([]),
+    ),
+    # https://spidermon.readthedocs.io/en/latest/actions/email-action.html
+    "SPIDERMON_EMAIL_SENDER": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_EMAIL_TO": Setting(
+        package="spidermon",
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
+    ),
+    "SPIDERMON_BODY_HTML": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_BODY_HTML_TEMPLATE": Setting(
+        package="spidermon",
+        type=SettingType.STR,
+        default_value=VersionedValue("reports/email/monitors/result.jinja"),
+    ),
+    "SPIDERMON_BODY_TEXT": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_BODY_TEXT_TEMPLATE": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_EMAIL_BCC": Setting(
+        package="spidermon",
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
+    ),
+    "SPIDERMON_EMAIL_CONTEXT": Setting(
+        package="spidermon",
+        type=SettingType.DICT,
+        default_value=VersionedValue({}),
+    ),
+    "SPIDERMON_EMAIL_CC": Setting(
+        package="spidermon",
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
+    ),
+    "SPIDERMON_EMAIL_FAKE": Setting(
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
+    "SPIDERMON_EMAIL_REPLY_TO": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_EMAIL_SUBJECT": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_EMAIL_SUBJECT_TEMPLATE": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_AWS_ACCESS_KEY": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_AWS_SECRET_KEY": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_AWS_ACCESS_KEY_ID": Setting(
+        package="spidermon",
+        type=SettingType.STR,
+    ),
+    "SPIDERMON_AWS_SECRET_ACCESS_KEY": Setting(
+        package="spidermon",
+        type=SettingType.STR,
+    ),
+    "SPIDERMON_AWS_REGION_NAME": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue("None"),
+    ),
+    "SPIDERMON_AWS_RETURN_PATH": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_SMTP_HOST": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_SMTP_PORT": Setting(
+        package="spidermon",
+        type=SettingType.OPT_INT,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_SMTP_USER": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_SMTP_PASSWORD": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_SMTP_ENFORCE_TLS": Setting(
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
+    "SPIDERMON_SMTP_ENFORCE_SSL": Setting(
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
+    # https://spidermon.readthedocs.io/en/latest/actions/slack-action.html
+    "SPIDERMON_SLACK_RECIPIENTS": Setting(
+        package="spidermon", type=SettingType.LIST, default_value=VersionedValue([])
+    ),
+    "SPIDERMON_SLACK_SENDER_NAME": Setting(
+        package="spidermon",
+        type=SettingType.STR,
+    ),
+    "SPIDERMON_SLACK_SENDER_TOKEN": Setting(
+        package="spidermon",
+        type=SettingType.STR,
+    ),
+    "SPIDERMON_SLACK_ATTACHMENTS": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_SLACK_ATTACHMENTS_TEMPLATE": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_SLACK_FAKE": Setting(
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
+    "SPIDERMON_SLACK_INCLUDE_ATTACHMENTS": Setting(
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
+    ),
+    "SPIDERMON_SLACK_INCLUDE_MESSAGE": Setting(
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
+    ),
+    "SPIDERMON_SLACK_MESSAGE": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_SLACK_MESSAGE_TEMPLATE": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_SLACK_NOTIFIER_INCLUDE_ERROR_ATTACHMENTS": Setting(
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
+    ),
+    "SPIDERMON_SLACK_NOTIFIER_INCLUDE_OK_ATTACHMENTS": Setting(
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
+    "SPIDERMON_SLACK_NOTIFIER_INCLUDE_REPORT_LINK": Setting(
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
+    "SPIDERMON_SLACK_NOTIFIER_REPORT_INDEX": Setting(
+        package="spidermon",
+        type=SettingType.INT,
+        default_value=VersionedValue(0),
+    ),
+    # https://spidermon.readthedocs.io/en/latest/actions/telegram-action.html
+    "SPIDERMON_TELEGRAM_RECIPIENTS": Setting(
+        package="spidermon", type=SettingType.LIST, default_value=VersionedValue([])
+    ),
+    "SPIDERMON_TELEGRAM_SENDER_TOKEN": Setting(
+        package="spidermon",
+        type=SettingType.STR,
+    ),
+    "SPIDERMON_TELEGRAM_FAKE": Setting(
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
+    "SPIDERMON_TELEGRAM_MESSAGE": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_TELEGRAM_MESSAGE_TEMPLATE": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    # https://spidermon.readthedocs.io/en/latest/actions/discord-action.html
+    "SPIDERMON_DISCORD_WEBHOOK_URL": Setting(
+        package="spidermon",
+        type=SettingType.STR,
+    ),
+    "SPIDERMON_DISCORD_FAKE": Setting(
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
+    "SPIDERMON_DISCORD_MESSAGE": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_DISCORD_MESSAGE_TEMPLATE": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    # https://spidermon.readthedocs.io/en/latest/actions/job-tags-action.html
+    "SPIDERMON_JOB_TAGS_TO_ADD": Setting(
+        package="spidermon",
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
+    ),
+    "SPIDERMON_JOB_TAGS_TO_REMOVE": Setting(
+        package="spidermon",
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
+    ),
+    # https://spidermon.readthedocs.io/en/latest/actions/file-report-action.html
+    "SPIDERMON_REPORT_CONTEXT": Setting(
+        package="spidermon",
+        type=SettingType.DICT,
+        default_value=VersionedValue({}),
+    ),
+    "SPIDERMON_REPORT_FILENAME": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_REPORT_TEMPLATE": Setting(
+        package="spidermon",
+        type=SettingType.STR,
+    ),
+    "SPIDERMON_REPORT_S3_BUCKET": Setting(
+        package="spidermon",
+        type=SettingType.STR,
+    ),
+    "SPIDERMON_REPORT_S3_CONTENT_TYPE": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_REPORT_S3_FILENAME": Setting(
+        package="spidermon",
+        type=SettingType.STR,
+    ),
+    "SPIDERMON_REPORT_S3_MAKE_PUBLIC": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_REPORT_S3_REGION_ENDPOINT": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    # https://spidermon.readthedocs.io/en/latest/actions/sentry-action.html
+    "SPIDERMON_SENTRY_DSN": Setting(
+        package="spidermon",
+        type=SettingType.STR,
+    ),
+    "SPIDERMON_SENTRY_PROJECT_NAME": Setting(
+        package="spidermon",
+        type=SettingType.STR,
+    ),
+    "SPIDERMON_SENTRY_ENVIRONMENT_TYPE": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_SENTRY_LOG_LEVEL": Setting(
+        package="spidermon",
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
+    ),
+    "SPIDERMON_SENTRY_FAKE": Setting(
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
+    # https://spidermon.readthedocs.io/en/latest/actions/sns-action.html
+    "SPIDERMON_SNS_TOPIC_ARN": Setting(
+        package="spidermon",
+        type=SettingType.STR,
+    ),
     # scrapy-zyte-api plugin settings, in order of appearance in
     # https://scrapy-zyte-api.readthedocs.io/en/latest/reference/settings.html
     "ZYTE_API_AUTO_FIELD_STATS": Setting(package="scrapy-zyte-api"),
@@ -1089,6 +1485,11 @@ SETTINGS = {
     "ZYTE_API_USE_ENV_PROXY": Setting(package="scrapy-zyte-api"),
     # scrapy-zyte-smartproxy plugin settings, in order of appearance in
     # https://scrapy-zyte-smartproxy.readthedocs.io/en/latest/settings.html
+    "ZYTE_SMARTPROXY_ENABLED": Setting(
+        package="scrapy-zyte-smartproxy",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
     "ZYTE_SMARTPROXY_APIKEY": Setting(package="scrapy-zyte-smartproxy"),
     "ZYTE_SMARTPROXY_URL": Setting(package="scrapy-zyte-smartproxy"),
     "ZYTE_SMARTPROXY_MAXBANS": Setting(package="scrapy-zyte-smartproxy"),
