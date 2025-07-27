@@ -1485,6 +1485,11 @@ SETTINGS = {
     "ZYTE_API_USE_ENV_PROXY": Setting(package="scrapy-zyte-api"),
     # scrapy-zyte-smartproxy plugin settings, in order of appearance in
     # https://scrapy-zyte-smartproxy.readthedocs.io/en/latest/settings.html
+    "ZYTE_SMARTPROXY_ENABLED": Setting(
+        package="scrapy-zyte-smartproxy",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
     "ZYTE_SMARTPROXY_APIKEY": Setting(package="scrapy-zyte-smartproxy"),
     "ZYTE_SMARTPROXY_URL": Setting(package="scrapy-zyte-smartproxy"),
     "ZYTE_SMARTPROXY_MAXBANS": Setting(package="scrapy-zyte-smartproxy"),
