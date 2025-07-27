@@ -908,14 +908,12 @@ SETTINGS = {
         sunset_guidance="use METAREFRESH_MAXDELAY instead",
         type=SettingType.FLOAT,
     ),
-    # scrapy-feedexporter-azure-storage plugin settings, in order of appearance
+    # scrapy-azure-exporter plugin settings, in order of appearance
     # in https://github.com/scrapy-plugins/scrapy-feedexporter-azure-storage
-    "AZURE_CONNECTION_STRING": Setting(package="scrapy-feedexporter-azure-storage"),
-    "AZURE_ACCOUNT_URL_WITH_SAS_TOKEN": Setting(
-        package="scrapy-feedexporter-azure-storage"
-    ),
-    "AZURE_ACCOUNT_URL": Setting(package="scrapy-feedexporter-azure-storage"),
-    "AZURE_ACCOUNT_KEY": Setting(package="scrapy-feedexporter-azure-storage"),
+    "AZURE_CONNECTION_STRING": Setting(package="scrapy-azure-exporter"),
+    "AZURE_ACCOUNT_URL_WITH_SAS_TOKEN": Setting(package="scrapy-azure-exporter"),
+    "AZURE_ACCOUNT_URL": Setting(package="scrapy-azure-exporter"),
+    "AZURE_ACCOUNT_KEY": Setting(package="scrapy-azure-exporter"),
     # scrapy-deltafetch plugin settings, in order of appearance in
     # https://github.com/scrapy-plugins/scrapy-deltafetch#usage
     "DELTAFETCH_ENABLED": Setting(package="scrapy-deltafetch", type=SettingType.BOOL),
