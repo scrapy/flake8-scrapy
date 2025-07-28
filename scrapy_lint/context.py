@@ -5,16 +5,15 @@ from configparser import ConfigParser
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from packaging.version import Version
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from flake8_scrapy.requirements import iter_requirement_lines
+from scrapy_lint.requirements import iter_requirement_lines
 
 if TYPE_CHECKING:
-    import argparse
     from ast import AST
     from collections.abc import Sequence
 
@@ -29,38 +28,22 @@ class Flake8File:
 
     @classmethod
     def from_params(
-        cls, tree: AST | None, file_path: str, lines: Sequence[str] | None = None
+        cls,
+        tree: AST | None,
+        file_path: str,
+        lines: Sequence[str] | None = None,
     ):
         return cls(tree, Path(file_path).resolve(), lines)
 
 
 @dataclass
 class Project:
-    root: Path | None
-    setting_module_import_paths: Sequence[str]
+    root: Path
     requirements_file_path: Path | None = None
 
-    @classmethod
-    def from_file(cls, file: Flake8File, requirements_file_path: str):
-        root = cls.root_from_file(file)
-        return cls(
-            root,
-            cls.setting_module_import_paths_from_root(root),
-            cls.find_requirements_file_path(root, requirements_file_path),
-        )
-
-    @staticmethod
-    def root_from_file(file: Flake8File) -> Path | None:
-        for parent in [file.path, *list(file.path.parents)]:
-            if (parent / "scrapy.cfg").exists():
-                return parent
-        return None
-
-    @staticmethod
-    def setting_module_import_paths_from_root(root: Path | None) -> Sequence[str]:
-        if not root:
-            return ()
-        config_file = root / "scrapy.cfg"
+    @cached_property
+    def setting_module_import_paths(self) -> Sequence[str]:
+        config_file = self.root / "scrapy.cfg"
         config = ConfigParser()
         config.read(config_file)
         if "settings" not in config:
@@ -69,7 +52,8 @@ class Project:
 
     @staticmethod
     def find_requirements_file_path(
-        root: Path | None, requirements_file_path: str | None
+        root: Path | None,
+        requirements_file_path: str | None,
     ) -> Path | None:
         if requirements_file_path:
             return Path(requirements_file_path).resolve()
@@ -86,15 +70,15 @@ class Project:
             except YAMLError:
                 pass
             else:
-                if (
-                    isinstance(data, dict)
-                    and "requirements" in data
-                    and isinstance(data["requirements"], dict)
-                    and "file" in data["requirements"]
-                    and isinstance(data["requirements"]["file"], str)
-                    and data["requirements"]["file"].strip()
-                ):
-                    scrapinghub_requirements_file = root / data["requirements"]["file"]
+                try:
+                    requirements_file_name = data.get("requirements", {}).get(
+                        "file",
+                        "",
+                    )
+                except AttributeError:
+                    pass
+                else:
+                    scrapinghub_requirements_file = root / requirements_file_name
                     if scrapinghub_requirements_file.exists():
                         return scrapinghub_requirements_file.resolve()
 
@@ -144,21 +128,5 @@ class Project:
 
 @dataclass
 class Context:
-    file: Flake8File
     project: Project
-    flake8_options: argparse.Namespace
-
-    @classmethod
-    def from_flake8_params(
-        cls,
-        tree: AST | None,
-        file_path: str,
-        options: argparse.Namespace,
-        lines: Sequence[str] | None,
-    ):
-        file = Flake8File.from_params(tree, file_path, lines)
-        requirements_file_path = options.scrapy_requirements_file or getattr(
-            options, "requirements_file", ""
-        )
-        project = Project.from_file(file, requirements_file_path)
-        return cls(file, project, options)
+    options: dict[str, Any]

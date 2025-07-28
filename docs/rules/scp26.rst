@@ -16,16 +16,16 @@ the one determined by the :ref:`requirements file resolution logic
 Why is this bad?
 ================
 
-When you specify a requirements file using the :ref:`scrapy-requirements-file`
-option, but your ``scrapinghub.yml`` points to a different requirements file,
-this creates an inconsistency between the requirements file that flake8-scrapy
-checks and the one that you deploy to Scrapy Cloud.
+When you specify a requirements file using the :ref:`requirements-file` option,
+but your ``scrapinghub.yml`` points to a different requirements file, this
+creates an inconsistency between the requirements file that scrapy-lint checks
+and the one that you deploy to Scrapy Cloud.
 
 
 Example
 =======
 
-With ``--scrapy-requirements-file=requirements-dev.txt``:
+With :ref:`requirements-file` seto to ``requirements-dev.txt``:
 
 .. code-block:: yaml
 

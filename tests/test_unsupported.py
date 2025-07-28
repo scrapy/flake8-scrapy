@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from . import NO_ISSUE, Cases, File, Issue, cases
+from . import NO_ISSUE, Cases, ExpectedIssue, File, cases
 from .helpers import check_project
 
 if TYPE_CHECKING:
@@ -60,7 +60,11 @@ CASES: Cases = (
             *(
                 (
                     f"{cls}(url, lambda x: x)",
-                    Issue("SCP05 lambda callback", column=len(cls) + 6, path=path),
+                    ExpectedIssue(
+                        "SCP05 lambda callback",
+                        column=len(cls) + 6,
+                        path=path,
+                    ),
                 )
                 for cls in ALL_REQUEST_CLASSES
             ),
@@ -87,11 +91,11 @@ CASES: Cases = (
                     (
                         "lambda x: x",
                         [
-                            Issue(
+                            ExpectedIssue(
                                 "SCP05 lambda callback",
                                 column=len(cls) + len(callback_prefix) + 6,
                                 path=path,
-                            )
+                            ),
                         ],
                         "foo",
                         [],
@@ -102,7 +106,7 @@ CASES: Cases = (
                         [],
                         "lambda x: x",
                         [
-                            Issue(
+                            ExpectedIssue(
                                 "SCP05 lambda callback",
                                 column=len(cls)
                                 + len(callback_prefix)
@@ -110,22 +114,22 @@ CASES: Cases = (
                                 + len(errback_prefix)
                                 + 8,
                                 path=path,
-                            )
+                            ),
                         ],
                     ),
                     # Both lambda
                     (
                         "lambda x: x",
                         [
-                            Issue(
+                            ExpectedIssue(
                                 "SCP05 lambda callback",
                                 column=len(cls) + len(callback_prefix) + 6,
                                 path=path,
-                            )
+                            ),
                         ],
                         "lambda x: x",
                         [
-                            Issue(
+                            ExpectedIssue(
                                 "SCP05 lambda callback",
                                 column=len(cls)
                                 + len(callback_prefix)
@@ -133,7 +137,7 @@ CASES: Cases = (
                                 + len(errback_prefix)
                                 + 8,
                                 path=path,
-                            )
+                            ),
                         ],
                     ),
                     # Representative non-lambda cases
@@ -150,24 +154,24 @@ CASES: Cases = (
             # Lambda assignments to callback/errback attributes
             (
                 "a.callback = lambda x: x",
-                Issue("SCP05 lambda callback", column=13, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=13, path=path),
             ),
             (
                 "a.errback = lambda x: x",
-                Issue("SCP05 lambda callback", column=12, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=12, path=path),
             ),
             (
                 "request.callback = lambda x: x",
-                Issue("SCP05 lambda callback", column=19, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=19, path=path),
             ),
             (
                 "request.errback = lambda x: x",
-                Issue("SCP05 lambda callback", column=18, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=18, path=path),
             ),
             # Multiple targets in assignment (though rare, should still be detected)
             (
                 "obj.callback = other.callback = lambda x: x",
-                Issue("SCP05 lambda callback", column=32, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=32, path=path),
             ),
             # Non-lambda assignments to callback/errback attributes (should not trigger)
             ("obj.callback = some_function", NO_ISSUE),
@@ -183,31 +187,31 @@ CASES: Cases = (
             # Request.replace() calls with lambda callbacks/errbacks
             (
                 "request.replace(callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=25, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=25, path=path),
             ),
             (
                 "request.replace(errback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=24, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=24, path=path),
             ),
             (
                 "req.replace(callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=21, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=21, path=path),
             ),
             (
                 "self.request.replace(callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=30, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=30, path=path),
             ),
             # replace() with positional lambda arguments
             (
                 "request.replace(url, lambda x: x)",
-                Issue("SCP05 lambda callback", column=21, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=21, path=path),
             ),
             # replace() with both callback and errback lambdas
             (
                 "request.replace(callback=lambda x: x, errback=lambda y: y)",
                 [
-                    Issue("SCP05 lambda callback", column=25, path=path),
-                    Issue("SCP05 lambda callback", column=46, path=path),
+                    ExpectedIssue("SCP05 lambda callback", column=25, path=path),
+                    ExpectedIssue("SCP05 lambda callback", column=46, path=path),
                 ],
             ),
             # replace() with non-lambda callbacks (should not trigger)
@@ -217,61 +221,61 @@ CASES: Cases = (
             # replace() on other objects with lambda (pragmatic approach - should trigger)
             (
                 "obj.replace(callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=21, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=21, path=path),
             ),
             (
                 "string_obj.replace(callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=28, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=28, path=path),
             ),
             # replace() with other parameters and lambda
             (
                 "request.replace(url='new_url', callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=40, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=40, path=path),
             ),
             # Response.follow() calls with lambda callbacks/errbacks
             (
                 "response.follow(url, callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=30, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=30, path=path),
             ),
             (
                 "response.follow(url, errback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=29, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=29, path=path),
             ),
             (
                 "response.follow(callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=25, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=25, path=path),
             ),
             (
                 "self.response.follow(url, callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=35, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=35, path=path),
             ),
             # Response.follow_all() calls with lambda callbacks/errbacks
             (
                 "response.follow_all(urls, callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=35, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=35, path=path),
             ),
             (
                 "response.follow_all(urls, errback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=34, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=34, path=path),
             ),
             (
                 "response.follow_all(callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=29, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=29, path=path),
             ),
             # follow() with both callback and errback lambdas
             (
                 "response.follow(url, callback=lambda x: x, errback=lambda y: y)",
                 [
-                    Issue("SCP05 lambda callback", column=30, path=path),
-                    Issue("SCP05 lambda callback", column=51, path=path),
+                    ExpectedIssue("SCP05 lambda callback", column=30, path=path),
+                    ExpectedIssue("SCP05 lambda callback", column=51, path=path),
                 ],
             ),
             # follow_all() with both callback and errback lambdas
             (
                 "response.follow_all(urls, callback=lambda x: x, errback=lambda y: y)",
                 [
-                    Issue("SCP05 lambda callback", column=35, path=path),
-                    Issue("SCP05 lambda callback", column=56, path=path),
+                    ExpectedIssue("SCP05 lambda callback", column=35, path=path),
+                    ExpectedIssue("SCP05 lambda callback", column=56, path=path),
                 ],
             ),
             # follow() with non-lambda callbacks (should not trigger)
@@ -281,41 +285,41 @@ CASES: Cases = (
             # follow() on other objects with lambda (pragmatic approach - should trigger)
             (
                 "obj.follow(url, callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=25, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=25, path=path),
             ),
             (
                 "other_obj.follow_all(items, callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=37, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=37, path=path),
             ),
             # FormRequest.from_response() calls with lambda callbacks/errbacks (keyword-only)
             (
                 "FormRequest.from_response(response, callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=45, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=45, path=path),
             ),
             (
                 "FormRequest.from_response(response, errback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=44, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=44, path=path),
             ),
             (
                 "scrapy.FormRequest.from_response(response, callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=52, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=52, path=path),
             ),
             (
                 "self.FormRequest.from_response(response, callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=50, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=50, path=path),
             ),
             # from_response() with both callback and errback lambdas
             (
                 "FormRequest.from_response(response, callback=lambda x: x, errback=lambda y: y)",
                 [
-                    Issue("SCP05 lambda callback", column=45, path=path),
-                    Issue("SCP05 lambda callback", column=66, path=path),
+                    ExpectedIssue("SCP05 lambda callback", column=45, path=path),
+                    ExpectedIssue("SCP05 lambda callback", column=66, path=path),
                 ],
             ),
             # from_response() with form data and lambda callback
             (
                 "FormRequest.from_response(response, formdata={'key': 'value'}, callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=72, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=72, path=path),
             ),
             # from_response() with non-lambda callbacks (should not trigger)
             ("FormRequest.from_response(response, callback=self.parse)", NO_ISSUE),
@@ -327,11 +331,11 @@ CASES: Cases = (
             # from_response() on other objects with lambda (pragmatic approach - should trigger)
             (
                 "obj.from_response(response, callback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=37, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=37, path=path),
             ),
             (
                 "CustomRequest.from_response(response, errback=lambda x: x)",
-                Issue("SCP05 lambda callback", column=46, path=path),
+                ExpectedIssue("SCP05 lambda callback", column=46, path=path),
             ),
             # from_response() without callback/errback keywords should not trigger
             ("FormRequest.from_response(response)", NO_ISSUE),
@@ -346,8 +350,8 @@ CASES: Cases = (
 
 @cases(CASES)
 def test(
-    input: File | Sequence[File],
-    expected: Issue | Sequence[Issue] | None,
+    input_: File | Sequence[File],
+    expected: ExpectedIssue | Sequence[ExpectedIssue] | None,
     flake8_options,
 ):
-    check_project(input, expected, flake8_options)
+    check_project(input_, expected, flake8_options)

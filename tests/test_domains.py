@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from . import Cases, File, Issue, cases
+from . import Cases, ExpectedIssue, File, cases
 from .helpers import check_project
 
 CASES: Cases = (
@@ -19,25 +19,25 @@ CASES: Cases = (
                         '        "https://c.example",',
                         '        "https://d.example",',
                         "    ]",
-                    ]
+                    ],
                 ),
                 path="a.py",
             ),
         ),
         (
-            Issue(
+            ExpectedIssue(
                 message="SCP01 disallowed domain",
                 line=8,
                 column=8,
                 path="a.py",
             ),
-            Issue(
+            ExpectedIssue(
                 message="SCP01 disallowed domain",
                 line=9,
                 column=8,
                 path="a.py",
             ),
-            Issue(
+            ExpectedIssue(
                 message="SCP02 URL in allowed_domains",
                 line=5,
                 column=8,
@@ -51,6 +51,8 @@ CASES: Cases = (
 
 @cases(CASES)
 def test(
-    input: File | list[File], expected: Issue | list[Issue] | None, flake8_options
+    input_: File | list[File],
+    expected: ExpectedIssue | list[ExpectedIssue] | None,
+    flake8_options,
 ):
-    check_project(input, expected, flake8_options)
+    check_project(input_, expected, flake8_options)

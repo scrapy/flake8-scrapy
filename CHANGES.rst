@@ -50,7 +50,6 @@ Release notes
     | :ref:`scp41`
     | :ref:`scp42`
     | :ref:`scp43`
-    | :ref:`scp44`
     | :ref:`scp45`
     | :ref:`scp46`
 

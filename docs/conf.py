@@ -1,4 +1,4 @@
-project = "flake8-scrapy"
+project = "scrapy-lint"
 project_copyright = "Valdir Stumm Junior"
 author = "Valdir Stumm Junior"
 
@@ -12,9 +12,6 @@ extensions = [
 html_theme = "sphinx_rtd_theme"
 default_dark_mode = False
 
-intersphinx_mapping = {
-    "flake8": ("https://flake8.pycqa.org/en/latest/", None),
-}
 scrapy_intersphinx_enable = [
     "shub",
     "scrapy-zyte-api",

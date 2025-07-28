@@ -7,44 +7,45 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 
-from . import File, Issue, chdir, run_checker
+import tomli_w
+
+from scrapy_lint import lint
+
+from . import ExpectedIssue, File, chdir
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
 
 
-def sort_issues(issues: Sequence[Issue]) -> Sequence[Issue]:
+def sort_issues(issues: Iterable[ExpectedIssue]) -> Iterable[ExpectedIssue]:
     return sorted(issues, key=lambda issue: (issue.message, issue.line, issue.column))
 
 
 def check_project(
-    input: File | Sequence[File],
-    expected: Issue | Sequence[Issue] | None,
-    flake8_options: dict | None = None,
+    input_: File | Sequence[File],
+    expected: ExpectedIssue | Sequence[ExpectedIssue] | None,
+    options: dict | None = None,
 ):
-    if isinstance(input, File):
-        input = [input]
-    if isinstance(expected, Issue):
+    if isinstance(input_, File):
+        input_ = [input_]
+    if isinstance(expected, ExpectedIssue):
         expected = [expected]
     elif expected is None:
         expected = []
-    with TemporaryDirectory() as dir:
-        for file in input:
+    with TemporaryDirectory() as directory:
+        for file in input_:
             assert file.path
-            file_path = Path(dir) / file.path
+            file_path = Path(directory) / file.path
             file_path.parent.mkdir(parents=True, exist_ok=True)
             if isinstance(file.text, bytes):
                 file_path.write_bytes(file.text)
             else:
                 file_path.write_text(file.text)
-        with chdir(dir):
-            issues = []
-            for file in input:
-                assert file.path
-                if isinstance(file.text, bytes):
-                    continue  # flake8 does not support binary files
-                issue_tuples = run_checker(file.text, file.path, flake8_options)
-                issues.extend(
-                    [Issue.from_tuple(issue, path=file.path) for issue in issue_tuples]
-                )
+        if options:
+            options_path = Path(directory) / "pyproject.toml"
+            toml_dict = {"tool": {"scrapy-lint": options}}
+            with options_path.open("wb") as f:
+                f.write(tomli_w.dumps(toml_dict).encode("utf-8"))
+        with chdir(directory):
+            issues = (ExpectedIssue.from_issue(issue) for issue in lint())
             assert sort_issues(expected) == sort_issues(issues)

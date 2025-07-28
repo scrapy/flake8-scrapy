@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from . import NO_ISSUE, Cases, File, Issue, cases
+from . import NO_ISSUE, Cases, ExpectedIssue, File, cases
 from .helpers import check_project
 
 PATH = "a.py"
@@ -16,7 +16,7 @@ CASES: Cases = (
             *(
                 (
                     code,
-                    Issue(
+                    ExpectedIssue(
                         message="SCP03 improper response URL join",
                         column=column,
                         path=PATH,
@@ -41,7 +41,7 @@ CASES: Cases = (
             *(
                 (
                     code,
-                    Issue(
+                    ExpectedIssue(
                         message="SCP04 improper response selector",
                         path=PATH,
                     ),
@@ -69,7 +69,7 @@ CASES: Cases = (
             *(
                 (
                     code,
-                    Issue(
+                    ExpectedIssue(
                         message="SCP06 improper first match extraction",
                         path=PATH,
                     ),
@@ -105,6 +105,8 @@ CASES: Cases = (
 
 @cases(CASES)
 def test(
-    input: File | list[File], expected: Issue | list[Issue] | None, flake8_options
+    input_: File | list[File],
+    expected: ExpectedIssue | list[ExpectedIssue] | None,
+    flake8_options,
 ):
-    check_project(input, expected, flake8_options)
+    check_project(input_, expected, flake8_options)

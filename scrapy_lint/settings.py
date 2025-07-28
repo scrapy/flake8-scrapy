@@ -8,18 +8,18 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from packaging.version import Version
 
-    from flake8_scrapy.context import Project
+    from scrapy_lint.context import Project
 
 
-class UnknownFutureVersion:
+class UnknownFutureVersion:  # pylint: disable=too-few-public-methods
     pass
 
 
-class UnknownSettingValue:
+class UnknownSettingValue:  # pylint: disable=too-few-public-methods
     pass
 
 
-class UnknownUnsupportedVersion:
+class UnknownUnsupportedVersion:  # pylint: disable=too-few-public-methods
     pass
 
 
@@ -162,24 +162,29 @@ class VersionedValue:
 
 
 @dataclass
-class Setting:
-    name: str | None = None
-    type: SettingType | None = None
-    values: tuple[Any, ...] | None = None
-    default_value: VersionedValue | UnknownSettingValue = field(
-        default_factory=lambda: UNKNOWN_SETTING_VALUE
-    )
-    is_pre_crawler: bool = False
-
-    package: str = "scrapy"
+class Versioning:
     added_in: Version | None = None
     deprecated_in: Version | UnknownUnsupportedVersion | None = None
     removed_in: Version | None = None
     sunset_guidance: str | None = None
 
+
+@dataclass
+class Setting:
+    name: str | None = None
+    type: SettingType | None = None
+    values: tuple[Any, ...] | None = None
+    default_value: VersionedValue | UnknownSettingValue = field(
+        default_factory=lambda: UNKNOWN_SETTING_VALUE,
+    )
+    is_pre_crawler: bool = False
+
+    package: str = "scrapy"
+    versioning: Versioning = field(default_factory=Versioning)
+
     @property
     def base(self) -> Setting:
-        from flake8_scrapy.data.settings import SETTINGS  # noqa: PLC0415
+        from scrapy_lint.data.settings import SETTINGS  # noqa: PLC0415
 
         return SETTINGS[f"{self.name}_BASE"]
 

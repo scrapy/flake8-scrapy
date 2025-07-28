@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from packaging.version import Version
 
-from flake8_scrapy.settings import (
+from scrapy_lint.settings import (
     UNKNOWN_FUTURE_VERSION,
     UNKNOWN_SETTING_VALUE,
     UNKNOWN_UNSUPPORTED_VERSION,
     Setting,
     SettingType,
     VersionedValue,
+    Versioning,
 )
 
 PREDEFINED_SUGGESTIONS = {
@@ -43,46 +44,56 @@ SETTINGS = {
     # order of appearance in
     # https://github.com/scrapy/scrapy/blob/master/scrapy/settings/default_settings.py
     "ADDONS": Setting(
-        added_in=Version("2.10.0"),
         type=SettingType.COMP_PRIO_DICT,
         default_value=VersionedValue({}),
         is_pre_crawler=True,
+        versioning=Versioning(added_in=Version("2.10.0")),
     ),
     "ASYNCIO_EVENT_LOOP": Setting(
-        added_in=Version("2.4.0"),
         type=SettingType.OPT_OBJ,
         default_value=VersionedValue(None),
         is_pre_crawler=True,
+        versioning=Versioning(added_in=Version("2.4.0")),
     ),
     "AUTOTHROTTLE_DEBUG": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "AUTOTHROTTLE_ENABLED": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "AUTOTHROTTLE_MAX_DELAY": Setting(
-        type=SettingType.FLOAT, default_value=VersionedValue(60.0)
+        type=SettingType.FLOAT,
+        default_value=VersionedValue(60.0),
     ),
     "AUTOTHROTTLE_START_DELAY": Setting(
-        type=SettingType.FLOAT, default_value=VersionedValue(5.0)
+        type=SettingType.FLOAT,
+        default_value=VersionedValue(5.0),
     ),
     "AUTOTHROTTLE_TARGET_CONCURRENCY": Setting(
-        type=SettingType.FLOAT, default_value=VersionedValue(1.0)
+        type=SettingType.FLOAT,
+        default_value=VersionedValue(1.0),
     ),
     "BOT_NAME": Setting(
-        type=SettingType.STR, default_value=VersionedValue("scrapybot")
+        type=SettingType.STR,
+        default_value=VersionedValue("scrapybot"),
     ),
     "CLOSESPIDER_ERRORCOUNT": Setting(
-        type=SettingType.INT, default_value=VersionedValue(0)
+        type=SettingType.INT,
+        default_value=VersionedValue(0),
     ),
     "CLOSESPIDER_ITEMCOUNT": Setting(
-        type=SettingType.INT, default_value=VersionedValue(0)
+        type=SettingType.INT,
+        default_value=VersionedValue(0),
     ),
     "CLOSESPIDER_PAGECOUNT": Setting(
-        type=SettingType.INT, default_value=VersionedValue(0)
+        type=SettingType.INT,
+        default_value=VersionedValue(0),
     ),
     "CLOSESPIDER_TIMEOUT": Setting(
-        type=SettingType.FLOAT, default_value=VersionedValue(0)
+        type=SettingType.FLOAT,
+        default_value=VersionedValue(0),
     ),
     "COMMANDS_MODULE": Setting(
         type=SettingType.STR,
@@ -90,36 +101,45 @@ SETTINGS = {
         is_pre_crawler=True,
     ),
     "COMPRESSION_ENABLED": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(True)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
     ),
     "CONCURRENT_ITEMS": Setting(
-        type=SettingType.INT, default_value=VersionedValue(100)
+        type=SettingType.INT,
+        default_value=VersionedValue(100),
     ),
     "CONCURRENT_REQUESTS": Setting(
-        type=SettingType.INT, default_value=VersionedValue(16)
+        type=SettingType.INT,
+        default_value=VersionedValue(16),
     ),
     "CONCURRENT_REQUESTS_PER_DOMAIN": Setting(
-        type=SettingType.INT, default_value=VersionedValue(8)
+        type=SettingType.INT,
+        default_value=VersionedValue(8),
     ),
     "CONCURRENT_REQUESTS_PER_IP": Setting(
-        type=SettingType.INT, default_value=VersionedValue(0)
+        type=SettingType.INT,
+        default_value=VersionedValue(0),
     ),
     "COOKIES_DEBUG": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "COOKIES_ENABLED": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(True)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
     ),
     "CRAWLSPIDER_FOLLOW_LINKS": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(True)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
     ),
     "DEFAULT_DROPITEM_LOG_LEVEL": Setting(
-        added_in=Version("2.13.0"),
         type=SettingType.LOG_LEVEL,
         default_value=VersionedValue("WARNING"),
+        versioning=Versioning(added_in=Version("2.13.0")),
     ),
     "DEFAULT_ITEM_CLASS": Setting(
-        type=SettingType.OBJ, default_value=VersionedValue("scrapy.item.Item")
+        type=SettingType.OBJ,
+        default_value=VersionedValue("scrapy.item.Item"),
     ),
     "DEFAULT_REQUEST_HEADERS": Setting(
         type=SettingType.DICT,
@@ -127,13 +147,14 @@ SETTINGS = {
             {
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
                 "Accept-Language": "en",
-            }
+            },
         ),
     ),
     "DEPTH_LIMIT": Setting(type=SettingType.INT, default_value=VersionedValue(0)),
     "DEPTH_PRIORITY": Setting(type=SettingType.INT, default_value=VersionedValue(0)),
     "DEPTH_STATS_VERBOSE": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "DNSCACHE_ENABLED": Setting(
         type=SettingType.BOOL,
@@ -157,10 +178,12 @@ SETTINGS = {
     ),
     "DOWNLOAD_DELAY": Setting(type=SettingType.FLOAT, default_value=VersionedValue(0)),
     "DOWNLOAD_FAIL_ON_DATALOSS": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(True)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
     ),
     "DOWNLOAD_HANDLERS": Setting(
-        type=SettingType.BASED_OBJ_DICT, default_value=VersionedValue({})
+        type=SettingType.BASED_OBJ_DICT,
+        default_value=VersionedValue({}),
     ),
     "DOWNLOAD_HANDLERS_BASE": Setting(
         default_value=VersionedValue(
@@ -171,24 +194,28 @@ SETTINGS = {
                 "https": "scrapy.core.downloader.handlers.http.HTTPDownloadHandler",
                 "s3": "scrapy.core.downloader.handlers.s3.S3DownloadHandler",
                 "ftp": "scrapy.core.downloader.handlers.ftp.FTPDownloadHandler",
-            }
-        )
+            },
+        ),
     ),
     "DOWNLOAD_MAXSIZE": Setting(
-        type=SettingType.INT, default_value=VersionedValue(1024 * 1024 * 1024)
+        type=SettingType.INT,
+        default_value=VersionedValue(1024 * 1024 * 1024),
     ),
     "DOWNLOAD_TIMEOUT": Setting(
-        type=SettingType.FLOAT, default_value=VersionedValue(180)
+        type=SettingType.FLOAT,
+        default_value=VersionedValue(180),
     ),
     "DOWNLOAD_WARNSIZE": Setting(
-        type=SettingType.INT, default_value=VersionedValue(32 * 1024 * 1024)
+        type=SettingType.INT,
+        default_value=VersionedValue(32 * 1024 * 1024),
     ),
     "DOWNLOADER": Setting(
         type=SettingType.OBJ,
         default_value=VersionedValue("scrapy.core.downloader.Downloader"),
     ),
     "DOWNLOADER_CLIENT_TLS_CIPHERS": Setting(
-        type=SettingType.STR, default_value=VersionedValue("DEFAULT")
+        type=SettingType.STR,
+        default_value=VersionedValue("DEFAULT"),
     ),
     "DOWNLOADER_CLIENT_TLS_METHOD": Setting(
         type=SettingType.ENUM_STR,
@@ -196,22 +223,24 @@ SETTINGS = {
         default_value=VersionedValue("TLS"),
     ),
     "DOWNLOADER_CLIENT_TLS_VERBOSE_LOGGING": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "DOWNLOADER_CLIENTCONTEXTFACTORY": Setting(
         type=SettingType.OBJ,
         default_value=VersionedValue(
-            "scrapy.core.downloader.contextfactory.ScrapyClientContextFactory"
+            "scrapy.core.downloader.contextfactory.ScrapyClientContextFactory",
         ),
     ),
     "DOWNLOADER_HTTPCLIENTFACTORY": Setting(
         type=SettingType.OBJ,
         default_value=VersionedValue(
-            "scrapy.core.downloader.webclient.ScrapyHTTPClientFactory"
+            "scrapy.core.downloader.webclient.ScrapyHTTPClientFactory",
         ),
     ),
     "DOWNLOADER_MIDDLEWARES": Setting(
-        type=SettingType.BASED_COMP_PRIO_DICT, default_value=VersionedValue({})
+        type=SettingType.BASED_COMP_PRIO_DICT,
+        default_value=VersionedValue({}),
     ),
     "DOWNLOADER_MIDDLEWARES_BASE": Setting(
         default_value=VersionedValue(
@@ -250,10 +279,11 @@ SETTINGS = {
                     "scrapy.downloadermiddlewares.httpcache.HttpCacheMiddleware": 900,
                 },
             },
-        )
+        ),
     ),
     "DOWNLOADER_STATS": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(True)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
     ),
     "DUPEFILTER_CLASS": Setting(
         type=SettingType.OBJ,
@@ -265,7 +295,8 @@ SETTINGS = {
         default_value=UNKNOWN_SETTING_VALUE,
     ),
     "EXTENSIONS": Setting(
-        type=SettingType.BASED_COMP_PRIO_DICT, default_value=VersionedValue({})
+        type=SettingType.BASED_COMP_PRIO_DICT,
+        default_value=VersionedValue({}),
     ),
     "EXTENSIONS_BASE": Setting(
         default_value=VersionedValue(
@@ -279,11 +310,13 @@ SETTINGS = {
                 "scrapy.extensions.logstats.LogStats": 0,
                 "scrapy.extensions.spiderstate.SpiderState": 0,
                 "scrapy.extensions.throttle.AutoThrottle": 0,
-            }
-        )
+            },
+        ),
     ),
     "FEED_EXPORT_BATCH_ITEM_COUNT": Setting(
-        added_in=Version("2.3.0"), type=SettingType.INT, default_value=VersionedValue(0)
+        type=SettingType.INT,
+        default_value=VersionedValue(0),
+        versioning=Versioning(added_in=Version("2.3.0")),
     ),
     "FEED_EXPORT_ENCODING": Setting(
         type=SettingType.OPT_STR,
@@ -291,17 +324,20 @@ SETTINGS = {
             history={
                 UNKNOWN_FUTURE_VERSION: "utf-8",
                 UNKNOWN_UNSUPPORTED_VERSION: None,
-            }
+            },
         ),
     ),
     "FEED_EXPORT_FIELDS": Setting(
-        type=SettingType.DICT_OR_LIST, default_value=VersionedValue(None)
+        type=SettingType.DICT_OR_LIST,
+        default_value=VersionedValue(None),
     ),
     "FEED_EXPORT_INDENT": Setting(
-        type=SettingType.OPT_INT, default_value=VersionedValue(0)
+        type=SettingType.OPT_INT,
+        default_value=VersionedValue(0),
     ),
     "FEED_EXPORTERS": Setting(
-        type=SettingType.BASED_OBJ_DICT, default_value=VersionedValue({})
+        type=SettingType.BASED_OBJ_DICT,
+        default_value=VersionedValue({}),
     ),
     "FEED_EXPORTERS_BASE": Setting(
         default_value=VersionedValue(
@@ -326,24 +362,28 @@ SETTINGS = {
                     "pickle": "scrapy.exporters.PickleItemExporter",
                 },
             },
-        )
+        ),
     ),
     "FEED_STORAGE_FTP_ACTIVE": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "FEED_STORAGE_GCS_ACL": Setting(
-        added_in=Version("2.3.0"),
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(""),
+        versioning=Versioning(added_in=Version("2.3.0")),
+    ),
+    "FEED_STORAGE_S3_ACL": Setting(
         type=SettingType.OPT_STR,
         default_value=VersionedValue(""),
     ),
-    "FEED_STORAGE_S3_ACL": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue("")
-    ),
     "FEED_STORE_EMPTY": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(True)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
     ),
     "FEED_STORAGES": Setting(
-        type=SettingType.BASED_OBJ_DICT, default_value=VersionedValue({})
+        type=SettingType.BASED_OBJ_DICT,
+        default_value=VersionedValue({}),
     ),
     "FEED_STORAGES_BASE": Setting(
         default_value=VersionedValue(
@@ -364,24 +404,28 @@ SETTINGS = {
                     "stdout": "scrapy.extensions.feedexport.StdoutFeedStorage",
                 },
             },
-        )
+        ),
     ),
     "FEED_TEMPDIR": Setting(
-        type=SettingType.OPT_PATH, default_value=VersionedValue(None)
+        type=SettingType.OPT_PATH,
+        default_value=VersionedValue(None),
     ),
     "FEED_URI_PARAMS": Setting(
-        type=SettingType.OPT_OBJ, default_value=VersionedValue(None)
+        type=SettingType.OPT_OBJ,
+        default_value=VersionedValue(None),
     ),
     "FEEDS": Setting(
-        added_in=Version("2.1.0"),
         type=SettingType.DICT,
         default_value=VersionedValue({}),
+        versioning=Versioning(added_in=Version("2.1.0")),
     ),
     "FILES_STORE_GCS_ACL": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue("")
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(""),
     ),
     "FILES_STORE_S3_ACL": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue("private")
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue("private"),
     ),
     "FORCE_CRAWLER_PROCESS": Setting(
         type=SettingType.BOOL,
@@ -389,48 +433,61 @@ SETTINGS = {
         is_pre_crawler=True,
     ),
     "FTP_PASSIVE_MODE": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(True)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
     ),
     "FTP_PASSWORD": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue("guest")
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue("guest"),
     ),
     "FTP_USER": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue("anonymous")
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue("anonymous"),
     ),
     "GCS_PROJECT_ID": Setting(
-        added_in=Version("2.3.0"),
         type=SettingType.OPT_STR,
         default_value=VersionedValue(None),
+        versioning=Versioning(added_in=Version("2.3.0")),
     ),
     "HTTPCACHE_ALWAYS_STORE": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "HTTPCACHE_DBM_MODULE": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue("dbm")
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue("dbm"),
     ),
     "HTTPCACHE_DIR": Setting(
-        type=SettingType.OPT_PATH, default_value=VersionedValue("httpcache")
+        type=SettingType.OPT_PATH,
+        default_value=VersionedValue("httpcache"),
     ),
     "HTTPCACHE_ENABLED": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "HTTPCACHE_EXPIRATION_SECS": Setting(
-        type=SettingType.INT, default_value=VersionedValue(0)
+        type=SettingType.INT,
+        default_value=VersionedValue(0),
     ),
     "HTTPCACHE_GZIP": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "HTTPCACHE_IGNORE_HTTP_CODES": Setting(
-        type=SettingType.LIST, default_value=VersionedValue([])
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
     ),
     "HTTPCACHE_IGNORE_MISSING": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "HTTPCACHE_IGNORE_RESPONSE_CACHE_CONTROLS": Setting(
-        type=SettingType.LIST, default_value=VersionedValue([])
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
     ),
     "HTTPCACHE_IGNORE_SCHEMES": Setting(
-        type=SettingType.LIST, default_value=VersionedValue(["file"])
+        type=SettingType.LIST,
+        default_value=VersionedValue(["file"]),
     ),
     "HTTPCACHE_POLICY": Setting(
         type=SettingType.OBJ,
@@ -439,23 +496,28 @@ SETTINGS = {
     "HTTPCACHE_STORAGE": Setting(
         type=SettingType.OBJ,
         default_value=VersionedValue(
-            "scrapy.extensions.httpcache.FilesystemCacheStorage"
+            "scrapy.extensions.httpcache.FilesystemCacheStorage",
         ),
     ),
     "HTTPPROXY_AUTH_ENCODING": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue("latin-1")
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue("latin-1"),
     ),
     "HTTPPROXY_ENABLED": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(True)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
     ),
     "IMAGES_STORE_GCS_ACL": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue("")
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(""),
     ),
     "IMAGES_STORE_S3_ACL": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue("private")
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue("private"),
     ),
     "ITEM_PIPELINES": Setting(
-        type=SettingType.BASED_COMP_PRIO_DICT, default_value=VersionedValue({})
+        type=SettingType.BASED_COMP_PRIO_DICT,
+        default_value=VersionedValue({}),
     ),
     "ITEM_PIPELINES_BASE": Setting(default_value=VersionedValue({})),
     "ITEM_PROCESSOR": Setting(
@@ -464,22 +526,24 @@ SETTINGS = {
     ),
     "JOBDIR": Setting(type=SettingType.OPT_PATH, default_value=VersionedValue(None)),
     "LOG_DATEFORMAT": Setting(
-        type=SettingType.STR, default_value=VersionedValue("%Y-%m-%d %H:%M:%S")
+        type=SettingType.STR,
+        default_value=VersionedValue("%Y-%m-%d %H:%M:%S"),
     ),
     "LOG_ENABLED": Setting(type=SettingType.BOOL, default_value=VersionedValue(True)),
     "LOG_ENCODING": Setting(
-        type=SettingType.STR, default_value=VersionedValue("utf-8")
+        type=SettingType.STR,
+        default_value=VersionedValue("utf-8"),
     ),
     "LOG_FILE": Setting(type=SettingType.OPT_PATH, default_value=VersionedValue(None)),
     "LOG_FILE_APPEND": Setting(
-        added_in=Version("2.6.0"),
         type=SettingType.BOOL,
         default_value=VersionedValue(True),
+        versioning=Versioning(added_in=Version("2.6.0")),
     ),
     "LOG_FORMAT": Setting(
         type=SettingType.STR,
         default_value=VersionedValue(
-            "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+            "%(asctime)s [%(name)s] %(levelname)s: %(message)s",
         ),
     ),
     "LOG_FORMATTER": Setting(
@@ -487,14 +551,15 @@ SETTINGS = {
         default_value=VersionedValue("scrapy.logformatter.LogFormatter"),
     ),
     "LOG_LEVEL": Setting(
-        type=SettingType.LOG_LEVEL, default_value=VersionedValue("DEBUG")
+        type=SettingType.LOG_LEVEL,
+        default_value=VersionedValue("DEBUG"),
     ),
     "LOG_SHORT_NAMES": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "LOG_STDOUT": Setting(type=SettingType.BOOL, default_value=VersionedValue(False)),
     "LOG_VERSIONS": Setting(
-        added_in=Version("2.13.0"),
         type=SettingType.LIST,
         default_value=VersionedValue(
             [
@@ -508,65 +573,78 @@ SETTINGS = {
                 "pyOpenSSL",
                 "cryptography",
                 "Platform",
-            ]
+            ],
         ),
+        versioning=Versioning(added_in=Version("2.13.0")),
     ),
     "LOGSTATS_INTERVAL": Setting(
-        type=SettingType.FLOAT, default_value=VersionedValue(60.0)
+        type=SettingType.FLOAT,
+        default_value=VersionedValue(60.0),
     ),
     "MAIL_FROM": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue("scrapy@localhost")
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue("scrapy@localhost"),
     ),
     "MAIL_HOST": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue("localhost")
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue("localhost"),
     ),
     "MAIL_PASS": Setting(type=SettingType.OPT_STR, default_value=VersionedValue(None)),
     "MAIL_PORT": Setting(type=SettingType.OPT_STR, default_value=VersionedValue(25)),
     "MAIL_USER": Setting(type=SettingType.OPT_STR, default_value=VersionedValue(None)),
     "MEMDEBUG_ENABLED": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
-    ),
-    "MEMDEBUG_NOTIFY": Setting(type=SettingType.LIST, default_value=VersionedValue([])),
-    "MEMUSAGE_CHECK_INTERVAL_SECONDS": Setting(
-        type=SettingType.FLOAT, default_value=VersionedValue(60.0)
-    ),
-    "MEMUSAGE_ENABLED": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(True)
-    ),
-    "MEMUSAGE_LIMIT_MB": Setting(type=SettingType.INT, default_value=VersionedValue(0)),
-    "MEMUSAGE_NOTIFY_MAIL": Setting(
-        type=SettingType.LIST, default_value=VersionedValue([])
-    ),
-    "MEMUSAGE_WARNING_MB": Setting(
-        type=SettingType.INT, default_value=VersionedValue(0)
-    ),
-    "METAREFRESH_ENABLED": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(True)
-    ),
-    "METAREFRESH_IGNORE_TAGS": Setting(
-        type=SettingType.LIST, default_value=VersionedValue(["noscript"])
-    ),
-    "METAREFRESH_MAXDELAY": Setting(
-        type=SettingType.INT, default_value=VersionedValue(100)
-    ),
-    "NEWSPIDER_MODULE": Setting(type=SettingType.STR, default_value=VersionedValue("")),
-    "PERIODIC_LOG_DELTA": Setting(
-        added_in=Version("2.11.0"),
-        type=SettingType.PERIODIC_LOG_CONFIG,
-        default_value=VersionedValue(None),
-    ),
-    "PERIODIC_LOG_STATS": Setting(
-        added_in=Version("2.11.0"),
-        type=SettingType.PERIODIC_LOG_CONFIG,
-        default_value=VersionedValue(None),
-    ),
-    "PERIODIC_LOG_TIMING_ENABLED": Setting(
-        added_in=Version("2.11.0"),
         type=SettingType.BOOL,
         default_value=VersionedValue(False),
     ),
+    "MEMDEBUG_NOTIFY": Setting(type=SettingType.LIST, default_value=VersionedValue([])),
+    "MEMUSAGE_CHECK_INTERVAL_SECONDS": Setting(
+        type=SettingType.FLOAT,
+        default_value=VersionedValue(60.0),
+    ),
+    "MEMUSAGE_ENABLED": Setting(
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
+    ),
+    "MEMUSAGE_LIMIT_MB": Setting(type=SettingType.INT, default_value=VersionedValue(0)),
+    "MEMUSAGE_NOTIFY_MAIL": Setting(
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
+    ),
+    "MEMUSAGE_WARNING_MB": Setting(
+        type=SettingType.INT,
+        default_value=VersionedValue(0),
+    ),
+    "METAREFRESH_ENABLED": Setting(
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
+    ),
+    "METAREFRESH_IGNORE_TAGS": Setting(
+        type=SettingType.LIST,
+        default_value=VersionedValue(["noscript"]),
+    ),
+    "METAREFRESH_MAXDELAY": Setting(
+        type=SettingType.INT,
+        default_value=VersionedValue(100),
+    ),
+    "NEWSPIDER_MODULE": Setting(type=SettingType.STR, default_value=VersionedValue("")),
+    "PERIODIC_LOG_DELTA": Setting(
+        type=SettingType.PERIODIC_LOG_CONFIG,
+        default_value=VersionedValue(None),
+        versioning=Versioning(added_in=Version("2.11.0")),
+    ),
+    "PERIODIC_LOG_STATS": Setting(
+        type=SettingType.PERIODIC_LOG_CONFIG,
+        default_value=VersionedValue(None),
+        versioning=Versioning(added_in=Version("2.11.0")),
+    ),
+    "PERIODIC_LOG_TIMING_ENABLED": Setting(
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+        versioning=Versioning(added_in=Version("2.11.0")),
+    ),
     "RANDOMIZE_DOWNLOAD_DELAY": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(True)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
     ),
     "REACTOR_THREADPOOL_MAXSIZE": Setting(
         type=SettingType.INT,
@@ -574,31 +652,34 @@ SETTINGS = {
         is_pre_crawler=True,
     ),
     "REDIRECT_ENABLED": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(True)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
     ),
     "REDIRECT_MAX_TIMES": Setting(
-        type=SettingType.INT, default_value=VersionedValue(20)
+        type=SettingType.INT,
+        default_value=VersionedValue(20),
     ),
     "REDIRECT_PRIORITY_ADJUST": Setting(
-        type=SettingType.INT, default_value=VersionedValue(2)
+        type=SettingType.INT,
+        default_value=VersionedValue(2),
     ),
     "REFERER_ENABLED": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(True)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(True),
     ),
     "REFERRER_POLICY": Setting(
         type=SettingType.OBJ,
         default_value=VersionedValue(
-            "scrapy.spidermiddlewares.referer.DefaultReferrerPolicy"
+            "scrapy.spidermiddlewares.referer.DefaultReferrerPolicy",
         ),
     ),
     "REQUEST_FINGERPRINTER_CLASS": Setting(
-        added_in=Version("2.7.0"),
         type=SettingType.OBJ,
         default_value=VersionedValue("scrapy.utils.request.RequestFingerprinter"),
+        versioning=Versioning(added_in=Version("2.7.0")),
     ),
     "RETRY_ENABLED": Setting(type=SettingType.BOOL, default_value=VersionedValue(True)),
     "RETRY_EXCEPTIONS": Setting(
-        added_in=Version("2.10.0"),
         type=SettingType.LIST,
         default_value=VersionedValue(
             [
@@ -615,33 +696,38 @@ SETTINGS = {
                 # decompress an empty response
                 OSError,
                 "scrapy.core.downloader.handlers.http11.TunnelError",
-            ]
+            ],
         ),
+        versioning=Versioning(added_in=Version("2.10.0")),
     ),
     "RETRY_HTTP_CODES": Setting(
         type=SettingType.LIST,
         default_value=VersionedValue([500, 502, 503, 504, 522, 524, 408, 429]),
     ),
     "RETRY_PRIORITY_ADJUST": Setting(
-        type=SettingType.INT, default_value=VersionedValue(-1)
+        type=SettingType.INT,
+        default_value=VersionedValue(-1),
     ),
     "RETRY_TIMES": Setting(type=SettingType.INT, default_value=VersionedValue(2)),
     "ROBOTSTXT_OBEY": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "ROBOTSTXT_PARSER": Setting(
         type=SettingType.OBJ,
         default_value=VersionedValue("scrapy.robotstxt.ProtegoRobotParser"),
     ),
     "ROBOTSTXT_USER_AGENT": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue(None)
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
     ),
     "SCHEDULER": Setting(
         type=SettingType.OBJ,
         default_value=VersionedValue("scrapy.core.scheduler.Scheduler"),
     ),
     "SCHEDULER_DEBUG": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "SCHEDULER_DISK_QUEUE": Setting(
         type=SettingType.OBJ,
@@ -656,20 +742,22 @@ SETTINGS = {
         default_value=VersionedValue("scrapy.pqueues.ScrapyPriorityQueue"),
     ),
     "SCHEDULER_START_DISK_QUEUE": Setting(
-        added_in=Version("2.13.0"),
         type=SettingType.OBJ,
         default_value=VersionedValue("scrapy.squeues.PickleFifoDiskQueue"),
+        versioning=Versioning(added_in=Version("2.13.0")),
     ),
     "SCHEDULER_START_MEMORY_QUEUE": Setting(
-        added_in=Version("2.13.0"),
         type=SettingType.OBJ,
         default_value=VersionedValue("scrapy.squeues.FifoMemoryQueue"),
+        versioning=Versioning(added_in=Version("2.13.0")),
     ),
     "SCRAPER_SLOT_MAX_ACTIVE_SIZE": Setting(
-        type=SettingType.INT, default_value=VersionedValue(5000000)
+        type=SettingType.INT,
+        default_value=VersionedValue(5000000),
     ),
     "SPIDER_CONTRACTS": Setting(
-        type=SettingType.BASED_COMP_PRIO_DICT, default_value=VersionedValue({})
+        type=SettingType.BASED_COMP_PRIO_DICT,
+        default_value=VersionedValue({}),
     ),
     "SPIDER_CONTRACTS_BASE": Setting(
         default_value=VersionedValue(
@@ -688,7 +776,7 @@ SETTINGS = {
                     "scrapy.contracts.default.ScrapesContract": 3,
                 },
             },
-        )
+        ),
     ),
     "SPIDER_LOADER_CLASS": Setting(
         type=SettingType.OBJ,
@@ -701,7 +789,8 @@ SETTINGS = {
         is_pre_crawler=True,
     ),
     "SPIDER_MIDDLEWARES": Setting(
-        type=SettingType.BASED_COMP_PRIO_DICT, default_value=VersionedValue({})
+        type=SettingType.BASED_COMP_PRIO_DICT,
+        default_value=VersionedValue({}),
     ),
     "SPIDER_MIDDLEWARES_BASE": Setting(
         default_value=VersionedValue(
@@ -727,7 +816,7 @@ SETTINGS = {
                     "scrapy.spidermiddlewares.depth.DepthMiddleware": 900,
                 },
             },
-        )
+        ),
     ),
     "SPIDER_MODULES": Setting(
         type=SettingType.LIST,
@@ -740,22 +829,28 @@ SETTINGS = {
     ),
     "STATS_DUMP": Setting(type=SettingType.BOOL, default_value=VersionedValue(True)),
     "STATSMAILER_RCPTS": Setting(
-        type=SettingType.LIST, default_value=VersionedValue([])
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
     ),
     "TELNETCONSOLE_ENABLED": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(1)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(1),
     ),
     "TELNETCONSOLE_HOST": Setting(
-        type=SettingType.STR, default_value=VersionedValue("127.0.0.1")
+        type=SettingType.STR,
+        default_value=VersionedValue("127.0.0.1"),
     ),
     "TELNETCONSOLE_PASSWORD": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue(None)
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
     ),
     "TELNETCONSOLE_PORT": Setting(
-        type=SettingType.LIST, default_value=VersionedValue([6023, 6073])
+        type=SettingType.LIST,
+        default_value=VersionedValue([6023, 6073]),
     ),
     "TELNETCONSOLE_USERNAME": Setting(
-        type=SettingType.STR, default_value=VersionedValue("scrapy")
+        type=SettingType.STR,
+        default_value=VersionedValue("scrapy"),
     ),
     "TEMPLATES_DIR": Setting(
         type=SettingType.OPT_PATH,
@@ -767,7 +862,7 @@ SETTINGS = {
         default_value=VersionedValue(
             history={
                 Version(
-                    "2.13.0"
+                    "2.13.0",
                 ): "twisted.internet.asyncioreactor.AsyncioSelectorReactor",
                 UNKNOWN_UNSUPPORTED_VERSION: None,
             },
@@ -775,7 +870,8 @@ SETTINGS = {
         is_pre_crawler=True,
     ),
     "URLLENGTH_LIMIT": Setting(
-        type=SettingType.INT, default_value=VersionedValue(2083)
+        type=SettingType.INT,
+        default_value=VersionedValue(2083),
     ),
     "USER_AGENT": Setting(
         type=SettingType.OPT_STR,
@@ -783,130 +879,161 @@ SETTINGS = {
         default_value=UNKNOWN_SETTING_VALUE,
     ),
     "WARN_ON_GENERATOR_RETURN_VALUE": Setting(
-        added_in=Version("2.13.0"),
         type=SettingType.BOOL,
         default_value=VersionedValue(True),
+        versioning=Versioning(added_in=Version("2.13.0")),
     ),
     # Active (i.e. neither deprecated nor removed) Scrapy built-in settings
     # that are missing from the default_settings.py file, in alphabetical
     # order.
     "AWS_ACCESS_KEY_ID": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue(None)
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
     ),
     "AWS_ENDPOINT_URL": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue(None)
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
     ),
     "AWS_REGION_NAME": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue(None)
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
     ),
     "AWS_SECRET_ACCESS_KEY": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue(None)
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
     ),
     "AWS_SESSION_TOKEN": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue(None)
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
     ),
     "AWS_USE_SSL": Setting(type=SettingType.BOOL, default_value=VersionedValue(False)),
     "AWS_VERIFY": Setting(type=SettingType.BOOL, default_value=VersionedValue(False)),
     "CLOSESPIDER_PAGECOUNT_NO_ITEM": Setting(
         type=SettingType.INT,
-        added_in=Version("2.12.0"),
         default_value=VersionedValue(0),
+        versioning=Versioning(added_in=Version("2.12.0")),
     ),
     "CLOSESPIDER_TIMEOUT_NO_ITEM": Setting(
         type=SettingType.INT,
-        added_in=Version("2.10.0"),
         default_value=VersionedValue(0),
+        versioning=Versioning(added_in=Version("2.10.0")),
     ),
     "DOWNLOAD_SLOTS": Setting(
         type=SettingType.DICT,
-        added_in=Version("2.9.0"),
         default_value=VersionedValue({}),
+        versioning=Versioning(added_in=Version("2.9.0")),
     ),
     "DUPEFILTER_DEBUG": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "FILES_EXPIRES": Setting(type=SettingType.INT, default_value=VersionedValue(0)),
     "FILES_RESULT_FIELD": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue(None)
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
     ),
     "FILES_STORE": Setting(
-        type=SettingType.OPT_PATH, default_value=VersionedValue(None)
+        type=SettingType.OPT_PATH,
+        default_value=VersionedValue(None),
     ),
     "FILES_URLS_FIELD": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue(None)
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
     ),
     "HTTPERROR_ALLOW_ALL": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "HTTPERROR_ALLOWED_CODES": Setting(
-        type=SettingType.LIST, default_value=VersionedValue([])
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
     ),
     "IMAGES_EXPIRES": Setting(type=SettingType.INT, default_value=VersionedValue(0)),
     "IMAGES_MIN_HEIGHT": Setting(type=SettingType.INT, default_value=VersionedValue(0)),
     "IMAGES_MIN_WIDTH": Setting(type=SettingType.INT, default_value=VersionedValue(0)),
     "IMAGES_RESULT_FIELD": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue(None)
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
     ),
     "IMAGES_STORE": Setting(
-        type=SettingType.OPT_PATH, default_value=VersionedValue(None)
+        type=SettingType.OPT_PATH,
+        default_value=VersionedValue(None),
     ),
     "IMAGES_THUMBS": Setting(type=SettingType.DICT, default_value=VersionedValue({})),
     "IMAGES_URLS_FIELD": Setting(
-        type=SettingType.OPT_STR, default_value=VersionedValue(None)
+        type=SettingType.OPT_STR,
+        default_value=VersionedValue(None),
     ),
     "MAIL_TLS": Setting(type=SettingType.BOOL, default_value=VersionedValue(False)),
     "MAIL_SSL": Setting(type=SettingType.BOOL, default_value=VersionedValue(False)),
     "MEDIA_ALLOW_REDIRECTS": Setting(
-        type=SettingType.BOOL, default_value=VersionedValue(False)
-    ),
-    # Deprecated Scrapy built-in settings, in reverse deprecation order.
-    "AJAXCRAWL_ENABLED": Setting(
-        added_in=Version("0.22.0"),
-        deprecated_in=Version("2.13.0"),
         type=SettingType.BOOL,
         default_value=VersionedValue(False),
     ),
+    # Deprecated Scrapy built-in settings, in reverse deprecation order.
+    "AJAXCRAWL_ENABLED": Setting(
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+        versioning=Versioning(
+            added_in=Version("0.22.0"),
+            deprecated_in=Version("2.13.0"),
+        ),
+    ),
     "AJAXCRAWL_MAXSIZE": Setting(
-        added_in=Version("0.22.0"),
-        deprecated_in=Version("2.13.0"),
         type=SettingType.INT,
         default_value=VersionedValue(32768),
+        versioning=Versioning(
+            added_in=Version("0.22.0"),
+            deprecated_in=Version("2.13.0"),
+        ),
     ),
     "REQUEST_FINGERPRINTER_IMPLEMENTATION": Setting(
         type=SettingType.ENUM_STR,
-        added_in=Version("2.7.0"),
-        deprecated_in=Version("2.12.0"),
         default_value=VersionedValue("SENTINEL"),
         values=("2.6", "2.7"),
+        versioning=Versioning(
+            added_in=Version("2.7.0"),
+            deprecated_in=Version("2.12.0"),
+        ),
     ),
     "FEED_FORMAT": Setting(
-        default_value=VersionedValue("jsonlines"),
-        deprecated_in=Version("2.1.0"),
-        sunset_guidance="use FEEDS instead",
         type=SettingType.STR,
+        default_value=VersionedValue("jsonlines"),
+        versioning=Versioning(
+            deprecated_in=Version("2.1.0"),
+            sunset_guidance="use FEEDS instead",
+        ),
     ),
     "FEED_URI": Setting(
-        deprecated_in=Version("2.1.0"),
-        sunset_guidance="use FEEDS instead",
         type=SettingType.OPT_STR,
+        versioning=Versioning(
+            deprecated_in=Version("2.1.0"),
+            sunset_guidance="use FEEDS instead",
+        ),
     ),
     # Removed Scrapy built-in settings, in reverse removal order.
     "SPIDER_MANAGER_CLASS": Setting(
-        removed_in=Version("2.5.0"),
-        deprecated_in=Version("1.0.0"),
         type=SettingType.OBJ,
+        versioning=Versioning(
+            removed_in=Version("2.5.0"),
+            deprecated_in=Version("1.0.0"),
+        ),
     ),
     "LOG_UNSERIALIZABLE_REQUESTS": Setting(
-        removed_in=Version("2.1.0"),
-        deprecated_in=UNKNOWN_UNSUPPORTED_VERSION,
-        sunset_guidance="use SCHEDULER_DEBUG instead",
         type=SettingType.BOOL,
+        versioning=Versioning(
+            removed_in=Version("2.1.0"),
+            deprecated_in=UNKNOWN_UNSUPPORTED_VERSION,
+            sunset_guidance="use SCHEDULER_DEBUG instead",
+        ),
     ),
     "REDIRECT_MAX_METAREFRESH_DELAY": Setting(
-        removed_in=Version("2.1.0"),
-        deprecated_in=UNKNOWN_UNSUPPORTED_VERSION,
-        sunset_guidance="use METAREFRESH_MAXDELAY instead",
         type=SettingType.FLOAT,
+        versioning=Versioning(
+            removed_in=Version("2.1.0"),
+            deprecated_in=UNKNOWN_UNSUPPORTED_VERSION,
+            sunset_guidance="use METAREFRESH_MAXDELAY instead",
+        ),
     ),
     # scrapy-azure-exporter plugin settings, in order of appearance
     # in https://github.com/scrapy-plugins/scrapy-feedexporter-azure-storage
@@ -926,7 +1053,7 @@ SETTINGS = {
     # https://github.com/scrapinghub/scrapy-frontera#usage-and-features
     "FRONTERA_SCHEDULER_START_REQUESTS_TO_FRONTIER": Setting(package="scrapy-frontera"),
     "FRONTERA_SCHEDULER_REQUEST_CALLBACKS_TO_FRONTIER": Setting(
-        package="scrapy-frontera"
+        package="scrapy-frontera",
     ),
     "FRONTERA_SCHEDULER_STATE_ATTRIBUTES": Setting(package="scrapy-frontera"),
     "FRONTERA_SCHEDULER_CALLBACK_SLOT_PREFIX_MAP": Setting(package="scrapy-frontera"),
@@ -934,7 +1061,7 @@ SETTINGS = {
     # scrapy-feedexporter-google-drive plugin settings, in order of appearance
     # in https://github.com/scrapy-plugins/scrapy-feedexporter-google-drive
     "GDRIVE_SERVICE_ACCOUNT_CREDENTIALS_JSON": Setting(
-        package="scrapy-feedexporter-google-drive"
+        package="scrapy-feedexporter-google-drive",
     ),
     # scrapy-feedexporter-google-sheets plugin settings, in order of appearance
     # in https://github.com/scrapy-plugins/scrapy-feedexporter-google-sheets
@@ -983,9 +1110,11 @@ SETTINGS = {
     "SCRAPY_POET_CACHE_ERRORS": Setting(package="scrapy-poet"),
     "SCRAPY_POET_DISCOVER": Setting(package="scrapy-poet"),
     "SCRAPY_POET_OVERRIDES": Setting(
-        deprecated_in=Version("0.9.0"),
-        sunset_guidance="use SCRAPY_POET_DISCOVER and/or SCRAPY_POET_RULES instead",
         package="scrapy-poet",
+        versioning=Versioning(
+            deprecated_in=Version("0.9.0"),
+            sunset_guidance="use SCRAPY_POET_DISCOVER and/or SCRAPY_POET_RULES instead",
+        ),
     ),
     "SCRAPY_POET_PROVIDERS": Setting(package="scrapy-poet"),
     "SCRAPY_POET_REQUEST_FINGERPRINTER_BASE_CLASS": Setting(package="scrapy-poet"),
@@ -1019,12 +1148,14 @@ SETTINGS = {
     # scrapy-settings-log plugin settings, in order of appearance in
     # https://github.com/scrapy-plugins/scrapy-settings-log
     "SETTINGS_LOGGING_ENABLED": Setting(
-        package="scrapy-settings-log", type=SettingType.BOOL
+        package="scrapy-settings-log",
+        type=SettingType.BOOL,
     ),
     "SETTINGS_LOGGING_REGEX": Setting(package="scrapy-settings-log"),
     "SETTINGS_LOGGING_INDENT": Setting(package="scrapy-settings-log"),
     "MASKED_SENSITIVE_SETTINGS_ENABLED": Setting(
-        package="scrapy-settings-log", type=SettingType.BOOL
+        package="scrapy-settings-log",
+        type=SettingType.BOOL,
     ),
     # scrapy-feedexporter-sftp plugin settings, in order of appearance in
     # https://github.com/scrapy-plugins/scrapy-feedexporter-sftp
@@ -1048,11 +1179,14 @@ SETTINGS = {
     # https://spidermon.readthedocs.io/en/latest/monitors.html
     "SPIDERMON_MAX_CRITICALS": Setting(package="spidermon", type=SettingType.INT),
     "SPIDERMON_MAX_DOWNLOADER_EXCEPTIONS": Setting(
-        package="spidermon", type=SettingType.INT
+        package="spidermon",
+        type=SettingType.INT,
     ),
     "SPIDERMON_MAX_ERRORS": Setting(package="spidermon", type=SettingType.INT),
     "SPIDERMON_FIELD_COVERAGE_SKIP_IF_NO_ITEM": Setting(
-        package="spidermon", type=SettingType.BOOL, default_value=VersionedValue(False)
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     "SPIDERMON_EXPECTED_FINISH_REASONS": Setting(
         package="spidermon",
@@ -1061,35 +1195,47 @@ SETTINGS = {
     ),
     "SPIDERMON_MIN_ITEMS": Setting(package="spidermon", type=SettingType.INT),
     "SPIDERMON_MAX_ITEM_VALIDATION_ERRORS": Setting(
-        package="spidermon", type=SettingType.INT
+        package="spidermon",
+        type=SettingType.INT,
     ),
     "SPIDERMON_MAX_EXECUTION_TIME": Setting(package="spidermon", type=SettingType.INT),
     "SPIDERMON_ITEM_COUNT_INCREASE": Setting(package="spidermon", type=SettingType.INT),
     "SPIDERMON_MAX_RETRIES": Setting(
-        package="spidermon", type=SettingType.INT, default_value=VersionedValue(-1)
+        package="spidermon",
+        type=SettingType.INT,
+        default_value=VersionedValue(-1),
     ),
     "SPIDERMON_MIN_SUCCESSFUL_REQUESTS": Setting(
-        package="spidermon", type=SettingType.INT, default_value=VersionedValue(0)
+        package="spidermon",
+        type=SettingType.INT,
+        default_value=VersionedValue(0),
     ),
     "SPIDERMON_MAX_REQUESTS_ALLOWED": Setting(
-        package="spidermon", type=SettingType.INT, default_value=VersionedValue(-1)
+        package="spidermon",
+        type=SettingType.INT,
+        default_value=VersionedValue(-1),
     ),
     "SPIDERMON_UNWANTED_HTTP_CODES_MAX_COUNT": Setting(
-        package="spidermon", type=SettingType.INT, default_value=VersionedValue(10)
+        package="spidermon",
+        type=SettingType.INT,
+        default_value=VersionedValue(10),
     ),
     "SPIDERMON_UNWANTED_HTTP_CODES": Setting(
         package="spidermon",
         type=SettingType.LIST,
         default_value=VersionedValue(
-            [400, 407, 429, 500, 502, 503, 504, 523, 540, 541]
+            [400, 407, 429, 500, 502, 503, 504, 523, 540, 541],
         ),
     ),
     "SPIDERMON_MAX_WARNINGS": Setting(package="spidermon", type=SettingType.INT),
     "SPIDERMON_JOBS_COMPARISON": Setting(
-        package="spidermon", type=SettingType.INT, default_value=VersionedValue(0)
+        package="spidermon",
+        type=SettingType.INT,
+        default_value=VersionedValue(0),
     ),
     "SPIDERMON_JOBS_COMPARISON_THRESHOLD": Setting(
-        package="spidermon", type=SettingType.FLOAT
+        package="spidermon",
+        type=SettingType.FLOAT,
     ),
     "SPIDERMON_JOBS_COMPARISON_STATES": Setting(
         package="spidermon",
@@ -1097,16 +1243,24 @@ SETTINGS = {
         default_value=VersionedValue(["finished"]),
     ),
     "SPIDERMON_JOBS_COMPARISON_TAGS": Setting(
-        package="spidermon", type=SettingType.LIST, default_value=VersionedValue([])
+        package="spidermon",
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
     ),
     "SPIDERMON_JOBS_COMPARISON_CLOSE_REASONS": Setting(
-        package="spidermon", type=SettingType.LIST, default_value=VersionedValue([])
+        package="spidermon",
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
     ),
     "SPIDERMON_JOBS_COMPARISON_ARGUMENTS": Setting(
-        package="spidermon", type=SettingType.DICT, default_value=VersionedValue({})
+        package="spidermon",
+        type=SettingType.DICT,
+        default_value=VersionedValue({}),
     ),
     "SPIDERMON_JOBS_COMPARISON_ARGUMENTS_ENABLED": Setting(
-        package="spidermon", type=SettingType.BOOL, default_value=VersionedValue(False)
+        package="spidermon",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
     ),
     # https://spidermon.readthedocs.io/en/latest/item-validation.html
     "SPIDERMON_VALIDATION_ADD_ERRORS_TO_ITEMS": Setting(
@@ -1255,7 +1409,9 @@ SETTINGS = {
     ),
     # https://spidermon.readthedocs.io/en/latest/actions/slack-action.html
     "SPIDERMON_SLACK_RECIPIENTS": Setting(
-        package="spidermon", type=SettingType.LIST, default_value=VersionedValue([])
+        package="spidermon",
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
     ),
     "SPIDERMON_SLACK_SENDER_NAME": Setting(
         package="spidermon",
@@ -1322,7 +1478,9 @@ SETTINGS = {
     ),
     # https://spidermon.readthedocs.io/en/latest/actions/telegram-action.html
     "SPIDERMON_TELEGRAM_RECIPIENTS": Setting(
-        package="spidermon", type=SettingType.LIST, default_value=VersionedValue([])
+        package="spidermon",
+        type=SettingType.LIST,
+        default_value=VersionedValue([]),
     ),
     "SPIDERMON_TELEGRAM_SENDER_TOKEN": Setting(
         package="spidermon",
@@ -1456,7 +1614,8 @@ SETTINGS = {
     "ZYTE_API_DEFAULT_PARAMS": Setting(package="scrapy-zyte-api"),
     "ZYTE_API_ENABLED": Setting(package="scrapy-zyte-api", type=SettingType.BOOL),
     "ZYTE_API_EXPERIMENTAL_COOKIES_ENABLED": Setting(
-        package="scrapy-zyte-api", type=SettingType.BOOL
+        package="scrapy-zyte-api",
+        type=SettingType.BOOL,
     ),
     "ZYTE_API_FALLBACK_HTTP_HANDLER": Setting(package="scrapy-zyte-api"),
     "ZYTE_API_FALLBACK_HTTPS_HANDLER": Setting(package="scrapy-zyte-api"),
@@ -1472,7 +1631,8 @@ SETTINGS = {
     "ZYTE_API_RETRY_POLICY": Setting(package="scrapy-zyte-api"),
     "ZYTE_API_SESSION_CHECKER": Setting(package="scrapy-zyte-api"),
     "ZYTE_API_SESSION_ENABLED": Setting(
-        package="scrapy-zyte-api", type=SettingType.BOOL
+        package="scrapy-zyte-api",
+        type=SettingType.BOOL,
     ),
     "ZYTE_API_SESSION_LOCATION": Setting(package="scrapy-zyte-api"),
     "ZYTE_API_SESSION_MAX_BAD_INITS": Setting(package="scrapy-zyte-api"),
@@ -1503,7 +1663,7 @@ SETTINGS = {
     "ZYTE_SMARTPROXY_BACKOFF_STEP": Setting(package="scrapy-zyte-smartproxy"),
     "ZYTE_SMARTPROXY_BACKOFF_MAX": Setting(package="scrapy-zyte-smartproxy"),
     "ZYTE_SMARTPROXY_FORCE_ENABLE_ON_HTTP_CODES": Setting(
-        package="scrapy-zyte-smartproxy"
+        package="scrapy-zyte-smartproxy",
     ),
     "ZYTE_SMARTPROXY_KEEP_HEADERS": Setting(package="scrapy-zyte-smartproxy"),
 }

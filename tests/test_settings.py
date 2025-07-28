@@ -7,11 +7,11 @@ from typing import overload
 
 from packaging.version import Version
 
-from flake8_scrapy.finders.settings import TYPE_CHECKERS
-from flake8_scrapy.settings import SettingType
+from scrapy_lint.finders.settings.types import TYPE_CHECKERS
+from scrapy_lint.settings import SettingType
 from tests.helpers import check_project
 
-from . import NO_ISSUE, Cases, File, Issue, cases, iter_issues
+from . import NO_ISSUE, Cases, ExpectedIssue, File, cases, iter_issues
 from .test_requirements import (
     SCRAPY_ANCIENT_VERSION,
     SCRAPY_FUTURE_VERSION,
@@ -57,39 +57,47 @@ class SafeDict(dict):
 
 @overload
 def zip_with_template(
-    a: tuple[tuple[str], ...], b: tuple[tuple[str, str], ...]
+    a: tuple[tuple[str], ...],
+    b: tuple[tuple[str, str], ...],
 ) -> tuple[tuple[str, str, str], ...]: ...
 
 
 @overload
 def zip_with_template(
-    a: tuple[tuple[str, int], ...], b: tuple[tuple[str], ...]
+    a: tuple[tuple[str, int], ...],
+    b: tuple[tuple[str], ...],
 ) -> tuple[tuple[str, int, str], ...]: ...
 
 
 @overload
 def zip_with_template(
-    a: tuple[tuple[str, int], ...], b: tuple[tuple[str, str], ...]
+    a: tuple[tuple[str, int], ...],
+    b: tuple[tuple[str, str], ...],
 ) -> tuple[tuple[str, int, str, str], ...]: ...
 
 
 @overload
 def zip_with_template(
-    a: tuple[tuple[str, int], ...], b: tuple[tuple[str, str, str, int], ...]
+    a: tuple[tuple[str, int], ...],
+    b: tuple[tuple[str, str, str, int], ...],
 ) -> tuple[tuple[str, int, str, str, str, int], ...]: ...
 
 
 @overload
 def zip_with_template(
-    a: tuple[tuple[str, int], ...], b: tuple[tuple[str, str | None, str, str, int], ...]
+    a: tuple[tuple[str, int], ...],
+    b: tuple[tuple[str, str | None, str, str, int], ...],
 ) -> tuple[tuple[str, int, str, str | None, str, str, int], ...]: ...
 
 
 @overload
 def zip_with_template(
     a: tuple[tuple[str, int], ...],
-    b: tuple[tuple[str, str, Sequence[Issue] | Issue | None], ...],
-) -> tuple[tuple[str, int, str, str, Sequence[Issue] | Issue | None], ...]: ...
+    b: tuple[tuple[str, str, Sequence[ExpectedIssue] | ExpectedIssue | None], ...],
+) -> tuple[
+    tuple[str, int, str, str, Sequence[ExpectedIssue] | ExpectedIssue | None],
+    ...,
+]: ...
 
 
 @overload
@@ -116,11 +124,12 @@ ALIAS_HAS_COL_OFFSET = supports_alias_col_offset()
 
 
 def default_issues(
-    path: str | None = None, exclude: int | set[int] | None = None
-) -> Sequence[Issue]:
+    path: str | None = None,
+    exclude: int | set[int] | None = None,
+) -> Sequence[ExpectedIssue]:
     exclude = {exclude} if isinstance(exclude, int) else exclude or set()
     return [
-        Issue(message=message, path=path)
+        ExpectedIssue(message=message, path=path)
         for message in (
             "SCP08 no project USER_AGENT",
             "SCP09 robots.txt ignored by default",
@@ -143,14 +152,17 @@ CASES: Cases = (
         for code, issues in (
             # Any object or attribute named “settings” used as a Settings
             # object (subscript, Settings getters) is assumed to be one.
-            ("settings['FOO']", Issue("SCP27 unknown setting", column=9, path=path)),
+            (
+                "settings['FOO']",
+                ExpectedIssue("SCP27 unknown setting", column=9, path=path),
+            ),
             (
                 "self.settings['FOO']",
-                Issue("SCP27 unknown setting", column=14, path=path),
+                ExpectedIssue("SCP27 unknown setting", column=14, path=path),
             ),
             (
                 "crawler.settings['FOO']",
-                Issue("SCP27 unknown setting", column=17, path=path),
+                ExpectedIssue("SCP27 unknown setting", column=17, path=path),
             ),
             # Anything else is not considered a Settings object and thus
             # ignored.
@@ -172,17 +184,17 @@ CASES: Cases = (
             # Subscript assignment also triggers setting name checks,
             (
                 "settings['FOO'] = 'bar'",
-                Issue("SCP27 unknown setting", column=9, path=path),
+                ExpectedIssue("SCP27 unknown setting", column=9, path=path),
             ),
             # even if the value is not supported for setting value checks,
             (
                 "settings['FOO'] = bar",
-                Issue("SCP27 unknown setting", column=9, path=path),
+                ExpectedIssue("SCP27 unknown setting", column=9, path=path),
             ),
             # and even on attributes.
             (
                 "self.settings['FOO'] = 'bar'",
-                Issue("SCP27 unknown setting", column=14, path=path),
+                ExpectedIssue("SCP27 unknown setting", column=14, path=path),
             ),
             # BaseSetting methods that have a setting name as a parameter
             # trigger setting name checks,
@@ -190,13 +202,17 @@ CASES: Cases = (
                 (
                     f"settings.{method_name}('FOO')",
                     (
-                        Issue(
+                        ExpectedIssue(
                             "SCP27 unknown setting",
                             column=len(method_name) + 10,
                             path=path,
                         ),
                         *(
-                            Issue("SCP40 unneeded setting get", column=9, path=path)
+                            ExpectedIssue(
+                                "SCP40 unneeded setting get",
+                                column=9,
+                                path=path,
+                            )
                             for _ in range(1)
                             if method_name == "get"
                         ),
@@ -233,13 +249,17 @@ CASES: Cases = (
                 (
                     f"settings.get({params})",
                     (
-                        Issue(
+                        ExpectedIssue(
                             "SCP27 unknown setting",
                             column=13 + column_offset,
                             path=path,
                         ),
                         *(
-                            Issue("SCP40 unneeded setting get", column=9, path=path)
+                            ExpectedIssue(
+                                "SCP40 unneeded setting get",
+                                column=9,
+                                path=path,
+                            )
                             for _ in range(1)
                             if not has_default
                         ),
@@ -272,10 +292,14 @@ CASES: Cases = (
             # checks,
             *(
                 (
-                    f"{callable}({{'FOO': 'bar'}})",
-                    Issue("SCP27 unknown setting", column=len(callable) + 2, path=path),
+                    f"{callable_}({{'FOO': 'bar'}})",
+                    ExpectedIssue(
+                        "SCP27 unknown setting",
+                        column=len(callable_) + 2,
+                        path=path,
+                    ),
                 )
-                for callable in (
+                for callable_ in (
                     "BaseSettings",
                     "Settings",
                     "overridden_settings",
@@ -322,7 +346,11 @@ CASES: Cases = (
             *(
                 (
                     f"Settings({params})",
-                    Issue("SCP27 unknown setting", column=9 + column_offset, path=path),
+                    ExpectedIssue(
+                        "SCP27 unknown setting",
+                        column=9 + column_offset,
+                        path=path,
+                    ),
                 )
                 for params, column_offset in (
                     ('{"FOO": "bar"}, foo=bar', 1),
@@ -335,7 +363,7 @@ CASES: Cases = (
             # dict() syntax,
             (
                 "Settings(dict(FOO='bar'))",
-                Issue("SCP27 unknown setting", column=14, path=path),
+                ExpectedIssue("SCP27 unknown setting", column=14, path=path),
             ),
             (
                 "Settings(foo(FOO='bar'))",
@@ -344,26 +372,26 @@ CASES: Cases = (
             # and checking all keys in the dict.
             (
                 'Settings({"DOWNLOAD_DELAY": 5.0, "BAR": "baz"})',
-                Issue("SCP27 unknown setting", column=33, path=path),
+                ExpectedIssue("SCP27 unknown setting", column=33, path=path),
             ),
             (
                 "Settings(dict(DOWNLOAD_DELAY=5.0, BAR='baz'))",
-                Issue("SCP27 unknown setting", column=34, path=path),
+                ExpectedIssue("SCP27 unknown setting", column=34, path=path),
             ),
             # "`FOO" in settings` triggers setting name checks,
             (
                 "'FOO' in settings",
-                Issue("SCP27 unknown setting", path=path),
+                ExpectedIssue("SCP27 unknown setting", path=path),
             ),
             # also when not is involved,
             (
                 "'FOO' not in settings",
-                Issue("SCP27 unknown setting", path=path),
+                ExpectedIssue("SCP27 unknown setting", path=path),
             ),
             # even for attributes,
             (
                 "'FOO' in self.settings",
-                Issue("SCP27 unknown setting", path=path),
+                ExpectedIssue("SCP27 unknown setting", path=path),
             ),
             # but not for non-settings objects.
             (
@@ -374,7 +402,7 @@ CASES: Cases = (
             *(
                 (
                     f"settings.{method_name}('BOT_NAME', None)",
-                    Issue(
+                    ExpectedIssue(
                         "SCP36 invalid setting value",
                         column=len(method_name) + 22,
                         path=path,
@@ -390,7 +418,7 @@ CASES: Cases = (
             *(
                 (
                     f"settings.set({params})",
-                    Issue(
+                    ExpectedIssue(
                         "SCP36 invalid setting value",
                         column=13 + column_offset,
                         path=path,
@@ -407,15 +435,15 @@ CASES: Cases = (
                 (
                     f"settings['{name}']",
                     (
-                        Issue("SCP27 unknown setting", column=9, path=path)
+                        ExpectedIssue("SCP27 unknown setting", column=9, path=path)
                         if issue is True
-                        else Issue(
+                        else ExpectedIssue(
                             f"SCP27 unknown setting: did you mean: {issue}?",
                             column=9,
                             path=path,
                         )
                         if isinstance(issue, str)
-                        else Issue(
+                        else ExpectedIssue(
                             f"SCP27 unknown setting: did you mean: {', '.join(issue)}?",
                             column=9,
                             path=path,
@@ -467,44 +495,64 @@ CASES: Cases = (
             # SCP32 wrong setting method: positional argument
             (
                 "settings.getint('LOG_ENABLED')",
-                Issue("SCP32 wrong setting method: use getbool()", column=9, path=path),
+                ExpectedIssue(
+                    "SCP32 wrong setting method: use getbool()",
+                    column=9,
+                    path=path,
+                ),
             ),
             # SCP32 wrong setting method: keyword argument
             (
                 "settings.get(name='RETRY_TIMES')",
                 (
-                    Issue(
-                        "SCP32 wrong setting method: use getint()", column=9, path=path
+                    ExpectedIssue(
+                        "SCP32 wrong setting method: use getint()",
+                        column=9,
+                        path=path,
                     ),
-                    Issue("SCP40 unneeded setting get", column=9, path=path),
+                    ExpectedIssue("SCP40 unneeded setting get", column=9, path=path),
                 ),
             ),
             # SCP32 wrong setting method: subscript
             (
                 "settings['DOWNLOAD_DELAY']",
-                Issue(
-                    "SCP32 wrong setting method: use getfloat()", column=8, path=path
+                ExpectedIssue(
+                    "SCP32 wrong setting method: use getfloat()",
+                    column=8,
+                    path=path,
                 ),
             ),
             # SCP32 wrong setting method: subscript recommendation
             (
                 "settings.getint('DEFAULT_DROPITEM_LOG_LEVEL')",
-                Issue("SCP32 wrong setting method: use []", column=9, path=path),
+                ExpectedIssue(
+                    "SCP32 wrong setting method: use []",
+                    column=9,
+                    path=path,
+                ),
             ),
             # SCP32 wrong setting method: get() recommendation due to positional default
             (
                 "settings.getint('DEFAULT_DROPITEM_LOG_LEVEL', 5)",
-                Issue("SCP32 wrong setting method: use get()", column=9, path=path),
+                ExpectedIssue(
+                    "SCP32 wrong setting method: use get()",
+                    column=9,
+                    path=path,
+                ),
             ),
             # SCP32 wrong setting method: get() recommendation due to keyword default
             (
                 "settings.getint('DEFAULT_DROPITEM_LOG_LEVEL', default=5)",
-                Issue("SCP32 wrong setting method: use get()", column=9, path=path),
+                ExpectedIssue(
+                    "SCP32 wrong setting method: use get()",
+                    column=9,
+                    path=path,
+                ),
             ),
             # SCP32 wrong setting method: list
             (
                 "settings.add_to_list('LOG_SHORT_NAMES', 'foo')",
-                Issue("SCP32 wrong setting method", column=21, path=path),
+                ExpectedIssue("SCP32 wrong setting method", column=21, path=path),
             ),
             (
                 "settings.add_to_list('LOG_VERSIONS', 'foo')",
@@ -513,7 +561,7 @@ CASES: Cases = (
             # SCP32 wrong setting method: component priority dict
             (
                 "settings.replace_in_component_priority_dict('DOWNLOAD_HANDLERS', Old, New)",
-                Issue("SCP32 wrong setting method", column=44, path=path),
+                ExpectedIssue("SCP32 wrong setting method", column=44, path=path),
             ),
             (
                 "settings.replace_in_component_priority_dict('DOWNLOADER_MIDDLEWARES', Old, New)",
@@ -522,26 +570,38 @@ CASES: Cases = (
             # SCP32 wrong setting method: component priority dict, based
             (
                 "settings.getdict('DOWNLOADER_MIDDLEWARES')",
-                Issue(
-                    "SCP32 wrong setting method: use getwithbase()", column=9, path=path
+                ExpectedIssue(
+                    "SCP32 wrong setting method: use getwithbase()",
+                    column=9,
+                    path=path,
                 ),
             ),
             # SCP32 wrong setting method: regular dict, based
             (
                 "settings.getdict('DOWNLOAD_HANDLERS')",
-                Issue(
-                    "SCP32 wrong setting method: use getwithbase()", column=9, path=path
+                ExpectedIssue(
+                    "SCP32 wrong setting method: use getwithbase()",
+                    column=9,
+                    path=path,
                 ),
             ),
             # SCP32 wrong setting method: component priority dict, not based
             (
                 "settings.getwithbase('ADDONS')",
-                Issue("SCP32 wrong setting method: use getdict()", column=9, path=path),
+                ExpectedIssue(
+                    "SCP32 wrong setting method: use getdict()",
+                    column=9,
+                    path=path,
+                ),
             ),
             # SCP32 wrong setting method: regular dict, not based
             (
                 "settings.getwithbase('DOWNLOAD_SLOTS')",
-                Issue("SCP32 wrong setting method: use getdict()", column=9, path=path),
+                ExpectedIssue(
+                    "SCP32 wrong setting method: use getdict()",
+                    column=9,
+                    path=path,
+                ),
             ),
             # SCP32 wrong setting method: non-getter setting method
             (
@@ -556,18 +616,18 @@ CASES: Cases = (
             # SCP33 base setting use
             (
                 "settings['DOWNLOAD_HANDLERS_BASE']",
-                Issue("SCP33 base setting use", column=9, path=path),
+                ExpectedIssue("SCP33 base setting use", column=9, path=path),
             ),
             (
                 "settings['FOO_BASE']",
-                Issue("SCP27 unknown setting", column=9, path=path),
+                ExpectedIssue("SCP27 unknown setting", column=9, path=path),
             ),
             # SCP35 no-op setting update
             *(
                 (
                     template.format_map(SafeDict(setting=setting, value=value)),
                     (
-                        Issue(
+                        ExpectedIssue(
                             "SCP35 no-op setting update",
                             column=column,
                             path=path,
@@ -612,7 +672,7 @@ CASES: Cases = (
             *(
                 (
                     template.format_map(SafeDict(setting=setting, value=value)),
-                    Issue(
+                    ExpectedIssue(
                         "SCP35 no-op setting update",
                         column=column,
                         path=path,
@@ -635,7 +695,7 @@ CASES: Cases = (
             *(
                 (
                     template.format_map(SafeDict(setting=setting)),
-                    Issue(
+                    ExpectedIssue(
                         "SCP35 no-op setting update",
                         column=column,
                         path=path,
@@ -665,9 +725,9 @@ CASES: Cases = (
                         "class MyAddon:",
                         "    def update_settings(self, settings):",
                         "        settings.add_to_list('SPIDER_MODULES', 'addon.spiders')",
-                    )
+                    ),
                 ),
-                Issue(
+                ExpectedIssue(
                     "SCP35 no-op setting update",
                     line=3,
                     column=29,
@@ -680,7 +740,7 @@ CASES: Cases = (
                         "class MyAddon:",
                         "    def update_pre_crawler_settings(cls, settings):",
                         "        settings.add_to_list('SPIDER_MODULES', 'addon.spiders')",
-                    )
+                    ),
                 ),
                 NO_ISSUE,
             ),
@@ -688,7 +748,7 @@ CASES: Cases = (
             *(
                 (
                     code,
-                    Issue("SCP40 unneeded setting get", column=9, path=path),
+                    ExpectedIssue("SCP40 unneeded setting get", column=9, path=path),
                 )
                 for code in (
                     "settings.get('DOWNLOADER')",
@@ -707,7 +767,7 @@ CASES: Cases = (
             # SCP46 raw Zyte API params
             (
                 "settings['ZYTE_API_DEFAULT_PARAMS'] = {'foo': 'bar'}",
-                Issue("SCP46 raw Zyte API params", column=9, path=path),
+                ExpectedIssue("SCP46 raw Zyte API params", column=9, path=path),
             ),
             # Setting value checks
             *(
@@ -946,7 +1006,7 @@ CASES: Cases = (
             *(
                 (
                     template.format_map(SafeDict(setting=setting, value=value)),
-                    Issue(
+                    ExpectedIssue(
                         issue,
                         column=template_column + len(setting) + value_offset,
                         path=path,
@@ -1452,7 +1512,7 @@ CASES: Cases = (
                     template.format_map(SafeDict(setting=setting, value=value)),
                     (
                         *(
-                            Issue(
+                            ExpectedIssue(
                                 msg,
                                 column=template_column + len(setting) + col,
                                 path=path,
@@ -1576,14 +1636,18 @@ CASES: Cases = (
             # Non-setting-module specific checks for Python files also apply
             (
                 "settings['FOO']",
-                Issue("SCP27 unknown setting", column=9, path=path),
+                ExpectedIssue("SCP27 unknown setting", column=9, path=path),
             ),
             # Setting name checks work with module-specific setting syntax
             *(
                 (
                     code,
                     (
-                        Issue("SCP27 unknown setting", column=column, path=path),
+                        ExpectedIssue(
+                            "SCP27 unknown setting",
+                            column=column,
+                            path=path,
+                        ),
                         *extra_issues,
                     ),
                 )
@@ -1593,8 +1657,10 @@ CASES: Cases = (
                         "class FOO:\n    pass",
                         6,
                         (
-                            Issue(
-                                "SCP11 improper setting definition", column=6, path=path
+                            ExpectedIssue(
+                                "SCP11 improper setting definition",
+                                column=6,
+                                path=path,
                             ),
                         ),
                     ),
@@ -1602,8 +1668,10 @@ CASES: Cases = (
                         "def FOO():\n    pass",
                         4,
                         (
-                            Issue(
-                                "SCP11 improper setting definition", column=4, path=path
+                            ExpectedIssue(
+                                "SCP11 improper setting definition",
+                                column=4,
+                                path=path,
                             ),
                         ),
                     ),
@@ -1611,7 +1679,7 @@ CASES: Cases = (
                         "import FOO",
                         7 if ALIAS_HAS_COL_OFFSET else 0,
                         (
-                            Issue(
+                            ExpectedIssue(
                                 "SCP12 imported setting",
                                 column=7 if ALIAS_HAS_COL_OFFSET else 0,
                                 path=path,
@@ -1624,7 +1692,7 @@ CASES: Cases = (
             *(
                 (
                     code,
-                    Issue(
+                    ExpectedIssue(
                         "SCP07 redefined setting: seen first at line 1",
                         line=2,
                         path=path,
@@ -1643,8 +1711,10 @@ CASES: Cases = (
             *(
                 (
                     "\n".join(lines),
-                    Issue(
-                        "SCP11 improper setting definition", column=column, path=path
+                    ExpectedIssue(
+                        "SCP11 improper setting definition",
+                        column=column,
+                        path=path,
                     ),
                 )
                 for lines, column in (
@@ -1684,7 +1754,7 @@ CASES: Cases = (
             *(
                 (
                     code,
-                    Issue(
+                    ExpectedIssue(
                         "SCP12 imported setting",
                         column=column if ALIAS_HAS_COL_OFFSET else 0,
                         path=path,
@@ -1700,12 +1770,12 @@ CASES: Cases = (
             (
                 "from foo import BOT_NAME, SPIDER_MODULES",
                 [
-                    Issue(
+                    ExpectedIssue(
                         "SCP12 imported setting",
                         column=16 if ALIAS_HAS_COL_OFFSET else 0,
                         path=path,
                     ),
-                    Issue(
+                    ExpectedIssue(
                         "SCP12 imported setting",
                         column=26 if ALIAS_HAS_COL_OFFSET else 0,
                         path=path,
@@ -1714,7 +1784,7 @@ CASES: Cases = (
             ),
             (
                 "import foo, BOT_NAME",
-                Issue(
+                ExpectedIssue(
                     "SCP12 imported setting",
                     column=12 if ALIAS_HAS_COL_OFFSET else 0,
                     path=path,
@@ -1734,7 +1804,7 @@ CASES: Cases = (
             *(
                 (
                     f"{name} = {value}",
-                    Issue(
+                    ExpectedIssue(
                         "SCP17 redundant setting value",
                         line=1,
                         column=len(name) + 3,
@@ -1767,7 +1837,7 @@ CASES: Cases = (
                 (
                     f"{name} = {value}",
                     (
-                        Issue(
+                        ExpectedIssue(
                             "SCP17 redundant setting value",
                             line=1,
                             column=len(name) + 3,
@@ -1781,7 +1851,11 @@ CASES: Cases = (
                         (
                             "DOWNLOAD_DELAY",
                             value,
-                            Issue("SCP38 low project throttling", column=17, path=path),
+                            ExpectedIssue(
+                                "SCP38 low project throttling",
+                                column=17,
+                                path=path,
+                            ),
                         )
                         for value in ("0", "0.0")
                     ),
@@ -1817,7 +1891,7 @@ CASES: Cases = (
             # SCP27 unknown setting
             (
                 "FOO = 'bar'",
-                Issue("SCP27 unknown setting", path=path),
+                ExpectedIssue("SCP27 unknown setting", path=path),
             ),
             # SCP35 no-op setting update
             (
@@ -1826,16 +1900,16 @@ CASES: Cases = (
             ),
             (
                 "settings['SPIDER_MODULES'] = ['myproject.spiders']",
-                Issue("SCP35 no-op setting update", column=9, path=path),
+                ExpectedIssue("SCP35 no-op setting update", column=9, path=path),
             ),
             # Setting value checks for pre-crawler settings
             (
                 "ADDONS = '{}'",
-                Issue("SCP17 redundant setting value", column=9, path=path),
+                ExpectedIssue("SCP17 redundant setting value", column=9, path=path),
             ),
             (
                 "ADDONS = {}",
-                Issue("SCP17 redundant setting value", column=9, path=path),
+                ExpectedIssue("SCP17 redundant setting value", column=9, path=path),
             ),
             *(
                 (
@@ -1850,7 +1924,7 @@ CASES: Cases = (
             *(
                 (
                     f"ADDONS = {value}",
-                    Issue(
+                    ExpectedIssue(
                         f"SCP36 invalid setting value: {detail}",
                         column=9 + offset,
                         path=path,
@@ -1898,7 +1972,7 @@ CASES: Cases = (
                 ),
                 *default_issues(path),
                 *(
-                    Issue(
+                    ExpectedIssue(
                         "SCP27 unknown setting",
                         line=line,
                         path=path,
@@ -1919,7 +1993,7 @@ CASES: Cases = (
             # SCP07 redefined setting
             (
                 f'{setting} = "a"\n{setting} = "a"',
-                Issue(
+                ExpectedIssue(
                     "SCP07 redefined setting: seen first at line 1",
                     line=2,
                     path=path,
@@ -1961,10 +2035,16 @@ CASES: Cases = (
                     f"ROBOTSTXT_OBEY = {value}",
                     9,
                     (
-                        Issue(
-                            "SCP09 robots.txt ignored by default", column=17, path=path
+                        ExpectedIssue(
+                            "SCP09 robots.txt ignored by default",
+                            column=17,
+                            path=path,
                         ),
-                        Issue("SCP17 redundant setting value", column=17, path=path),
+                        ExpectedIssue(
+                            "SCP17 redundant setting value",
+                            column=17,
+                            path=path,
+                        ),
                     ),
                 )
                 for value in FALSE_BOOLS
@@ -1973,7 +2053,7 @@ CASES: Cases = (
             (
                 "ROBOTSTXT_OBEY = 'foo'",
                 9,
-                (Issue("SCP36 invalid setting value", column=17, path=path),),
+                (ExpectedIssue("SCP36 invalid setting value", column=17, path=path),),
             ),
             # SCP10 incomplete project throttling
             (
@@ -1986,8 +2066,10 @@ CASES: Cases = (
                     code,
                     10,
                     (
-                        Issue(
-                            "SCP10 incomplete project throttling", column=0, path=path
+                        ExpectedIssue(
+                            "SCP10 incomplete project throttling",
+                            column=0,
+                            path=path,
                         ),
                     ),
                 )
@@ -2001,21 +2083,21 @@ CASES: Cases = (
                 (
                     f"AUTOTHROTTLE_ENABLED = {value}",
                     10,
-                    Issue("SCP10 incomplete project throttling", path=path),
+                    ExpectedIssue("SCP10 incomplete project throttling", path=path),
                 )
                 for value in TRUE_BOOLS
             ),
             (
                 "AUTOTHROTTLE_ENABLED = foo",
                 10,
-                Issue("SCP10 incomplete project throttling", path=path),
+                ExpectedIssue("SCP10 incomplete project throttling", path=path),
             ),
             (
                 "AUTOTHROTTLE_ENABLED = 'foo'",
                 10,
                 (
-                    Issue("SCP10 incomplete project throttling", path=path),
-                    Issue("SCP36 invalid setting value", column=23, path=path),
+                    ExpectedIssue("SCP10 incomplete project throttling", path=path),
+                    ExpectedIssue("SCP36 invalid setting value", column=23, path=path),
                 ),
             ),
             *(
@@ -2023,8 +2105,12 @@ CASES: Cases = (
                     f"AUTOTHROTTLE_ENABLED = {value}",
                     10,
                     (
-                        Issue("SCP10 incomplete project throttling", path=path),
-                        Issue("SCP17 redundant setting value", column=23, path=path),
+                        ExpectedIssue("SCP10 incomplete project throttling", path=path),
+                        ExpectedIssue(
+                            "SCP17 redundant setting value",
+                            column=23,
+                            path=path,
+                        ),
                     ),
                 )
                 for value in FALSE_BOOLS
@@ -2048,8 +2134,13 @@ CASES: Cases = (
                 "CONCURRENT_REQUESTS_PER_DOMAIN = 2\nDOWNLOAD_DELAY = 0.9",
                 10,
                 (
-                    Issue("SCP38 low project throttling", column=33, path=path),
-                    Issue("SCP38 low project throttling", line=2, column=17, path=path),
+                    ExpectedIssue("SCP38 low project throttling", column=33, path=path),
+                    ExpectedIssue(
+                        "SCP38 low project throttling",
+                        line=2,
+                        column=17,
+                        path=path,
+                    ),
                 ),
             ),
             (
@@ -2061,8 +2152,13 @@ CASES: Cases = (
                 "CONCURRENT_REQUESTS_PER_DOMAIN = 'foo'\nDOWNLOAD_DELAY = 'bar'",
                 10,
                 (
-                    Issue("SCP36 invalid setting value", column=33, path=path),
-                    Issue("SCP36 invalid setting value", line=2, column=17, path=path),
+                    ExpectedIssue("SCP36 invalid setting value", column=33, path=path),
+                    ExpectedIssue(
+                        "SCP36 invalid setting value",
+                        line=2,
+                        column=17,
+                        path=path,
+                    ),
                 ),
             ),
         )
@@ -2076,7 +2172,7 @@ CASES: Cases = (
                 File(f"settings[{setting_name!r}]", path=path),
             ),
             (
-                Issue(
+                ExpectedIssue(
                     "SCP13 incomplete requirements freeze",
                     path="requirements.txt",
                 ),
@@ -2092,7 +2188,7 @@ CASES: Cases = (
                     requirements,
                     setting_name,
                     (
-                        Issue(
+                        ExpectedIssue(
                             f"SCP27 unknown setting: did you mean: {', '.join(suggestions)}?"
                             if suggestions
                             else "SCP27 unknown setting",
@@ -2179,7 +2275,7 @@ CASES: Cases = (
                         "ADD_ONS",
                         ("ADDONS",),
                         (
-                            Issue(
+                            ExpectedIssue(
                                 "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
                                 path="requirements.txt",
                             ),
@@ -2190,7 +2286,7 @@ CASES: Cases = (
                         "ADD_ONS",
                         (),
                         (
-                            Issue(
+                            ExpectedIssue(
                                 "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
                                 path="requirements.txt",
                             ),
@@ -2202,7 +2298,7 @@ CASES: Cases = (
             (
                 ("scrapy==2.12.0",),
                 "REQUEST_FINGERPRINTER_IMPLEMENTATION",
-                Issue(
+                ExpectedIssue(
                     "SCP28 deprecated setting: deprecated in scrapy 2.12.0",
                     path=path,
                     column=column,
@@ -2218,11 +2314,11 @@ CASES: Cases = (
                 ("scrapy==2.1.0",),
                 "FEED_FORMAT",
                 (
-                    Issue(
+                    ExpectedIssue(
                         "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
                         path="requirements.txt",
                     ),
-                    Issue(
+                    ExpectedIssue(
                         "SCP28 deprecated setting: deprecated in scrapy 2.1.0; use FEEDS instead",
                         path=path,
                         column=column,
@@ -2239,7 +2335,7 @@ CASES: Cases = (
             (
                 (f"scrapy=={SCRAPY_FUTURE_VERSION}",),
                 "REQUEST_FINGERPRINTER_IMPLEMENTATION",
-                Issue(
+                ExpectedIssue(
                     "SCP28 deprecated setting: deprecated in scrapy 2.12.0",
                     path=path,
                     column=column,
@@ -2250,7 +2346,7 @@ CASES: Cases = (
             (
                 ("scrapy-poet==0.9.0",),
                 "SCRAPY_POET_OVERRIDES",
-                Issue(
+                ExpectedIssue(
                     "SCP28 deprecated setting: deprecated in scrapy-poet "
                     "0.9.0; use SCRAPY_POET_DISCOVER and/or SCRAPY_POET_RULES "
                     "instead",
@@ -2264,15 +2360,15 @@ CASES: Cases = (
                 (f"scrapy=={SCRAPY_ANCIENT_VERSION}",),
                 "SPIDER_MANAGER_CLASS",
                 (
-                    Issue(
+                    ExpectedIssue(
                         "SCP14 unsupported requirement: flake8-scrapy only supports scrapy 2.0.1+",
                         path="requirements.txt",
                     ),
-                    Issue(
+                    ExpectedIssue(
                         "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
                         path="requirements.txt",
                     ),
-                    Issue(
+                    ExpectedIssue(
                         "SCP28 deprecated setting: deprecated in scrapy 1.0.0",
                         path=path,
                         column=column,
@@ -2287,16 +2383,16 @@ CASES: Cases = (
                 (f"scrapy=={SCRAPY_LOWEST_SUPPORTED}",),
                 "LOG_UNSERIALIZABLE_REQUESTS",
                 (
-                    Issue(
+                    ExpectedIssue(
                         "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
                         path="requirements.txt",
                     ),
-                    Issue(
+                    ExpectedIssue(
                         "SCP28 deprecated setting: deprecated in scrapy 2.0.1 or lower; use SCHEDULER_DEBUG instead",
                         path=path,
                         column=column,
                     ),
-                    Issue(
+                    ExpectedIssue(
                         "SCP32 wrong setting method: use getbool()",
                         path=path,
                         column=column - 1,
@@ -2307,15 +2403,15 @@ CASES: Cases = (
                 (f"scrapy=={SCRAPY_ANCIENT_VERSION}",),
                 "LOG_UNSERIALIZABLE_REQUESTS",
                 (
-                    Issue(
+                    ExpectedIssue(
                         "SCP14 unsupported requirement: flake8-scrapy only supports scrapy 2.0.1+",
                         path="requirements.txt",
                     ),
-                    Issue(
+                    ExpectedIssue(
                         "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
                         path="requirements.txt",
                     ),
-                    Issue(
+                    ExpectedIssue(
                         "SCP32 wrong setting method: use getbool()",
                         path=path,
                         column=column - 1,
@@ -2327,7 +2423,7 @@ CASES: Cases = (
                 ("scrapy==2.7.0",),
                 "REQUEST_FINGERPRINTER_IMPLEMENTATION",
                 (
-                    Issue(
+                    ExpectedIssue(
                         "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
                         path="requirements.txt",
                     ),
@@ -2337,11 +2433,11 @@ CASES: Cases = (
                 ("scrapy==2.6.3",),
                 "REQUEST_FINGERPRINTER_IMPLEMENTATION",
                 (
-                    Issue(
+                    ExpectedIssue(
                         "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
                         path="requirements.txt",
                     ),
-                    Issue(
+                    ExpectedIssue(
                         "SCP29 setting needs upgrade: added in scrapy 2.7.0",
                         column=column,
                         path=path,
@@ -2353,17 +2449,17 @@ CASES: Cases = (
                 ("scrapy==2.1.0",),
                 "LOG_UNSERIALIZABLE_REQUESTS",
                 (
-                    Issue(
+                    ExpectedIssue(
                         "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
                         path="requirements.txt",
                     ),
-                    Issue(
+                    ExpectedIssue(
                         "SCP30 removed setting: deprecated in scrapy 2.0.1 or "
                         "lower, removed in 2.1.0; use SCHEDULER_DEBUG instead",
                         path=path,
                         column=column,
                     ),
-                    Issue(
+                    ExpectedIssue(
                         "SCP32 wrong setting method: use getbool()",
                         path=path,
                         column=column - 1,
@@ -2374,7 +2470,7 @@ CASES: Cases = (
             (
                 ("scrapy",),
                 "SCRAPY_POET_CACHE",
-                Issue(
+                ExpectedIssue(
                     "SCP31 missing setting requirement: scrapy-poet",
                     path=path,
                     column=column,
@@ -2383,7 +2479,7 @@ CASES: Cases = (
             (
                 (f"scrapy=={SCRAPY_HIGHEST_KNOWN}",),
                 "SCRAPY_POET_CACHE",
-                Issue(
+                ExpectedIssue(
                     "SCP31 missing setting requirement: scrapy-poet",
                     path=path,
                     column=column,
@@ -2410,7 +2506,7 @@ CASES: Cases = (
                 File(f"settings[{name!r}] = {value}", path=path),
             ),
             (
-                Issue(
+                ExpectedIssue(
                     "SCP13 incomplete requirements freeze",
                     path="requirements.txt",
                 ),
@@ -2427,13 +2523,13 @@ CASES: Cases = (
                     "FEEDS",
                     value,
                     (
-                        Issue(
+                        ExpectedIssue(
                             "SCP15 insecure requirement: scrapy 2.11.2 implements "
                             "security fixes",
                             path="requirements.txt",
                         ),
                         *(
-                            Issue(
+                            ExpectedIssue(
                                 f"SCP29 setting needs upgrade: {key!r} "
                                 f"requires Scrapy {versions[1]}+",
                                 column=25,
@@ -2484,11 +2580,11 @@ CASES: Cases = (
                 File(code, path=path),
             ],
             (
-                Issue(
+                ExpectedIssue(
                     "SCP13 incomplete requirements freeze",
                     path="requirements.txt",
                 ),
-                Issue(
+                ExpectedIssue(
                     "SCP15 insecure requirement: scrapy 2.11.2 implements security fixes",
                     path="requirements.txt",
                 ),
@@ -2502,7 +2598,7 @@ CASES: Cases = (
                 (
                     requirements,
                     template.format_map(SafeDict(setting=setting, value=value)),
-                    Issue(
+                    ExpectedIssue(
                         issue,
                         column=template_column + len(setting) + value_offset,
                         path=path,
@@ -2744,7 +2840,10 @@ CASES: Cases = (
             ),
             (
                 *default_issues(path),
-                Issue("SCP13 incomplete requirements freeze", path="requirements.txt"),
+                ExpectedIssue(
+                    "SCP13 incomplete requirements freeze",
+                    path="requirements.txt",
+                ),
                 *iter_issues(issues),
             ),
             {},
@@ -2767,12 +2866,12 @@ CASES: Cases = (
                 ("scrapy==2.13.0",),
                 "TWISTED_REACTOR = 'twisted.internet.asyncioreactor.AsyncioSelectorReactor'",
                 (
-                    Issue(
+                    ExpectedIssue(
                         "SCP17 redundant setting value",
                         column=18,
                         path=path,
                     ),
-                    Issue(
+                    ExpectedIssue(
                         "SCP41 unneeded import path",
                         column=18,
                         path=path,
@@ -2782,7 +2881,7 @@ CASES: Cases = (
             (
                 ("scrapy==2.12.0",),
                 "",
-                Issue(
+                ExpectedIssue(
                     "SCP34 missing changing setting: TWISTED_REACTOR changes "
                     "from None to "
                     "'twisted.internet.asyncioreactor.AsyncioSelectorReactor' "
@@ -2798,7 +2897,7 @@ CASES: Cases = (
             (
                 ("scrapy==2.12.0",),
                 'TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"',
-                Issue(
+                ExpectedIssue(
                     "SCP41 unneeded import path",
                     column=18,
                     path=path,
@@ -2807,7 +2906,7 @@ CASES: Cases = (
             (
                 ("scrapy==2.12.0",),
                 'TWISTED_REACTOR = "custom.reactor"',
-                Issue(
+                ExpectedIssue(
                     "SCP41 unneeded import path",
                     column=18,
                     path=path,
@@ -2818,14 +2917,14 @@ CASES: Cases = (
                 ("scrapy==2.10.0",),
                 "ADDONS = {ScrapyPoetAddon: 300}",
                 (
-                    Issue(
+                    ExpectedIssue(
                         (
                             "SCP15 insecure requirement: scrapy 2.11.2 "
                             "implements security fixes"
                         ),
                         path="requirements.txt",
                     ),
-                    Issue(
+                    ExpectedIssue(
                         (
                             "SCP34 missing changing setting: TWISTED_REACTOR "
                             "changes from None to "
@@ -2840,14 +2939,14 @@ CASES: Cases = (
                 ("scrapy==2.10.0",),
                 'ADDONS = {"scrapy_poet.addons.Addon": 300}',
                 (
-                    Issue(
+                    ExpectedIssue(
                         (
                             "SCP15 insecure requirement: scrapy 2.11.2 "
                             "implements security fixes"
                         ),
                         path="requirements.txt",
                     ),
-                    Issue(
+                    ExpectedIssue(
                         (
                             "SCP34 missing changing setting: TWISTED_REACTOR "
                             "changes from None to "
@@ -2856,7 +2955,7 @@ CASES: Cases = (
                         ),
                         path=path,
                     ),
-                    Issue(
+                    ExpectedIssue(
                         "SCP41 unneeded import path",
                         column=10,
                         path=path,
@@ -2868,15 +2967,15 @@ CASES: Cases = (
                 ("scrapy==2.4.0",),
                 'EXTENSIONS_BASE = {"custom.Extension": 42}',
                 (
-                    Issue(
+                    ExpectedIssue(
                         (
                             "SCP15 insecure requirement: scrapy 2.11.2 "
                             "implements security fixes"
                         ),
                         path="requirements.txt",
                     ),
-                    Issue("SCP33 base setting use", path=path),
-                    Issue(
+                    ExpectedIssue("SCP33 base setting use", path=path),
+                    ExpectedIssue(
                         (
                             "SCP34 missing changing setting: TWISTED_REACTOR "
                             "changes from None to "
@@ -2892,7 +2991,7 @@ CASES: Cases = (
                 ("scrapy==2.11.2",),
                 'SPIDER_CONTRACTS = {"scrapy.contracts.default.MetadataContract": None}',
                 (
-                    Issue(
+                    ExpectedIssue(
                         (
                             "SCP34 missing changing setting: TWISTED_REACTOR "
                             "changes from None to "
@@ -2901,14 +3000,14 @@ CASES: Cases = (
                         ),
                         path=path,
                     ),
-                    Issue("SCP41 unneeded import path", column=20, path=path),
+                    ExpectedIssue("SCP41 unneeded import path", column=20, path=path),
                 ),
             ),
             (
                 ("scrapy==2.12.0",),
                 'SPIDER_CONTRACTS = {"scrapy.contracts.default.MetadataContract": None}',
                 (
-                    Issue(
+                    ExpectedIssue(
                         (
                             "SCP34 missing changing setting: TWISTED_REACTOR "
                             "changes from None to "
@@ -2924,14 +3023,14 @@ CASES: Cases = (
                 ("scrapy==2.11.1",),
                 'SPIDER_MIDDLEWARES = {"scrapy.spidermiddlewares.offsite.OffsiteMiddleware": 10}',
                 (
-                    Issue(
+                    ExpectedIssue(
                         (
                             "SCP15 insecure requirement: scrapy 2.11.2 "
                             "implements security fixes"
                         ),
                         path="requirements.txt",
                     ),
-                    Issue(
+                    ExpectedIssue(
                         (
                             "SCP34 missing changing setting: TWISTED_REACTOR "
                             "changes from None to "
@@ -2946,7 +3045,7 @@ CASES: Cases = (
                 ("scrapy==2.11.2",),
                 'SPIDER_MIDDLEWARES = {"scrapy.spidermiddlewares.offsite.OffsiteMiddleware": 10}',
                 (
-                    Issue(
+                    ExpectedIssue(
                         (
                             "SCP34 missing changing setting: TWISTED_REACTOR "
                             "changes from None to "
@@ -2955,7 +3054,7 @@ CASES: Cases = (
                         ),
                         path=path,
                     ),
-                    Issue("SCP41 unneeded import path", column=22, path=path),
+                    ExpectedIssue("SCP41 unneeded import path", column=22, path=path),
                 ),
             ),
         )
@@ -2970,9 +3069,12 @@ CASES: Cases = (
             ],
             (
                 *default_issues(path),
-                Issue("SCP13 incomplete requirements freeze", path="requirements.txt"),
+                ExpectedIssue(
+                    "SCP13 incomplete requirements freeze",
+                    path="requirements.txt",
+                ),
                 *(
-                    Issue(message, path="requirements.txt")
+                    ExpectedIssue(message, path="requirements.txt")
                     for message, min_version in (
                         (
                             "SCP14 unsupported requirement: flake8-scrapy only supports scrapy 2.0.1+",
@@ -2987,7 +3089,7 @@ CASES: Cases = (
                 ),
                 *(
                     (
-                        Issue(
+                        ExpectedIssue(
                             "SCP17 redundant setting value",
                             column=len(name) + 3,
                             path=path,
@@ -3028,13 +3130,14 @@ CASES: Cases = (
             (
                 *default_issues(path),
                 *(
-                    Issue(
-                        "SCP13 incomplete requirements freeze", path="requirements.txt"
+                    ExpectedIssue(
+                        "SCP13 incomplete requirements freeze",
+                        path="requirements.txt",
                     )
                     for _ in range(1)
                     if not isinstance(requirements, bytes)
                 ),
-                Issue(
+                ExpectedIssue(
                     "SCP17 redundant setting value",
                     column=len("TELNETCONSOLE_USERNAME") + 3,
                     path=path,
@@ -3056,23 +3159,23 @@ CASES: Cases = (
             b"\xff\xfe\x00\x00",
         )
     ),
-    # scrapy_known_settings silences SCP27
+    # known-settings silences SCP27
     (
         [File("settings['FOO']", path="a.py")],
         NO_ISSUE,
-        {"scrapy_known_settings": "FOO,BAR"},
+        {"known-settings": "FOO,BAR"},
     ),
     # and extends automatic suggestions.
     (
         [File("settings['FOOBAR']", path="a.py")],
-        Issue(
+        ExpectedIssue(
             "SCP27 unknown setting: did you mean: FOO_BAR?",
             column=9,
             path="a.py",
         ),
-        {"scrapy_known_settings": "FOO_BAR"},
+        {"known-settings": "FOO_BAR"},
     ),
-    # SCP27 unknown setting: recommend scrapy_known_settings even when
+    # SCP27 unknown setting: recommend known-settings even when
     # dependency versions need to be taken into account (assume they are met)
     (
         (
@@ -3081,20 +3184,20 @@ CASES: Cases = (
             File("settings['SETING']", path="a.py"),
         ),
         (
-            Issue(
+            ExpectedIssue(
                 message="SCP13 incomplete requirements freeze",
                 line=1,
                 column=0,
                 path="requirements.txt",
             ),
-            Issue(
+            ExpectedIssue(
                 "SCP27 unknown setting: did you mean: SETTING?",
                 column=9,
                 path="a.py",
             ),
         ),
         {
-            "scrapy_known_settings": "SETTING",
+            "known-settings": "SETTING",
         },
     ),
     # SCP32 wrong setting method: do not trigger when not using getwithbase()
@@ -3114,7 +3217,7 @@ CASES: Cases = (
                         "        super().update_settings(settings)",
                         '        dm = settings["DOWNLOADER_MIDDLEWARES"]',
                         '        dm["custom.Middleware"] = 500',
-                    )
+                    ),
                 ),
                 path="a.py",
             ),
@@ -3137,12 +3240,12 @@ CASES: Cases = (
                         "        super().update_settings(settings)",
                         '        dm = settings.get("DOWNLOADER_MIDDLEWARES")',
                         '        dm["custom.Middleware"] = 500',
-                    )
+                    ),
                 ),
                 path="a.py",
             ),
         ),
-        Issue("SCP40 unneeded setting get", line=9, column=22, path="a.py"),
+        ExpectedIssue("SCP40 unneeded setting get", line=9, column=22, path="a.py"),
         {},
     ),
 )
@@ -3150,6 +3253,8 @@ CASES: Cases = (
 
 @cases(CASES)
 def test(
-    input: File | list[File], expected: Issue | list[Issue] | None, flake8_options
+    input_: File | list[File],
+    expected: ExpectedIssue | list[ExpectedIssue] | None,
+    flake8_options,
 ):
-    check_project(input, expected, flake8_options)
+    check_project(input_, expected, flake8_options)

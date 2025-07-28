@@ -1,10 +1,10 @@
 from packaging.utils import canonicalize_name
 from packaging.version import Version
 
-from flake8_scrapy.data.packages import PACKAGES
-from flake8_scrapy.finders.requirements import RequirementsIssueFinder
+from scrapy_lint.data.packages import PACKAGES
+from scrapy_lint.finders.requirements import RequirementsIssueFinder
 
-from . import HAS_FLAKE8_REQUIREMENTS, NO_ISSUE, Cases, File, Issue, cases
+from . import NO_ISSUE, Cases, ExpectedIssue, File, cases
 from .helpers import check_project
 
 SCRAPY_FUTURE_VERSION = Version("3.0.0")
@@ -48,7 +48,7 @@ ALL_DEPS = "\n".join(
         "service-identity==23.1.0",
         "w3lib==2.1.2",
         "zope.interface==6.0",
-    ]
+    ],
 )
 
 CASES: Cases = (
@@ -83,7 +83,7 @@ CASES: Cases = (
                             "Twisted==23.8.0",
                             "w3lib==2.1.2",
                             "zope.interface==6.0",
-                        ]
+                        ],
                     ),
                     # Different package name formats (service_identity vs
                     # service-identity, twisted vs Twisted)
@@ -101,7 +101,7 @@ CASES: Cases = (
                             "twisted==23.8.0",
                             "w3lib==2.1.2",
                             "zope.interface==6.0",
-                        ]
+                        ],
                     ),
                     # All required dependencies plus extra packages
                     "\n".join(
@@ -119,12 +119,15 @@ CASES: Cases = (
                             "Twisted==23.8.0",
                             "w3lib==2.1.2",
                             "zope.interface==6.0",
-                        ]
+                        ],
                     ),
                 )
             ),
             *(
-                (requirements, Issue("SCP13 incomplete requirements freeze", path=path))
+                (
+                    requirements,
+                    ExpectedIssue("SCP13 incomplete requirements freeze", path=path),
+                )
                 for requirements in (
                     # Empty requirements file
                     "",
@@ -142,7 +145,7 @@ CASES: Cases = (
                             "cssselect==1.2.0",
                             "lxml==4.9.3",
                             "parsel==1.8.1",
-                        ]
+                        ],
                     ),
                 )
             ),
@@ -183,10 +186,10 @@ CASES: Cases = (
                         "twisted==23.8.0",
                         "w3lib==2.1.2",
                         "zope.interface==6.0",
-                    ]
+                    ],
                 ),
                 (
-                    Issue(
+                    ExpectedIssue(
                         "SCP24 missing stack requirements: missing packages: aiohttp, awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, scrapinghub, scrapinghub-entrypoint-scrapy, scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, scrapy-pagestorage, scrapy-querycleaner, scrapy-splitvariants, scrapy-zyte-smartproxy, spidermon, urllib3",
                         path=path,
                     ),
@@ -196,8 +199,8 @@ CASES: Cases = (
             (
                 "",
                 (
-                    Issue("SCP13 incomplete requirements freeze", path=path),
-                    Issue(
+                    ExpectedIssue("SCP13 incomplete requirements freeze", path=path),
+                    ExpectedIssue(
                         "SCP24 missing stack requirements: missing packages: aiohttp, awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, requests, scrapinghub, scrapinghub-entrypoint-scrapy, scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, scrapy-pagestorage, scrapy-querycleaner, scrapy-splitvariants, scrapy-zyte-smartproxy, spidermon, urllib3",
                         path=path,
                     ),
@@ -216,9 +219,9 @@ CASES: Cases = (
                     [
                         f"scrapy=={SCRAPY_HIGHEST_KNOWN}",
                         "requests==2.31.0",
-                    ]
+                    ],
                 ),
-                (Issue("SCP13 incomplete requirements freeze", path=path),),
+                (ExpectedIssue("SCP13 incomplete requirements freeze", path=path),),
             ),
         )
     ),
@@ -226,7 +229,7 @@ CASES: Cases = (
     *(
         (
             (File("", path="scrapy.cfg"), File(requirements, path=path)),
-            (Issue("SCP13 incomplete requirements freeze", path=path), *issues),
+            (ExpectedIssue("SCP13 incomplete requirements freeze", path=path), *issues),
             {},
         )
         for path in ("requirements.txt",)
@@ -242,7 +245,7 @@ CASES: Cases = (
                     (
                         SCRAPY_INSECURE_VERSION,
                         (
-                            Issue(
+                            ExpectedIssue(
                                 f"SCP15 insecure requirement: scrapy {SCRAPY_LOWEST_SAFE} implements security fixes",
                                 path=path,
                             ),
@@ -251,7 +254,7 @@ CASES: Cases = (
                     (
                         SCRAPY_LOWEST_SUPPORTED,
                         (
-                            Issue(
+                            ExpectedIssue(
                                 f"SCP15 insecure requirement: scrapy {SCRAPY_LOWEST_SAFE} implements security fixes",
                                 path=path,
                             ),
@@ -260,11 +263,11 @@ CASES: Cases = (
                     (
                         SCRAPY_ANCIENT_VERSION,
                         (
-                            Issue(
+                            ExpectedIssue(
                                 f"SCP14 unsupported requirement: flake8-scrapy only supports scrapy {SCRAPY_LOWEST_SUPPORTED}+",
                                 path=path,
                             ),
-                            Issue(
+                            ExpectedIssue(
                                 f"SCP15 insecure requirement: scrapy {SCRAPY_LOWEST_SAFE} implements security fixes",
                                 path=path,
                             ),
@@ -290,7 +293,7 @@ CASES: Cases = (
             (
                 "scrapy-crawlera",
                 (
-                    Issue(
+                    ExpectedIssue(
                         "SCP16 unmaintained requirement: replace with scrapy-zyte-smartproxy",
                         path=path,
                     ),
@@ -299,7 +302,7 @@ CASES: Cases = (
             (
                 "scrapy-splash==1.2.3",
                 (
-                    Issue(
+                    ExpectedIssue(
                         "SCP16 unmaintained requirement: replace with one of: scrapy-playwright, scrapy-zyte-api",
                         path=path,
                     ),
@@ -313,20 +316,20 @@ CASES: Cases = (
                         "-e git+https://github.com/scrapy/parsel.git#egg=parsel",
                         f"scrapy=={SCRAPY_ANCIENT_VERSION}",
                         "scrapy-crawlera~=1.0.0",
-                    ]
+                    ],
                 ),
                 (
-                    Issue(
+                    ExpectedIssue(
                         f"SCP14 unsupported requirement: flake8-scrapy only supports scrapy {SCRAPY_LOWEST_SUPPORTED}+",
                         line=2,
                         path=path,
                     ),
-                    Issue(
+                    ExpectedIssue(
                         f"SCP15 insecure requirement: scrapy {SCRAPY_LOWEST_SAFE} implements security fixes",
                         line=2,
                         path=path,
                     ),
-                    Issue(
+                    ExpectedIssue(
                         "SCP16 unmaintained requirement: replace with scrapy-zyte-smartproxy",
                         line=3,
                         path=path,
@@ -369,9 +372,7 @@ CASES: Cases = (
             File("", path="scrapy.cfg"),
             File(ALL_DEPS, path="custom-requirements.txt"),
         ),
-        Issue("SCP44 requirements_file mismatch", path="custom-requirements.txt")
-        if HAS_FLAKE8_REQUIREMENTS
-        else NO_ISSUE,
+        NO_ISSUE,
         {
             "scrapy_requirements_file": "custom-requirements.txt",
         },
@@ -391,13 +392,13 @@ CASES: Cases = (
 
 
 @cases(CASES)
-def test(input, expected, flake8_options):
-    check_project(input, expected, flake8_options)
+def test(input_, expected, flake8_options):
+    check_project(input_, expected, flake8_options)
 
 
 def test_required_dependencies_are_canonical():
     deps = set(RequirementsIssueFinder.REQUIRED_DEPENDENCIES) | set(
-        RequirementsIssueFinder.SCRAPY_CLOUD_STACK_DEPENDENCIES
+        RequirementsIssueFinder.SCRAPY_CLOUD_STACK_DEPENDENCIES,
     )
     for dep in set(deps):
         assert dep == canonicalize_name(dep)

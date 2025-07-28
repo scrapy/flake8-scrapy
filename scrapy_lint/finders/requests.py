@@ -1,15 +1,10 @@
 from __future__ import annotations
 
-from ast import Attribute, Call, Constant, Dict, Name, expr
+from ast import AST, Attribute, Call, Constant, Dict, Name, expr
 from typing import TYPE_CHECKING
 
-from flake8_scrapy.ast import is_dict, iter_dict
-from flake8_scrapy.issues import (
-    UNSAFE_META_COPY,
-    ZYTE_RAW_PARAMS,
-    Issue,
-    Pos,
-)
+from scrapy_lint.ast import is_dict, iter_dict
+from scrapy_lint.issues import UNSAFE_META_COPY, ZYTE_RAW_PARAMS, Issue, Pos
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -30,7 +25,7 @@ def is_request_construction(node: Call) -> bool:
         and (
             fn_name.endswith("Request")
             or fn_name in {"follow", "follow_all", "replace"}
-        )
+        ),
     )
 
 
@@ -44,7 +39,8 @@ def is_response_meta(value: expr) -> bool:
 
 
 class RequestIssueFinder:
-    def find_issues(self, node: Call) -> Generator[Issue]:
+    def __call__(self, node: AST) -> Generator[Issue]:
+        assert isinstance(node, Call)
         if not is_request_construction(node):
             return
         for arg in node.args:

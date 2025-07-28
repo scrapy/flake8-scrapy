@@ -4,38 +4,73 @@
 Options
 =======
 
-This is a list of options of flake8-scrapy.
+Options that you can set in ``pyproject.toml``, under ``[tool.scrapy-lint]``.
 
-See :ref:`configuration` for information on how to configure these options,
-disable rules, etc.
+.. _ignore:
 
-.. _scrapy-known-settings:
+ignore
+======
 
-scrapy_known_settings
-=====================
+:ref:`rules` to ignore for all files.
 
-A comma-separated list of additional setting names to treat as known (i.e. not
-trigger :ref:`SCP27`):
+For example:
 
-.. code-block:: ini
+.. code-block:: toml
 
-    [flake8]
-    scrapy_known_settings = FOO,BAR,MY_CUSTOM_SETTING
-
-Use this to silence false positives for custom or project-specific settings.
+    [tool.scrapy-lint]
+    ignore = ["SCP46"]
 
 
-.. _scrapy-requirements-file:
+.. _known-settings:
 
-scrapy_requirements_file
-========================
+known-settings
+==============
+
+Setting names that must not trigger :ref:`SCP27`.
+
+For example:
+
+.. code-block:: toml
+
+    [tool.scrapy-lint]
+    known-settings = [
+        "FOO",
+        "BAR",
+    ]
+
+
+.. _per-file-ignores:
+
+per-file-ignores
+================
+
+:ref:`rules` to ignore for specific files.
+
+For example:
+
+.. code-block:: toml
+
+    [tool.scrapy-lint.per-file-ignores]
+    "spiders/toscrape_com.py" = ["SCP46"]
+
+
+.. _requirements-file:
+
+requirements-file
+=================
 
 The path to the requirements file of the Scrapy project:
 
-.. code-block:: ini
+.. code-block:: toml
 
-    [flake8]
-    scrapy_requirements_file = path/to/my-requirements.txt
+    [tool.scrapy-lint]
+    requirements-file = "path/to/my-requirements.txt"
 
-Only necessary if the :ref:`default lookup <requirements>` does not find the
-right file.
+If not specified, a requirements file is looked up as follows:
+
+#.  The requirements file specified in ``scrapinghub.yml`` if such file exists
+    and contains a root ``requirements`` key with a ``file`` value pointing to
+    an existing file (path interpreted relative to the project root).
+
+#.  The ``requirements.txt`` file in the project root directory, i.e. where
+    ``scrapy.cfg`` lives.
