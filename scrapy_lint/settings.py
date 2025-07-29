@@ -11,6 +11,12 @@ if TYPE_CHECKING:
     from scrapy_lint.context import Project
 
 
+# Expectation of the check for “changing settings”, i.e. SCP34. SCP34 logic
+# needs to be updated to support more than 2 default value history entries in
+# non-base settings.
+MAX_DEFAULT_VALUE_HISTORY = 2
+
+
 class UnknownFutureVersion:  # pylint: disable=too-few-public-methods
     pass
 

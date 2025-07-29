@@ -76,6 +76,7 @@ from scrapy_lint.issues import (
     Pos,
 )
 from scrapy_lint.settings import (
+    MAX_DEFAULT_VALUE_HISTORY,
     SETTING_GETTERS,
     SETTING_METHODS,
     SETTING_SETTERS,
@@ -413,14 +414,15 @@ class SettingIssueFinder:
                 self.setting_checker.in_update_settings = False
 
     def find_call_issues(self, node: Call) -> Generator[Issue]:  # noqa: PLR0912
+        default_arg_index = 1
         if self.looks_like_setting_method(node.func):
             assert isinstance(node.func, Attribute)
             name: Constant | None = None
             value_or_default: expr | None = None
             if node.args and isinstance(node.args[0], Constant):
                 name = node.args[0]
-            if len(node.args) >= 2:  # noqa: PLR2004
-                value_or_default = node.args[1]
+            if len(node.args) >= (default_arg_index + 1):
+                value_or_default = node.args[default_arg_index]
             else:
                 for kw in node.keywords:
                     if not node.args and kw.arg == "name":
@@ -716,7 +718,7 @@ class SettingsModuleSettingsProcessor:
             if not default or not default.value_history:
                 continue
             history = default.value_history
-            assert len(history) == 2  # noqa: PLR2004
+            assert len(history) == MAX_DEFAULT_VALUE_HISTORY
             assert UNKNOWN_UNSUPPORTED_VERSION in history
             old_value = history[UNKNOWN_UNSUPPORTED_VERSION]
             if UNKNOWN_FUTURE_VERSION in history:
@@ -763,7 +765,7 @@ class SettingsModuleSettingsProcessor:
         if not default or not default.value_history:
             return False
         history = default.value_history
-        assert len(history) == 2  # noqa: PLR2004
+        assert len(history) == MAX_DEFAULT_VALUE_HISTORY
         assert UNKNOWN_UNSUPPORTED_VERSION in history
         assert UNKNOWN_FUTURE_VERSION not in history
         requirements = self.context.project.frozen_requirements
