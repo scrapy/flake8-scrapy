@@ -419,7 +419,31 @@ def check_opt_path(
         yield Issue(UNNEEDED_PATH_STRING, pos)
 
 
-def check_periodic_log_config(node: expr, **_) -> Generator[Issue]:  # noqa: PLR0912
+def check_periodic_log_config_key(key) -> str | None:
+    if not isinstance(key.value, str):
+        return f"keys must be 'include' or 'exclude', not {type(key.value).__name__} ({key.value!r})"
+    if key.value not in {"include", "exclude"}:
+        return f"keys must be 'include' or 'exclude', not {key.value!r}"
+    return None
+
+
+def check_periodic_log_config_value(value) -> str | None:
+    if isinstance(value, (Constant, Dict, Lambda)):
+        return "dict values must be lists of stat name substrings"
+    return None
+
+
+def check_periodic_log_config_item(item) -> str | None:
+    if isinstance(item, (Dict, Lambda, List, Set, Tuple)):
+        return "include/exclude list items must be strings"
+    if not isinstance(item, Constant):
+        return None
+    if not isinstance(item.value, str):
+        return "include/exclude list items must be strings"
+    return None
+
+
+def check_periodic_log_config(node: expr, **_) -> Generator[Issue]:
     detail = "must be True or a dict"
     issue = Issue(INVALID_SETTING_VALUE, Pos.from_node(node), detail)
     if isinstance(node, (Lambda, List, Set, Tuple)):
@@ -434,29 +458,19 @@ def check_periodic_log_config(node: expr, **_) -> Generator[Issue]:  # noqa: PLR
     assert isinstance(node, (Call, Dict))
     for key, value in iter_dict(node):
         if isinstance(key, Constant):
-            if not isinstance(key.value, str):
-                detail = (
-                    f"keys must be 'include' or 'exclude', not "
-                    f"{type(key.value).__name__} ({key.value!r})"
-                )
-                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(key), detail)
-            elif key.value not in {"include", "exclude"}:
-                detail = f"keys must be 'include' or 'exclude', not {key.value!r}"
-                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(key), detail)
-        if isinstance(value, (Constant, Dict, Lambda)):
-            detail = "dict values must be lists of stat name substrings"
-            yield Issue(INVALID_SETTING_VALUE, Pos.from_node(value), detail)
+            key_detail = check_periodic_log_config_key(key)
+            if key_detail:
+                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(key), key_detail)
+        value_detail = check_periodic_log_config_value(value)
+        if value_detail:
+            yield Issue(INVALID_SETTING_VALUE, Pos.from_node(value), value_detail)
+            continue
         if not isinstance(value, (List, Set, Tuple)):
             continue
         for item in value.elts:
-            if isinstance(item, (Dict, Lambda, List, Set, Tuple)):
-                detail = "include/exclude list items must be strings"
-                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(item), detail)
-            if not isinstance(item, Constant):
-                continue
-            if not isinstance(item.value, str):
-                detail = "include/exclude list items must be strings"
-                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(item), detail)
+            item_detail = check_periodic_log_config_item(item)
+            if item_detail:
+                yield Issue(INVALID_SETTING_VALUE, Pos.from_node(item), item_detail)
 
 
 TYPE_CHECKERS: dict[SettingType, TypeChecker] = {
