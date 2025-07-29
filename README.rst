@@ -4,16 +4,16 @@ scrapy-lint
 
 |version| |python_version| |ci|
 
-.. |version| image:: https://img.shields.io/pypi/v/flake8-scrapy.svg
-   :target: https://pypi.org/pypi/flake8-scrapy
+.. |version| image:: https://img.shields.io/pypi/v/scrapy-lint.svg
+   :target: https://pypi.org/pypi/scrapy-lint
    :alt: PyPI version
 
-.. |python_version| image:: https://img.shields.io/pypi/pyversions/flake8-scrapy.svg
-   :target: https://pypi.org/pypi/flake8-scrapy
+.. |python_version| image:: https://img.shields.io/pypi/pyversions/scrapy-lint.svg
+   :target: https://pypi.org/pypi/scrapy-lint
    :alt: Supported Python versions
 
-.. |ci| image:: https://github.com/scrapy/flake8-scrapy/workflows/CI/badge.svg
-   :target: https://github.com/scrapy/flake8-scrapy/actions?query=workflow%3ACI
+.. |ci| image:: https://github.com/scrapy/scrapy-lint/workflows/CI/badge.svg
+   :target: https://github.com/scrapy/scrapy-lint/actions?query=workflow%3ACI
    :alt: CI
 
 .. readme-start
@@ -33,7 +33,7 @@ To use with `pre-commit <https://pre-commit.com/>`__, add the following to your
 
 .. code-block:: yaml
 
-    - repo: https://github.com/scrapy/flake8-scrapy
+    - repo: https://github.com/scrapy/scrapy-lint
       rev: "0.0.2"
       hooks:
       - id: scrapy-lint
@@ -50,4 +50,4 @@ Documentation
 
 See the documentation_ for more.
 
-.. _documentation: https://flake8-scrapy.readthedocs.io/en/latest/
+.. _documentation: https://scrapy-lint.readthedocs.io/en/latest/

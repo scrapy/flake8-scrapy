@@ -56,7 +56,7 @@ Release notes
     | :ref:`scp45`
     | :ref:`scp46`
 
--   Added `documentation <https://flake8-scrapy.readthedocs.io/en/latest/>`_.
+-   Added `documentation <https://scrapy-lint.readthedocs.io/en/latest/>`_.
 
 -   Improved CI and achieved full test coverage.
 
@@ -65,4 +65,4 @@ Earlier releases
 ================
 
 Find the earlier commit history `at GitHub
-<https://github.com/scrapy/flake8-scrapy/commits/4be77a75b5a88f58f20b49067afda8e7e7a9bf6d>`_.
+<https://github.com/scrapy/scrapy-lint/commits/4be77a75b5a88f58f20b49067afda8e7e7a9bf6d>`_.

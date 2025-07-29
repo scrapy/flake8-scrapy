@@ -39,9 +39,9 @@ maintainers = [{ name = "Valdir Stumm Junior", email = "stummjr@gmail.com" }]
 scrapy-lint = "scrapy_lint:main"
 
 [project.urls]
-Source = "https://github.com/scrapy/flake8-scrapy"
-Tracker = "https://github.com/scrapy/flake8-scrapy/issues"
-"Release notes" = "https://flake8-scrapy.readthedocs.io/en/latest/changes.html"
+Source = "https://github.com/scrapy/scrapy-lint"
+Tracker = "https://github.com/scrapy/scrapy-lint/issues"
+"Release notes" = "https://scrapy-lint.readthedocs.io/en/latest/changes.html"
 
 [tool.hatch.build.targets.sdist]
 include = [
