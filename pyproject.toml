@@ -8,9 +8,9 @@ version = "0.0.2"
 description = "A linter for Scrapy projects"
 dependencies = [
     "packaging>=20.0",
-    "pathspec",  # TODO: Find the minimum required version
+    "pathspec>=0.10.1",
     "ruamel.yaml>=0.17.5",
-    "tomli; python_version<'3.11'",  # TODO: Find the minimum required version
+    "tomli>=1.0.0; python_version<'3.11'",
     'typing_extensions>=4.6.0; python_version<"3.10"'
 ]
 classifiers = [
