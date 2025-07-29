@@ -413,59 +413,67 @@ class SettingIssueFinder:
             elif node.name == "update_settings":
                 self.setting_checker.in_update_settings = False
 
-    def find_call_issues(self, node: Call) -> Generator[Issue]:  # noqa: PLR0912
-        default_arg_index = 1
+    def find_call_issues(self, node: Call) -> Generator[Issue]:
         if self.looks_like_setting_method(node.func):
-            assert isinstance(node.func, Attribute)
-            name: Constant | None = None
-            value_or_default: expr | None = None
-            if node.args and isinstance(node.args[0], Constant):
-                name = node.args[0]
-            if len(node.args) >= (default_arg_index + 1):
-                value_or_default = node.args[default_arg_index]
-            else:
-                for kw in node.keywords:
-                    if not node.args and kw.arg == "name":
-                        if not isinstance(kw.value, Constant):
-                            return
-                        name = kw.value
-                    elif kw.arg in {"value", "default"}:
-                        value_or_default = kw.value
-            if not name:
-                return
-            yield from self.setting_checker.check_name(name)
-            yield from self.setting_checker.check_method(name, node)
-            if node.func.attr in SETTING_SETTERS:
-                if isinstance(name.value, str) and value_or_default:
-                    yield from self.setting_checker.check_value(
-                        name.value,
-                        value_or_default,
-                    )
-            elif node.func.attr == "get" and (
-                value_or_default is None
-                or (
-                    isinstance(value_or_default, Constant)
-                    and value_or_default.value is None
-                )
-            ):
-                assert isinstance(node.func.value.end_lineno, int)
-                assert isinstance(node.func.value.end_col_offset, int)
-                pos = Pos(
-                    node.func.value.end_lineno,
-                    node.func.value.end_col_offset + 1,
-                )
-                yield Issue(UNNEEDED_SETTING_GET, pos)
+            yield from self.check_method_call(node)
             return
 
         if self.looks_like_settings_callable(node.func):
-            if node.args:
-                yield from self.setting_checker.check_dict(node.args[0])
-                return
-            for kw in node.keywords:
-                if kw.arg in ("values", "settings"):
-                    yield from self.setting_checker.check_dict(kw.value)
-                    return
+            yield from self.check_settings_callable(node)
             return
+
+    def check_method_call(self, node: Call) -> Generator[Issue]:
+        """Handle issues for calls that look like setting methods."""
+        default_arg_index = 1
+        assert isinstance(node.func, Attribute)
+        name: Constant | None = None
+        value_or_default: expr | None = None
+        if node.args and isinstance(node.args[0], Constant):
+            name = node.args[0]
+        if len(node.args) >= (default_arg_index + 1):
+            value_or_default = node.args[default_arg_index]
+        else:
+            for kw in node.keywords:
+                if not node.args and kw.arg == "name":
+                    if not isinstance(kw.value, Constant):
+                        return
+                    name = kw.value
+                elif kw.arg in {"value", "default"}:
+                    value_or_default = kw.value
+        if not name:
+            return
+        yield from self.setting_checker.check_name(name)
+        yield from self.setting_checker.check_method(name, node)
+        if node.func.attr in SETTING_SETTERS:
+            if isinstance(name.value, str) and value_or_default:
+                yield from self.setting_checker.check_value(
+                    name.value,
+                    value_or_default,
+                )
+        elif node.func.attr == "get" and (
+            value_or_default is None
+            or (
+                isinstance(value_or_default, Constant)
+                and value_or_default.value is None
+            )
+        ):
+            assert isinstance(node.func.value.end_lineno, int)
+            assert isinstance(node.func.value.end_col_offset, int)
+            pos = Pos(
+                node.func.value.end_lineno,
+                node.func.value.end_col_offset + 1,
+            )
+            yield Issue(UNNEEDED_SETTING_GET, pos)
+
+    def check_settings_callable(self, node: Call) -> Generator[Issue]:
+        """Handle issues for calls that look like settings callables."""
+        if node.args:
+            yield from self.setting_checker.check_dict(node.args[0])
+            return
+        for kw in node.keywords:
+            if kw.arg in ("values", "settings"):
+                yield from self.setting_checker.check_dict(kw.value)
+                return
 
     def find_assign_issues(self, node: Assign) -> Generator[Issue]:
         for target in node.targets:
