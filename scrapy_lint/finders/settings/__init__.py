@@ -562,7 +562,7 @@ class SettingModuleIssueFinder(NodeVisitor):
                 spec = find_spec(import_path)
             if not spec or not spec.origin:
                 continue
-            module_path = Path(spec.origin).resolve()
+            module_path = Path(spec.origin).relative_to(self.context.project.root)
             if module_path == self.file:
                 return True
         return False
