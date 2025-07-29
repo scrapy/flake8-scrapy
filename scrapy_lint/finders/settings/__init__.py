@@ -153,23 +153,34 @@ class SettingChecker:
         matches.sort(key=lambda x: (-x[1], x[0]))
         return [m[0] for m in matches[:MAX_AUTOMATIC_SUGGESTIONS]]
 
-    def check_known_name(  # noqa: PLR0911, PLR0912
-        self,
-        name: str,
-        pos: Pos,
-    ) -> Generator[Issue]:
-        if name.endswith("_BASE"):
-            yield Issue(BASE_SETTING_USE, pos)
-        elif name == "ZYTE_API_DEFAULT_PARAMS":
-            yield Issue(ZYTE_RAW_PARAMS, pos)
+    def check_known_name(self, name: str, pos: Pos) -> Generator[Issue]:
+        yield from self.check_special_names(name, pos)
         if name not in SETTINGS:
             return
         setting = SETTINGS[name]
         package = setting.package
+        yield from self.check_setting_requirement(setting, pos)
         if package not in self.project.frozen_requirements:
-            if self.project.packages and package not in self.project.packages:
-                yield Issue(MISSING_SETTING_REQUIREMENT, pos, package)
             return
+        yield from self.check_setting_versioning(setting, pos)
+
+    def check_special_names(self, name: str, pos: Pos) -> Generator[Issue]:
+        if name.endswith("_BASE"):
+            yield Issue(BASE_SETTING_USE, pos)
+        elif name == "ZYTE_API_DEFAULT_PARAMS":
+            yield Issue(ZYTE_RAW_PARAMS, pos)
+
+    def check_setting_requirement(self, setting, pos: Pos) -> Generator[Issue]:
+        package = setting.package
+        if (
+            package not in self.project.frozen_requirements
+            and self.project.packages
+            and package not in self.project.packages
+        ):
+            yield Issue(MISSING_SETTING_REQUIREMENT, pos, package)
+
+    def check_setting_versioning(self, setting, pos: Pos) -> Generator[Issue]:
+        package = setting.package
         added_in = setting.versioning.added_in
         deprecated_in = setting.versioning.deprecated_in
         removed_in = setting.versioning.removed_in
