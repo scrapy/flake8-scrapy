@@ -551,7 +551,7 @@ class SettingModuleIssueFinder(NodeVisitor):
     def __init__(self, context: Context, file: Path, setting_checker: SettingChecker):
         super().__init__()
         self.context = context
-        self.file = file
+        self.file = file.absolute()
         self.issues: list[Issue] = []
         self.setting_checker = setting_checker
 
@@ -562,7 +562,7 @@ class SettingModuleIssueFinder(NodeVisitor):
                 spec = find_spec(import_path)
             if not spec or not spec.origin:
                 continue
-            module_path = Path(spec.origin).relative_to(self.context.project.root)
+            module_path = Path(spec.origin).absolute()
             if module_path == self.file:
                 return True
         return False

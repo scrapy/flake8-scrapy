@@ -215,8 +215,8 @@ class Linter:
     def lint(self) -> Generator[Issue]:
         for file in self.files:
             absolute_file = file.resolve()
-            for issue in self.lint_file(file):
-                if self.is_ignored(issue, file):
+            for issue in self.lint_file(absolute_file):
+                if self.is_ignored(issue, absolute_file):
                     continue
                 issue.file = absolute_file.relative_to(self.root)
                 yield issue
