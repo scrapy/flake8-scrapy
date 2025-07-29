@@ -30,10 +30,6 @@ if TYPE_CHECKING:
     from scrapy_lint.context import Context
 
 
-class ValueChecker(Protocol):  # pylint: disable=too-few-public-methods
-    def __call__(self, node: expr, *, context: Context) -> Generator[Issue]: ...
-
-
 def check_slot_config(node: Call | Dict) -> Generator[Issue]:
     for key, value in iter_dict(node):
         if not isinstance(key, Constant):
@@ -128,103 +124,6 @@ def check_feed_uri(
             yield unneeded_str
 
 
-def check_feed_config(node: Call | Dict, context: Context) -> Generator[Issue]:  # noqa: PLR0912
-    scrapy_version = context.project.frozen_requirements.get("scrapy")
-    for key, value in iter_dict(node):
-        if not isinstance(key, Constant):
-            continue
-        param = key.value
-        assert isinstance(param, str)
-        if (
-            param in FEEDS_KEY_VERSION_ADDED
-            and scrapy_version
-            and scrapy_version < FEEDS_KEY_VERSION_ADDED[param]
-        ):
-            yield Issue(
-                SETTING_NEEDS_UPGRADE,
-                Pos.from_node(key),
-                f"{param!r} requires Scrapy {FEEDS_KEY_VERSION_ADDED[param]}+",
-            )
-        pos = Pos.from_node(value)
-        if param == "format":
-            if isinstance(value, (Dict, Lambda, List, Set, Tuple)) or (
-                isinstance(value, Constant) and not isinstance(value.value, str)
-            ):
-                yield Issue(INVALID_SETTING_VALUE, pos, f"{param!r} must be a string")
-        elif param in {"overwrite", "store_empty"}:
-            if isinstance(value, (Dict, Lambda, List, Set, Tuple)) or (
-                isinstance(value, Constant) and not isinstance(value.value, bool)
-            ):
-                yield Issue(INVALID_SETTING_VALUE, pos, f"{param!r} must be a boolean")
-        elif param in {"batch_item_count", "indent"}:
-            if isinstance(value, (Dict, Lambda, List, Set, Tuple)) or (
-                isinstance(value, Constant) and not isinstance(value.value, int)
-            ):
-                yield Issue(INVALID_SETTING_VALUE, pos, f"{param!r} must be an integer")
-            elif (
-                isinstance(value, Constant)
-                and isinstance(value.value, int)
-                and value.value < 0
-            ) or (isinstance(value, UnaryOp) and isinstance(value.op, USub)):
-                yield Issue(INVALID_SETTING_VALUE, pos, f"{param!r} must be >= 0")
-        elif param == "encoding":
-            if isinstance(value, (Dict, Lambda, List, Set, Tuple)) or (
-                isinstance(value, Constant)
-                and not isinstance(value.value, str)
-                and value.value is not None
-            ):
-                yield Issue(
-                    INVALID_SETTING_VALUE,
-                    pos,
-                    f"{param!r} must be a string or None",
-                )
-        elif param in {"item_filter", "uri_params"}:
-            if isinstance(value, (Dict, Lambda, List, Set, Tuple)) or (
-                isinstance(value, Constant)
-                and not isinstance(value.value, str)
-                and value.value is not None
-            ):
-                detail = (
-                    f"{param!r} must be a Python object or its import path as a string"
-                )
-                yield Issue(INVALID_SETTING_VALUE, pos, detail)
-            elif isinstance(value, Constant) and isinstance(value.value, str):
-                if not is_import_path(value.value):
-                    detail = (
-                        f"{param!r} ({value.value!r}) does not look like a "
-                        f"valid import path"
-                    )
-                    yield Issue(INVALID_SETTING_VALUE, pos, detail)
-                else:
-                    yield from check_import_path_need(value, context.project)
-        elif param == "item_export_kwargs":
-            if isinstance(value, (Constant, Lambda, List, Set, Tuple)):
-                detail = f"{param!r} must be a dict"
-                yield Issue(INVALID_SETTING_VALUE, pos, detail)
-            elif is_dict(value):
-                assert isinstance(value, (Call, Dict))
-                for key_elt, _ in iter_dict(value):
-                    if isinstance(key_elt, Constant) and not isinstance(
-                        key_elt.value,
-                        str,
-                    ):
-                        detail = (
-                            f"{param!r} keys must be strings, not "
-                            f"{type(key_elt.value).__name__} ({key_elt.value!r})"
-                        )
-                        yield Issue(INVALID_SETTING_VALUE, pos, detail)
-        elif param in {"item_classes", "postprocessing"}:
-            yield from check_feed_class_list(param, value, context)
-        elif param == "fields":
-            yield from check_feed_fields(value)
-        else:
-            yield Issue(
-                INVALID_SETTING_VALUE,
-                Pos.from_node(key),
-                "unknown feed config key",
-            )
-
-
 def check_feed_class_list(
     param: str,
     value: expr,
@@ -264,8 +163,7 @@ def check_feed_class_list(
                 yield from check_import_path_need(elt, context.project)
 
 
-def check_feed_fields(value: expr) -> Generator[Issue]:
-    param = "fields"
+def check_feed_fields(param: str, value: expr, **_kwargs) -> Generator[Issue]:
     pos = Pos.from_node(value)
     if isinstance(value, Constant):
         if value.value is not None:
@@ -318,6 +216,137 @@ def check_feed_fields(value: expr) -> Generator[Issue]:
                 f"({elt_value.value!r})"
             )
             yield Issue(INVALID_SETTING_VALUE, pos_value, detail)
+
+
+def check_item_export_kwargs(param: str, value: expr, **_kwargs) -> Generator[Issue]:
+    pos = Pos.from_node(value)
+    if isinstance(value, (Constant, Lambda, List, Set, Tuple)):
+        detail = f"{param!r} must be a dict"
+        yield Issue(INVALID_SETTING_VALUE, pos, detail)
+        return
+    if not is_dict(value):
+        return
+    assert isinstance(value, (Call, Dict))
+    for key_elt, _ in iter_dict(value):
+        if isinstance(key_elt, Constant) and not isinstance(
+            key_elt.value,
+            str,
+        ):
+            detail = (
+                f"{param!r} keys must be strings, not "
+                f"{type(key_elt.value).__name__} ({key_elt.value!r})"
+            )
+            yield Issue(INVALID_SETTING_VALUE, pos, detail)
+
+
+def check_feed_obj_list(param: str, value: expr, context: Context) -> Generator[Issue]:
+    pos = Pos.from_node(value)
+    if isinstance(value, (Dict, Lambda, List, Set, Tuple)) or (
+        isinstance(value, Constant)
+        and not isinstance(value.value, str)
+        and value.value is not None
+    ):
+        detail = f"{param!r} must be a Python object or its import path as a string"
+        yield Issue(INVALID_SETTING_VALUE, pos, detail)
+        return
+    if not (isinstance(value, Constant) and isinstance(value.value, str)):
+        return
+    if is_import_path(value.value):
+        yield from check_import_path_need(value, context.project)
+        return
+    detail = f"{param!r} ({value.value!r}) does not look like a valid import path"
+    yield Issue(INVALID_SETTING_VALUE, pos, detail)
+
+
+class FieldChecker(Protocol):  # pylint: disable=too-few-public-methods
+    def __call__(
+        self, param: str, value: expr, *, context: Context
+    ) -> Generator[Issue]: ...
+
+
+def check_feed_format(param: str, value: expr, **_kwargs) -> Generator[Issue]:
+    pos = Pos.from_node(value)
+    if isinstance(value, (Dict, Lambda, List, Set, Tuple)) or (
+        isinstance(value, Constant) and not isinstance(value.value, str)
+    ):
+        yield Issue(INVALID_SETTING_VALUE, pos, f"{param!r} must be a string")
+
+
+def check_feed_bool(param: str, value: expr, **_kwargs) -> Generator[Issue]:
+    pos = Pos.from_node(value)
+    if isinstance(value, (Dict, Lambda, List, Set, Tuple)) or (
+        isinstance(value, Constant) and not isinstance(value.value, bool)
+    ):
+        yield Issue(INVALID_SETTING_VALUE, pos, f"{param!r} must be a boolean")
+
+
+def check_feed_int(param: str, value: expr, **_kwargs) -> Generator[Issue]:
+    pos = Pos.from_node(value)
+    if isinstance(value, (Dict, Lambda, List, Set, Tuple)) or (
+        isinstance(value, Constant) and not isinstance(value.value, int)
+    ):
+        yield Issue(INVALID_SETTING_VALUE, pos, f"{param!r} must be an integer")
+    elif (
+        isinstance(value, Constant) and isinstance(value.value, int) and value.value < 0
+    ) or (isinstance(value, UnaryOp) and isinstance(value.op, USub)):
+        yield Issue(INVALID_SETTING_VALUE, pos, f"{param!r} must be >= 0")
+
+
+def check_feed_encoding(param: str, value: expr, **_kwargs) -> Generator[Issue]:
+    pos = Pos.from_node(value)
+    if isinstance(value, (Dict, Lambda, List, Set, Tuple)) or (
+        isinstance(value, Constant)
+        and not isinstance(value.value, str)
+        and value.value is not None
+    ):
+        yield Issue(
+            INVALID_SETTING_VALUE,
+            pos,
+            f"{param!r} must be a string or None",
+        )
+
+
+FEED_CONFIG_CHECKERS: dict[str, FieldChecker] = {
+    "fields": check_feed_fields,
+    "item_classes": check_feed_class_list,
+    "item_export_kwargs": check_item_export_kwargs,
+    "item_filter": check_feed_obj_list,
+    "postprocessing": check_feed_class_list,
+    "uri_params": check_feed_obj_list,
+    "format": check_feed_format,
+    "overwrite": check_feed_bool,
+    "store_empty": check_feed_bool,
+    "batch_item_count": check_feed_int,
+    "indent": check_feed_int,
+    "encoding": check_feed_encoding,
+}
+
+
+def check_feed_config(node: Call | Dict, context: Context) -> Generator[Issue]:
+    scrapy_version = context.project.frozen_requirements.get("scrapy")
+    for key, value in iter_dict(node):
+        if not isinstance(key, Constant):
+            continue
+        param = key.value
+        assert isinstance(param, str)
+        if (
+            param in FEEDS_KEY_VERSION_ADDED
+            and scrapy_version
+            and scrapy_version < FEEDS_KEY_VERSION_ADDED[param]
+        ):
+            yield Issue(
+                SETTING_NEEDS_UPGRADE,
+                Pos.from_node(key),
+                f"{param!r} requires Scrapy {FEEDS_KEY_VERSION_ADDED[param]}+",
+            )
+        if param in FEED_CONFIG_CHECKERS:
+            yield from FEED_CONFIG_CHECKERS[param](param, value, context=context)
+            return
+        yield Issue(
+            INVALID_SETTING_VALUE,
+            Pos.from_node(key),
+            "unknown feed config key",
+        )
 
 
 def check_feeds(node: expr, context: Context, **_) -> Generator[Issue]:
@@ -382,6 +411,10 @@ def check_user_agent(node: expr, **_) -> Generator[Issue]:
         or not any(re.search(p, node.value) for p in REQUIRED_UA_PATTERNS)
     ):
         yield issue
+
+
+class ValueChecker(Protocol):  # pylint: disable=too-few-public-methods
+    def __call__(self, node: expr, *, context: Context) -> Generator[Issue]: ...
 
 
 VALUE_CHECKERS: dict[str, ValueChecker] = {
