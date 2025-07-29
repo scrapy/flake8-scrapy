@@ -41,5 +41,5 @@ Instead use:
     requirements:
       file: requirements-dev.txt
 
-Or update your Flake8 configuration to use the same file as specified in
+Or update your :ref:`options <options>` to use the same file as specified in
 ``scrapinghub.yml``.

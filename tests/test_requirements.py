@@ -272,7 +272,7 @@ CASES: Cases = (
                         SCRAPY_ANCIENT_VERSION,
                         (
                             ExpectedIssue(
-                                f"SCP14 unsupported requirement: flake8-scrapy only supports scrapy {SCRAPY_LOWEST_SUPPORTED}+",
+                                f"SCP14 unsupported requirement: scrapy-lint only supports scrapy {SCRAPY_LOWEST_SUPPORTED}+",
                                 path=path,
                             ),
                             ExpectedIssue(
@@ -328,7 +328,7 @@ CASES: Cases = (
                 ),
                 (
                     ExpectedIssue(
-                        f"SCP14 unsupported requirement: flake8-scrapy only supports scrapy {SCRAPY_LOWEST_SUPPORTED}+",
+                        f"SCP14 unsupported requirement: scrapy-lint only supports scrapy {SCRAPY_LOWEST_SUPPORTED}+",
                         line=2,
                         path=path,
                     ),

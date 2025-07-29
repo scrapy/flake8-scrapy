@@ -194,7 +194,7 @@ CASES: Cases = (
                 "SPIDER_MANAGER_CLASS",
                 (
                     ExpectedIssue(
-                        "SCP14 unsupported requirement: flake8-scrapy only supports scrapy 2.0.1+",
+                        "SCP14 unsupported requirement: scrapy-lint only supports scrapy 2.0.1+",
                         path="requirements.txt",
                     ),
                     ExpectedIssue(
@@ -237,7 +237,7 @@ CASES: Cases = (
                 "LOG_UNSERIALIZABLE_REQUESTS",
                 (
                     ExpectedIssue(
-                        "SCP14 unsupported requirement: flake8-scrapy only supports scrapy 2.0.1+",
+                        "SCP14 unsupported requirement: scrapy-lint only supports scrapy 2.0.1+",
                         path="requirements.txt",
                     ),
                     ExpectedIssue(

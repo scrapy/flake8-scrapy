@@ -126,7 +126,9 @@ class RequirementsIssueFinder:
             package.lowest_supported_version
             and version < package.lowest_supported_version
         ):
-            detail = f"flake8-scrapy only supports {name} {package.lowest_supported_version}+"
+            detail = (
+                f"scrapy-lint only supports {name} {package.lowest_supported_version}+"
+            )
             yield Issue(UNSUPPORTED_REQUIREMENT, pos, detail)
         if package.lowest_safe_version and version < package.lowest_safe_version:
             detail = f"{name} {package.lowest_safe_version} implements security fixes"

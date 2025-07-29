@@ -16,7 +16,6 @@ dependencies = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
-    "Framework :: Flake8",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
@@ -178,6 +177,8 @@ extend-select = [
     "YTT",
 ]
 ignore = [
+    # ruff format recommends disabling this rule
+    "COM812",
     # No API docs needed
     "D",
     # asserts for mypy

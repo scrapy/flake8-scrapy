@@ -589,7 +589,7 @@ CASES: Cases = (
                     ExpectedIssue(message, path="requirements.txt")
                     for message, min_version in (
                         (
-                            "SCP14 unsupported requirement: flake8-scrapy only supports scrapy 2.0.1+",
+                            "SCP14 unsupported requirement: scrapy-lint only supports scrapy 2.0.1+",
                             "2.0.1",
                         ),
                         (
