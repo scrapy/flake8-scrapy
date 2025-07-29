@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from . import NO_ISSUE, Cases, File, Issue, cases
+from . import NO_ISSUE, Cases, ExpectedIssue, File, cases
 from .helpers import check_project
 
 PATH = "a.py"
@@ -24,7 +24,7 @@ CASES: Cases = (
             *(
                 (
                     code,
-                    Issue(
+                    ExpectedIssue(
                         message="SCP45 unsafe meta copy",
                         column=column,
                         path=PATH,
@@ -44,7 +44,7 @@ CASES: Cases = (
             *(
                 (
                     code,
-                    Issue(
+                    ExpectedIssue(
                         message="SCP46 raw Zyte API params",
                         column=column,
                         path=PATH,
@@ -61,6 +61,8 @@ CASES: Cases = (
 
 @cases(CASES)
 def test(
-    input: File | list[File], expected: Issue | list[Issue] | None, flake8_options
+    files: File | list[File],
+    expected: ExpectedIssue | list[ExpectedIssue] | None,
+    options,
 ):
-    check_project(input, expected, flake8_options)
+    check_project(files, expected, options)

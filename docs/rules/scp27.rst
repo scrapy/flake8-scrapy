@@ -44,5 +44,4 @@ Instead, use only valid Scrapy settings, such as:
 
 .. note::
 
-   To silence false positives for custom or project-specific settings, use
-   :ref:`scrapy_known_settings <scrapy-known-settings>`.
+   Use :ref:`known-settings` to declare project-specific settings.

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 from ruamel.yaml import YAML, CommentedMap
 from ruamel.yaml.error import YAMLError
 
-from flake8_scrapy.issues import (
+from scrapy_lint.issues import (
     INVALID_SCRAPINGHUB_YML,
     NO_ROOT_REQUIREMENTS,
     NO_ROOT_STACK,
@@ -21,25 +21,19 @@ from flake8_scrapy.issues import (
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from pathlib import Path
 
-    from flake8_scrapy.context import Context
+    from scrapy_lint.context import Context
 
 
 class ZyteCloudConfigIssueFinder:
     def __init__(self, context: Context):
         self.context = context
 
-    def in_target_file(self) -> bool:
-        if not self.context.project.root:
-            return False
-        return self.context.file.path == self.context.project.root / "scrapinghub.yml"
-
-    def check(self) -> Generator[Issue]:
-        assert self.context.file.lines is not None
-        content = "\n".join(self.context.file.lines)
+    def lint(self, file: Path) -> Generator[Issue]:
         yaml_parser = YAML(typ="rt")
         try:
-            data = yaml_parser.load(content)
+            data = yaml_parser.load(file.read_text(encoding="utf-8"))
         except YAMLError as e:
             yield Issue(INVALID_SCRAPINGHUB_YML, detail=str(e))
             return
@@ -97,7 +91,9 @@ class ZyteCloudConfigIssueFinder:
             yield Issue(STACK_NOT_FROZEN, pos)
 
     def _check_requirements_value(
-        self, requirements_value: Any, pos: Pos
+        self,
+        requirements_value: Any,
+        pos: Pos,
     ) -> Generator[Issue]:
         if not isinstance(requirements_value, CommentedMap):
             yield Issue(INVALID_SCRAPINGHUB_YML, pos, "non-mapping requirements")

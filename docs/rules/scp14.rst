@@ -8,10 +8,10 @@ What it does
 ============
 
 Finds out if your :ref:`requirements file <requirements>` contains a package
-that flake8-scrapy supports with a frozen [#f1]_ version that flake8-scrapy
-does *not* support.
+that scrapy-lint supports with a frozen [#f1]_ version that scrapy-lint does
+*not* support.
 
-flake8-scrapy supports many packages in the Scrapy ecosystem, but expects the
+scrapy-lint supports many packages in the Scrapy ecosystem, but expects the
 following minimum versions of them to be used in your project:
 
 ======= ===============
@@ -35,7 +35,7 @@ packages in the Scrapy ecosystem to ensure your projects benefit from the
 latest features, bug fixes, and performance improvements.
 
 However, the specific issue with using a version of a package older than the
-minimum version supported by flake8-scrapy is that flake8-scrapy may misreport
+minimum version supported by scrapy-lint is that scrapy-lint may misreport
 issues and fail to report others.
 
 

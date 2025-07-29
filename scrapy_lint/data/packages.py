@@ -1,6 +1,6 @@
 from packaging.version import Version
 
-from flake8_scrapy.packages import Package
+from scrapy_lint.packages import Package
 
 PACKAGES = {
     "scrapy": Package(

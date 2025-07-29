@@ -3,10 +3,11 @@ from __future__ import annotations
 from packaging.utils import canonicalize_name
 from packaging.version import Version
 
-from flake8_scrapy.data.packages import PACKAGES
-from flake8_scrapy.data.settings import SETTINGS
-from flake8_scrapy.finders.settings import PATH_SUPPORT_VERSIONS
-from flake8_scrapy.settings import (
+from scrapy_lint.data.packages import PACKAGES
+from scrapy_lint.data.settings import SETTINGS
+from scrapy_lint.finders.settings.types import PATH_SUPPORT_VERSIONS
+from scrapy_lint.settings import (
+    MAX_DEFAULT_VALUE_HISTORY,
     UNKNOWN_UNSUPPORTED_VERSION,
     SettingType,
     UnknownSettingValue,
@@ -38,10 +39,7 @@ def test_default_value_history():
         if not history:
             continue
         assert UNKNOWN_UNSUPPORTED_VERSION in history
-        # The following is an expectation of the check for “changing settings”,
-        # i.e. SCP34. SCP34 logic needs to be updated to support more than 2
-        # default value history entries in non-base settings.
-        assert len(history) == 2 or data.name.endswith("_BASE")
+        assert len(history) == MAX_DEFAULT_VALUE_HISTORY or data.name.endswith("_BASE")
 
 
 def test_enum_setting_values():
@@ -61,21 +59,24 @@ def test_path_support():
 
 def test_sunset_guidance():
     for data in SETTINGS.values():
-        if not data.deprecated_in:
-            assert not data.sunset_guidance
+        if not data.versioning.deprecated_in:
+            assert not data.versioning.sunset_guidance
 
 
 def test_versions():
     for data in SETTINGS.values():
-        if data.removed_in:
+        if data.versioning.removed_in:
             # Any setting with a removed_in version is expected to have a
             # lower deprecated_in version as well. If that ever changes, we
             # need to review any existing code that relies on this assumption.
-            assert data.deprecated_in
-            if isinstance(data.deprecated_in, UnknownUnsupportedVersion):
-                assert data.deprecated_in is UNKNOWN_UNSUPPORTED_VERSION
+            assert data.versioning.deprecated_in
+            if isinstance(data.versioning.deprecated_in, UnknownUnsupportedVersion):
+                assert data.versioning.deprecated_in is UNKNOWN_UNSUPPORTED_VERSION
                 assert PACKAGES[data.package].lowest_supported_version
-                assert PACKAGES[data.package].lowest_supported_version < data.removed_in  # type: ignore[operator]
+                assert (
+                    PACKAGES[data.package].lowest_supported_version  # type: ignore[operator]
+                    < data.versioning.removed_in
+                )
             else:
-                assert isinstance(data.deprecated_in, Version)
-                assert data.deprecated_in < data.removed_in
+                assert isinstance(data.versioning.deprecated_in, Version)
+                assert data.versioning.deprecated_in < data.versioning.removed_in

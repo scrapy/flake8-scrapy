@@ -1,0 +1,4 @@
+- id: scrapy-lint
+  name: scrapy-lint
+  entry: scrapy-lint
+  language: python

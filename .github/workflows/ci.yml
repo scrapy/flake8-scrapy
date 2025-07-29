@@ -18,6 +18,7 @@ jobs:
         - python-version: "3.11"
         - python-version: "3.12"
         - python-version: "3.13"
+        - python-version: "3.14.0-rc.1"
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
@@ -39,7 +40,8 @@ jobs:
         include:
         - python-version: "3.9"
           toxenv: "mypy"
-        - toxenv: "twinecheck"
+        - toxenv: "pylint"
+        - toxenv: "twine"
         - toxenv: "docs"
     steps:
     - uses: actions/checkout@v4

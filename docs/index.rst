@@ -1,21 +1,10 @@
-===========================
-flake8-scrapy documentation
-===========================
+=========================
+scrapy-lint documentation
+=========================
 
 .. include:: ../README.rst
-   :start-after: intro-start
-   :end-before: intro-end
-
-.. toctree::
-    :maxdepth: 1
-    :caption: Configuration
-    :hidden:
-
-    pre-commit
-    tools
-    requirements
-    zyte
-    options
+   :start-after: readme-start
+   :end-before: readme-end
 
 .. toctree::
     :maxdepth: 1
@@ -23,4 +12,5 @@ flake8-scrapy documentation
     :hidden:
 
     rules/index
+    options
     changes

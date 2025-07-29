@@ -1,10 +1,9 @@
 import ast
+from ast import AST
 from collections.abc import Generator
 from urllib.parse import urlparse
 
-from flake8_scrapy.issues import DISALLOWED_DOMAIN, URL_IN_ALLOWED_DOMAINS, Issue, Pos
-
-from . import IssueFinder
+from scrapy_lint.issues import DISALLOWED_DOMAIN, URL_IN_ALLOWED_DOMAINS, Issue, Pos
 
 
 def get_list_metadata(node):
@@ -23,7 +22,7 @@ def is_list_assignment(node, var_name):
     )
 
 
-class UnreachableDomainIssueFinder(IssueFinder):
+class UnreachableDomainIssueFinder:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.allowed_domains = []
@@ -33,7 +32,7 @@ class UnreachableDomainIssueFinder(IssueFinder):
         netloc = urlparse(url).netloc
         return any(domain in netloc for _, _, domain in self.allowed_domains)
 
-    def find_issues(self, node) -> Generator[Issue]:
+    def __call__(self, node) -> Generator[Issue]:
         if is_list_assignment(node, var_name="allowed_domains"):
             self.allowed_domains = get_list_metadata(node)
 
@@ -48,7 +47,15 @@ class UnreachableDomainIssueFinder(IssueFinder):
                 yield Issue(DISALLOWED_DOMAIN, Pos(line, column))
 
 
-class UrlInAllowedDomainsIssueFinder(IssueFinder):
+class UrlInAllowedDomainsIssueFinder:
+    def __call__(self, node: AST) -> Generator[Issue]:
+        if not is_list_assignment(node, var_name="allowed_domains"):
+            return
+        allowed_domains = get_list_metadata(node)
+        for line, column, url in allowed_domains:
+            if self.is_url(url):
+                yield Issue(URL_IN_ALLOWED_DOMAINS, Pos(line, column))
+
     def is_url(self, domain):
         # when it's just a domain (as 'toscrape.com'), the parsed URL contains
         # only the 'path' component
@@ -61,11 +68,3 @@ class UrlInAllowedDomainsIssueFinder(IssueFinder):
         ]
         parts = urlparse(domain)
         return any(getattr(parts, comp, None) for comp in forbidden_components)
-
-    def find_issues(self, node) -> Generator[Issue]:
-        if is_list_assignment(node, var_name="allowed_domains"):
-            allowed_domains = get_list_metadata(node)
-
-            for line, column, url in allowed_domains:
-                if self.is_url(url):
-                    yield Issue(URL_IN_ALLOWED_DOMAINS, Pos(line, column))

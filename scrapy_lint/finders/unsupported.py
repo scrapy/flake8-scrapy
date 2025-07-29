@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import ast
-from ast import Assign, Attribute, Call, Name, expr
+from ast import AST, Assign, Attribute, Call, Name, expr
 from typing import TYPE_CHECKING
 
-from flake8_scrapy.issues import LAMBDA_CALLBACK, Issue, Pos
-
-from . import IssueFinder
+from scrapy_lint.issues import LAMBDA_CALLBACK, Issue, Pos
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -63,7 +61,13 @@ def import_path_from_attribute(attr: expr) -> tuple[str, ...]:
     return tuple(reversed(parts))
 
 
-class LambdaCallbackIssueFinder(IssueFinder):
+class LambdaCallbackIssueFinder:
+    def __call__(self, node: AST) -> Generator[Issue]:
+        if isinstance(node, Call):
+            yield from self._find_issues_in_call(node)
+        elif isinstance(node, Assign):
+            yield from self._find_issues_in_assign(node)
+
     def looks_like_request(self, func: expr):
         return (
             isinstance(func, Name)
@@ -95,12 +99,6 @@ class LambdaCallbackIssueFinder(IssueFinder):
     def looks_like_from_response(self, func: expr):
         """Check if this looks like a FormRequest.from_response() call."""
         return isinstance(func, Attribute) and func.attr == "from_response"
-
-    def find_issues(self, node: Call | Assign) -> Generator[Issue]:
-        if isinstance(node, Call):
-            yield from self._find_issues_in_call(node)
-        elif isinstance(node, Assign):
-            yield from self._find_issues_in_assign(node)
 
     def _check_lambda_callbacks_positional(self, node: Call) -> Generator[Issue]:
         """Check for lambda callbacks in positional arguments."""

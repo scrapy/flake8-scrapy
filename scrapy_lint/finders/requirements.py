@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 from packaging.version import InvalidVersion, Version
 
-from flake8_scrapy.data.packages import PACKAGES
-from flake8_scrapy.issues import (
-    FLAKE8_REQUIREMENTS_FILE_MISMATCH,
+from scrapy_lint.data.packages import PACKAGES
+from scrapy_lint.issues import (
     INSECURE_REQUIREMENT,
     MISSING_STACK_REQUIREMENTS,
     PARTIAL_FREEZE,
@@ -16,14 +14,15 @@ from flake8_scrapy.issues import (
     Issue,
     Pos,
 )
-from flake8_scrapy.requirements import iter_requirement_lines
+from scrapy_lint.requirements import iter_requirement_lines
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from pathlib import Path
 
     from packaging.requirements import Requirement
 
-    from flake8_scrapy.context import Context
+    from scrapy_lint.context import Context
 
 
 class RequirementsIssueFinder:
@@ -40,7 +39,7 @@ class RequirementsIssueFinder:
             "twisted",
             "w3lib",
             "zope-interface",
-        }
+        },
     )
     SCRAPY_CLOUD_STACK_DEPENDENCIES = frozenset(
         {
@@ -64,23 +63,20 @@ class RequirementsIssueFinder:
             "scrapy-zyte-smartproxy",
             "spidermon",
             "urllib3",
-        }
+        },
     )
 
     def __init__(self, context: Context):
         self.context = context
 
-    def in_target_file(self) -> bool:
-        if not self.context.project.requirements_file_path:
-            return False
-        return self.context.file.path == self.context.project.requirements_file_path
-
-    def check(self) -> Generator[Issue]:
-        yield from self.check_flake8_requirements_options()
+    def lint(self, file: Path) -> Generator[Issue]:
         packages: set[str] = set()
-        assert self.context.file.lines is not None
+        try:
+            requirements_text = file.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            return
         for line_number, name, requirement in iter_requirement_lines(
-            self.context.file.lines
+            requirements_text.splitlines(),
         ):
             packages.add(name)
             if name not in PACKAGES:
@@ -94,20 +90,6 @@ class RequirementsIssueFinder:
         if missing_deps or not packages:
             yield Issue(PARTIAL_FREEZE)
         yield from self.check_scrapy_cloud_stack_requirements(packages)
-
-    def check_flake8_requirements_options(self) -> Generator[Issue]:
-        if not find_spec("flake8_requirements"):
-            return
-        scrapy_requirements_file = getattr(
-            self.context.flake8_options, "scrapy_requirements_file", None
-        )
-        if not scrapy_requirements_file:
-            return
-        flake8_requirements_file = getattr(
-            self.context.flake8_options, "requirements_file", "requirements.txt"
-        )
-        if scrapy_requirements_file != flake8_requirements_file:
-            yield Issue(FLAKE8_REQUIREMENTS_FILE_MISMATCH)
 
     @staticmethod
     def requirement_version(requirement: Requirement) -> Version | None:
@@ -133,7 +115,10 @@ class RequirementsIssueFinder:
             yield Issue(UNMAINTAINED_REQUIREMENT, Pos(line), detail)
 
     def check_package_version(
-        self, name: str, version: Version, line: int
+        self,
+        name: str,
+        version: Version,
+        line: int,
     ) -> Generator[Issue]:
         package = PACKAGES[name]
         pos = Pos(line)
@@ -141,14 +126,17 @@ class RequirementsIssueFinder:
             package.lowest_supported_version
             and version < package.lowest_supported_version
         ):
-            detail = f"flake8-scrapy only supports {name} {package.lowest_supported_version}+"
+            detail = (
+                f"scrapy-lint only supports {name} {package.lowest_supported_version}+"
+            )
             yield Issue(UNSUPPORTED_REQUIREMENT, pos, detail)
         if package.lowest_safe_version and version < package.lowest_safe_version:
             detail = f"{name} {package.lowest_safe_version} implements security fixes"
             yield Issue(INSECURE_REQUIREMENT, pos, detail)
 
     def check_scrapy_cloud_stack_requirements(
-        self, packages: set[str]
+        self,
+        packages: set[str],
     ) -> Generator[Issue]:
         if (
             not self.context.project.root
@@ -158,5 +146,5 @@ class RequirementsIssueFinder:
         missing = self.SCRAPY_CLOUD_STACK_DEPENDENCIES - packages
         if not missing:
             return
-        detail = f"missing packages: {', '.join(sorted(missing))}"
+        detail = ", ".join(sorted(missing))
         yield Issue(MISSING_STACK_REQUIREMENTS, detail=detail)

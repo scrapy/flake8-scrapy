@@ -1,37 +1,53 @@
-=============
-flake8-scrapy
-=============
+===========
+scrapy-lint
+===========
 
 |version| |python_version| |ci|
 
-.. |version| image:: https://img.shields.io/pypi/v/flake8-scrapy.svg
-   :target: https://pypi.org/pypi/flake8-scrapy
+.. |version| image:: https://img.shields.io/pypi/v/scrapy-lint.svg
+   :target: https://pypi.org/pypi/scrapy-lint
    :alt: PyPI version
 
-.. |python_version| image:: https://img.shields.io/pypi/pyversions/flake8-scrapy.svg
-   :target: https://pypi.org/pypi/flake8-scrapy
+.. |python_version| image:: https://img.shields.io/pypi/pyversions/scrapy-lint.svg
+   :target: https://pypi.org/pypi/scrapy-lint
    :alt: Supported Python versions
 
-.. |ci| image:: https://github.com/scrapy/flake8-scrapy/workflows/CI/badge.svg
-   :target: https://github.com/scrapy/flake8-scrapy/actions?query=workflow%3ACI
+.. |ci| image:: https://github.com/scrapy/scrapy-lint/workflows/CI/badge.svg
+   :target: https://github.com/scrapy/scrapy-lint/actions?query=workflow%3ACI
    :alt: CI
 
-.. intro-start
+.. readme-start
 
-A Flake8_ plugin to catch common issues in Scrapy projects.
+**scrapy-lint** is a linter for `Scrapy <https://scrapy.org/>`_ projects.
 
-.. _Flake8: https://flake8.pycqa.org/en/latest/
+To install::
 
-Install::
+    pip install scrapy-lint
 
-    pip install flake8-scrapy
+To run::
 
-And run Flake8_::
+    scrapy-lint
 
-    flake8
+To use with `pre-commit <https://pre-commit.com/>`__, add the following to your
+``.pre-commit-config.yaml``:
 
-.. intro-end
+.. code-block:: yaml
+
+    - repo: https://github.com/scrapy/scrapy-lint
+      rev: "0.0.2"
+      hooks:
+      - id: scrapy-lint
+
+Can be combined with `ruff <https://docs.astral.sh/ruff/>`_,
+`mypy <https://mypy.readthedocs.io/en/stable/>`_,
+`pylint <https://pylint.readthedocs.io/en/stable/>`_ and
+`flake8-requirements <https://pypi.org/project/flake8-requirements/>`_.
+
+.. readme-end
+
+Documentation
+=============
 
 See the documentation_ for more.
 
-.. _documentation: https://flake8-scrapy.readthedocs.io/en/latest/
+.. _documentation: https://scrapy-lint.readthedocs.io/en/latest/

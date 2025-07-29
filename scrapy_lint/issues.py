@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @dataclass
 class Pos:
     line: int = 1
     column: int = 0
-
-    def __iter__(self):
-        return iter([self.line, self.column])
 
     @classmethod
     def from_node(cls, node, column: int | None = None, /) -> Pos:
@@ -23,26 +24,36 @@ class Pos:
 class Issue:
     code: int
     summary: str
+    pos: Pos
     detail: str | None = None
-    line: int = 1
-    column: int = 0
+    file: Path | None = None
 
     def __init__(
         self,
-        id: tuple[int, str],
+        id_: tuple[int, str],
         pos: Pos | None = None,
         /,
         detail: str | None = None,
     ):
-        self.code, self.summary = id
+        self.code, self.summary = id_
         self.pos = pos or Pos()
         self.detail = detail
 
-    def __iter__(self):
-        message = f"SCP{self.code:02} {self.summary}"
-        if self.detail:
-            message += f": {self.detail}"
-        return iter([*self.pos, message])
+    @property
+    def message(self) -> str:
+        detail = f": {self.detail}" if self.detail else ""
+        return f"SCP{self.code:02} {self.summary}{detail}"
+
+    @property
+    def line(self) -> int:
+        return self.pos.line
+
+    @property
+    def column(self) -> int:
+        return self.pos.column
+
+    def __str__(self):
+        return f"{self.file}:{self.line}:{self.column}: {self.message}"
 
 
 DISALLOWED_DOMAIN = (1, "disallowed domain")
@@ -88,6 +99,5 @@ UNNEEDED_SETTING_GET = (40, "unneeded setting get")
 UNNEEDED_IMPORT_PATH = (41, "unneeded import path")
 UNNEEDED_PATH_STRING = (42, "unneeded path string")
 UNSUPPORTED_PATH_OBJECT = (43, "unsupported Path object")
-FLAKE8_REQUIREMENTS_FILE_MISMATCH = (44, "requirements_file mismatch")
 UNSAFE_META_COPY = (45, "unsafe meta copy")
 ZYTE_RAW_PARAMS = (46, "raw Zyte API params")

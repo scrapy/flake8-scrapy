@@ -54,4 +54,4 @@ Use :reqmeta:`zyte_api_automap`:
 
 .. code-block:: python
 
-    Request(url, meta={'zyte_api_automap': {"geolocation": "ie"}})
+    Request(url, meta={"zyte_api_automap": {"geolocation": "ie"}})

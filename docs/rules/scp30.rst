@@ -21,4 +21,3 @@ Why is this bad?
 
 Removed settings have stopped working the way they used to, and instead are
 silently ignored.
-

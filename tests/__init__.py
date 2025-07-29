@@ -1,72 +1,28 @@
 from __future__ import annotations
 
-import ast
 import os
 import sys
 from collections.abc import Generator, Iterable, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
-from importlib.util import find_spec
 from pathlib import Path
-from typing import Any, Callable, Union
+from tempfile import TemporaryDirectory
+from typing import TYPE_CHECKING, Any, Callable, Union
 
 import pytest
-
-from flake8_scrapy import ScrapyFlake8Plugin
+import tomli_w
 
 if sys.version_info >= (3, 10):
     from typing import TypeAlias
 else:
     from typing_extensions import TypeAlias
 
-HAS_FLAKE8_REQUIREMENTS = bool(find_spec("flake8_requirements"))
+if TYPE_CHECKING:
+    from scrapy_lint.issues import Issue
+
 NO_ISSUE = None
 
 pytest.register_assert_rewrite("tests.helpers")
-
-
-class MockParser:
-    def __init__(self):
-        self.options = {}
-
-    def add_option(self, *args, **kwargs):
-        option_name = args[0].lstrip("-").replace("-", "_")
-        default_value = kwargs.get("default", "")
-        self.options[option_name] = default_value
-
-
-class MockOptions:
-    def __init__(self, options_dict: dict):
-        parser = MockParser()
-        ScrapyFlake8Plugin.add_options(parser)
-        for option_name, default_value in parser.options.items():
-            setattr(self, option_name, default_value)
-        for key, value in options_dict.items():
-            setattr(self, key, value)
-
-
-def run_checker(
-    code: str, file_path: str = "a.py", flake8_options: dict | None = None
-) -> Sequence[tuple[int, int, str]]:
-    if file_path.endswith(".py"):
-        tree = ast.parse(code)
-        lines = None
-    else:
-        tree = None
-        lines = code.splitlines()
-    if flake8_options is None:
-        flake8_options = {}
-    original_class_dict = ScrapyFlake8Plugin.__dict__.copy()
-    mock_options = MockOptions(flake8_options)
-    try:
-        ScrapyFlake8Plugin.parse_options(mock_options)  # type: ignore[arg-type]
-        checker = ScrapyFlake8Plugin(tree, file_path, lines)
-        return tuple(checker.run())
-    finally:
-        current_attrs = set(ScrapyFlake8Plugin.__dict__.keys())
-        original_attrs = set(original_class_dict.keys())
-        for new_attr in current_attrs - original_attrs:
-            delattr(ScrapyFlake8Plugin, new_attr)
 
 
 @dataclass
@@ -76,19 +32,20 @@ class File:
 
 
 @dataclass
-class Issue:
+class ExpectedIssue:
     message: str
     line: int = 1
     column: int = 0
     path: str | None = None
 
     @classmethod
-    def from_tuple(cls, issue: tuple[int, int, str], path: str | None = None) -> Issue:
+    def from_issue(cls, issue: Issue) -> ExpectedIssue:
+        assert issue.file
         return cls(
-            message=issue[2],
-            line=issue[0],
-            column=issue[1],
-            path=path,
+            message=issue.message,
+            line=issue.pos.line,
+            column=issue.pos.column,
+            path=str(issue.file),
         )
 
     def replace(
@@ -98,8 +55,8 @@ class Issue:
         line: int | None = None,
         column: int | None = None,
         path: str | None = None,
-    ) -> Issue:
-        return Issue(
+    ) -> ExpectedIssue:
+        return ExpectedIssue(
             message=message if message else self.message,
             line=line if line else self.line,
             column=column if column is not None else self.column,
@@ -107,7 +64,6 @@ class Issue:
         )
 
 
-# TODO: Use contextlib.chdir when Python 3.11 is the minimum version
 @contextmanager
 def chdir(path: str | Path):
     old_cwd = Path.cwd()
@@ -119,15 +75,15 @@ def chdir(path: str | Path):
 
 
 Files: TypeAlias = Union[Sequence[File], File]
-Issues: TypeAlias = Union[Sequence[Issue], Issue, None]
-Flake8Options: TypeAlias = dict[str, Any]
-Cases: TypeAlias = Sequence[tuple[Files, Issues, Flake8Options]]
+ExpectedIssues: TypeAlias = Union[Sequence[ExpectedIssue], ExpectedIssue, None]
+Options: TypeAlias = dict[str, Any]
+Cases: TypeAlias = Sequence[tuple[Files, ExpectedIssues, Options]]
 
 
 def cases(test_cases: Cases) -> Callable:
     def decorator(func):
         return pytest.mark.parametrize(
-            ("input", "expected", "flake8_options"),
+            ("files", "expected", "options"),
             test_cases,
             ids=range(len(test_cases)),
         )(func)
@@ -135,10 +91,39 @@ def cases(test_cases: Cases) -> Callable:
     return decorator
 
 
-def iter_issues(issues: Iterable[Issue] | Issue | None) -> Generator[Issue]:
+def iter_issues(
+    issues: Iterable[ExpectedIssue] | ExpectedIssue | None,
+) -> Generator[ExpectedIssue]:
     if issues is None:
         return
-    if isinstance(issues, Issue):
+    if isinstance(issues, ExpectedIssue):
         yield issues
         return
     yield from issues
+
+
+@contextmanager
+def project(
+    files: File | Sequence[File] | None = None,
+    options: dict | None = None,
+):
+    if isinstance(files, File):
+        files = [files]
+    elif files is None:
+        files = []
+    with TemporaryDirectory() as directory:
+        for file in files:
+            assert file.path
+            file_path = Path(directory) / file.path
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            if isinstance(file.text, str):
+                file_path.write_text(file.text)
+            else:
+                file_path.write_bytes(file.text)
+        if options:
+            options_path = Path(directory) / "pyproject.toml"
+            toml_dict = {"tool": {"scrapy-lint": options}}
+            with options_path.open("wb") as f:
+                f.write(tomli_w.dumps(toml_dict).encode("utf-8"))
+        with chdir(directory):
+            yield directory

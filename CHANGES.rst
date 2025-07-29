@@ -5,6 +5,9 @@ Release notes
 0.1.0 (unreleased)
 ==================
 
+-   Switched from being a `flake8 <https://flake8.pycqa.org/en/latest/>`_
+    plugin to being a standalone tool, to support rules on non-Python files.
+
 -   Dropped Python 3.8 support, added Python 3.9+ support.
 
 -   Requires Scrapy 2.0.1+.
@@ -50,11 +53,10 @@ Release notes
     | :ref:`scp41`
     | :ref:`scp42`
     | :ref:`scp43`
-    | :ref:`scp44`
     | :ref:`scp45`
     | :ref:`scp46`
 
--   Added `documentation <https://flake8-scrapy.readthedocs.io/en/latest/>`_.
+-   Added `documentation <https://scrapy-lint.readthedocs.io/en/latest/>`_.
 
 -   Improved CI and achieved full test coverage.
 
@@ -63,4 +65,4 @@ Earlier releases
 ================
 
 Find the earlier commit history `at GitHub
-<https://github.com/scrapy/flake8-scrapy/commits/4be77a75b5a88f58f20b49067afda8e7e7a9bf6d>`_.
+<https://github.com/scrapy/scrapy-lint/commits/4be77a75b5a88f58f20b49067afda8e7e7a9bf6d>`_.

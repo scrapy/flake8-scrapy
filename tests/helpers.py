@@ -3,48 +3,28 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
 
-from . import File, Issue, chdir, run_checker
+from scrapy_lint import lint
+
+from . import ExpectedIssue, File, iter_issues, project
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterable, Sequence
 
 
-def sort_issues(issues: Sequence[Issue]) -> Sequence[Issue]:
+def sort_issues(issues: Iterable[ExpectedIssue]) -> Iterable[ExpectedIssue]:
     return sorted(issues, key=lambda issue: (issue.message, issue.line, issue.column))
 
 
 def check_project(
-    input: File | Sequence[File],
-    expected: Issue | Sequence[Issue] | None,
-    flake8_options: dict | None = None,
+    files: File | Sequence[File],
+    expected: ExpectedIssue | Sequence[ExpectedIssue] | None,
+    options: dict | None = None,
+    args: Sequence[str] | None = None,
 ):
-    if isinstance(input, File):
-        input = [input]
-    if isinstance(expected, Issue):
-        expected = [expected]
-    elif expected is None:
-        expected = []
-    with TemporaryDirectory() as dir:
-        for file in input:
-            assert file.path
-            file_path = Path(dir) / file.path
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            if isinstance(file.text, bytes):
-                file_path.write_bytes(file.text)
-            else:
-                file_path.write_text(file.text)
-        with chdir(dir):
-            issues = []
-            for file in input:
-                assert file.path
-                if isinstance(file.text, bytes):
-                    continue  # flake8 does not support binary files
-                issue_tuples = run_checker(file.text, file.path, flake8_options)
-                issues.extend(
-                    [Issue.from_tuple(issue, path=file.path) for issue in issue_tuples]
-                )
-            assert sort_issues(expected) == sort_issues(issues)
+    args = args or []
+    expected = list(iter_issues(expected))
+    with project(files, options):
+        issues = (ExpectedIssue.from_issue(issue) for issue in lint(args))
+        assert sort_issues(expected) == sort_issues(issues)

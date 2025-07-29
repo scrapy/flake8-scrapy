@@ -3,19 +3,19 @@ requires = ["hatchling>=1.27.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "flake8-scrapy"
+name = "scrapy-lint"
 version = "0.0.2"
-description = "A Flake8 plugin to catch common issues on Scrapy projects"
+description = "A linter for Scrapy projects"
 dependencies = [
-    "flake8>=0.1",
     "packaging>=20.0",
+    "pathspec>=0.10.1",
     "ruamel.yaml>=0.17.5",
+    "tomli>=1.0.0; python_version<'3.11'",
     'typing_extensions>=4.6.0; python_version<"3.10"'
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
-    "Framework :: Flake8",
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
@@ -35,13 +35,13 @@ requires-python = ">=3.9"
 authors = [{ name = "Valdir Stumm Junior", email = "stummjr@gmail.com" }]
 maintainers = [{ name = "Valdir Stumm Junior", email = "stummjr@gmail.com" }]
 
-[project.entry-points."flake8.extension"]
-SCP = "flake8_scrapy:ScrapyFlake8Plugin"
+[project.scripts]
+scrapy-lint = "scrapy_lint:main"
 
 [project.urls]
-Source = "https://github.com/scrapy/flake8-scrapy"
-Tracker = "https://github.com/scrapy/flake8-scrapy/issues"
-"Release notes" = "https://github.com/scrapy/flake8-scrapy/blob/master/CHANGES.rst"
+Source = "https://github.com/scrapy/scrapy-lint"
+Tracker = "https://github.com/scrapy/scrapy-lint/issues"
+"Release notes" = "https://scrapy-lint.readthedocs.io/en/latest/changes.html"
 
 [tool.hatch.build.targets.sdist]
 include = [
@@ -51,14 +51,13 @@ include = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["flake8_scrapy"]
+packages = ["scrapy_lint"]
 
 [tool.bumpversion]
 current_version = "0.0.2"
 commit = true
 tag = true
 tag_name = "v{new_version}"
-pre_commit_hooks = ["utils/update-flake8-version.py"]
 
 [[tool.bumpversion.files]]
 filename = "CHANGES.rst"
@@ -67,20 +66,37 @@ replace = "({now:%Y-%m-%d})"
 regex = true
 
 [[tool.bumpversion.files]]
-filename = "flake8_scrapy/__init__.py"
+filename = "README.rst"
 
 [tool.coverage.report]
 exclude_also = [
     "if TYPE_CHECKING:",
     "@abstractmethod",
 ]
-omit = [
-    "flake8_scrapy/typing.py",
-]
 
 [tool.mypy]
 check_untyped_defs = true
 exclude = "samples"
+
+[tool.pylint.master]
+load-plugins=[
+    "pylint_per_file_ignores",
+]
+
+[tool.pylint.'message control']
+# Covered by Ruff:
+# PLC0415: import-outside-toplevel
+disable = """
+    import-outside-toplevel,
+    line-too-long,
+    missing-class-docstring,
+    missing-function-docstring,
+    missing-module-docstring,
+"""
+per-file-ignores = [
+    "/docs/conf.py:invalid-name",
+    "/tests/:duplicate-code",
+]
 
 [tool.pytest.ini_options]
 filterwarnings = [
@@ -89,10 +105,16 @@ filterwarnings = [
 
 [tool.ruff.lint]
 extend-select = [
+    # flake8-builtins
+    "A",
+    # flake8-async
+    "ASYNC",
     # flake8-bugbear
     "B",
     # flake8-comprehensions
     "C4",
+    # flake8-commas
+    "COM",
     # pydocstyle
     "D",
     # flake8-future-annotations
@@ -149,6 +171,8 @@ extend-select = [
     "YTT",
 ]
 ignore = [
+    # ruff format recommends disabling this rule
+    "COM812",
     # No API docs needed
     "D",
     # asserts for mypy
@@ -160,6 +184,9 @@ ignore = [
 # PLR2004: Line and column numbers are expressed with hardcoded ints.
 # S: Security issues, irrelevant for tests
 "tests/**" = ["FLY002", "PLR2004", "S"]
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
