@@ -146,6 +146,8 @@ CASES: Cases = (
                             "FEEDS",
                             '{f:{"item_classes":[ProductItem],"item_filter":MyFilter,"uri_params":get_uri_params,}}',
                         ),
+                        ("FEEDS", '{f: {"item_export_kwargs": kwargs}}'),
+                        ("FEEDS", '{f: {"fields": field_list}}'),
                         (
                             "FEEDS",
                             '{f: {"format": "xml", "batch_item_count": 100, "encoding": None, "fields": {"name": "product_name", "price": "product_price"}, "item_classes": ["myproject.items.ProductItem"], "item_filter": "myproject.filters.MyFilter", "indent": 2, "item_export_kwargs": {"root_element": "products"}, "overwrite": True, "store_empty": False, "uri_params": "myproject.utils.get_uri_params"}}',
