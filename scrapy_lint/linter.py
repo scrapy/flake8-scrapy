@@ -5,6 +5,9 @@ from ast import NodeVisitor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
+
 try:
     import tomllib  # type: ignore[import-not-found]
 except ImportError:  # Python < 3.11
@@ -128,20 +131,53 @@ class Linter:
         options: dict[str, Any],
     ) -> Path | None:
         requirements_file: Path | None
-        path_str = options.get("requirements_file", "requirements.txt")
-        requirements_file = Path(path_str).resolve()
-        if not requirements_file.exists():
-            return None
-        return requirements_file
+        path_str = options.get("requirements_file")
+        if path_str is not None:
+            requirements_file = Path(path_str).resolve()
+            if requirements_file.exists():
+                return requirements_file
+
+        # Check scrapinghub.yml for requirements file
+        scrapinghub_file = Path("scrapinghub.yml")
+        yaml_parser = YAML(typ="safe")
+        if scrapinghub_file.exists():
+            try:
+                with scrapinghub_file.open(encoding="utf-8") as f:
+                    data = yaml_parser.load(f)
+            except (UnicodeDecodeError, YAMLError):
+                pass
+            else:
+                try:
+                    requirements_file_name = data.get("requirements", {}).get(
+                        "file",
+                        "",
+                    )
+                except AttributeError:
+                    pass
+                else:
+                    if requirements_file_name and isinstance(
+                        requirements_file_name,
+                        str,
+                    ):
+                        scrapinghub_requirements_file = Path(requirements_file_name)
+                        if scrapinghub_requirements_file.exists():
+                            return scrapinghub_requirements_file.resolve()
+
+        # Fall back to requirements.txt
+        requirements_file = Path("requirements.txt")
+        if requirements_file.exists():
+            return requirements_file.resolve()
+
+        return None
 
     @classmethod
     def load_options(cls, root: Path) -> dict[str, Any]:
         pyproject_path = root / "pyproject.toml"
         if not pyproject_path.exists():
-            raise ValueError(f"{pyproject_path} does not exist.")
+            return {}
         try:
             pyproject = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
-        except tomllib.TOMLDecodeError as e:
+        except (tomllib.TOMLDecodeError, UnicodeDecodeError) as e:
             raise ValueError(f"Invalid pyproject.toml: {e}") from None
         return pyproject.get("tool", {}).get("scrapy-lint", {})
 
@@ -169,17 +205,20 @@ class Linter:
                     files.add(zyte_config_path)
                 if requirements_path and requirements_path.exists():
                     files.add(requirements_path)
-            for python_file_path in path.glob("*/**.py"):
-                if spec is None or not spec.match_file(python_file_path):
+            for python_file_path in path.glob("**/*.py"):
+                if spec is None or not spec.match_file(
+                    python_file_path.relative_to(root),
+                ):
                     files.add(python_file_path)
         return sorted(files)
 
     def lint(self) -> Generator[Issue]:
         for file in self.files:
+            absolute_file = file.resolve()
             for issue in self.lint_file(file):
                 if self.is_ignored(issue, file):
                     continue
-                issue.file = file.relative_to(self.root)
+                issue.file = absolute_file.relative_to(self.root)
                 yield issue
 
     def is_ignored(self, issue: Issue, file: Path) -> bool:
@@ -192,7 +231,7 @@ class Linter:
             yield from self.lint_python_file(file)
         elif file.name == "scrapinghub.yml":
             yield from ZyteCloudConfigIssueFinder(self.context).lint(file)
-        elif file == self.requirements_file:
+        elif self.requirements_file is not None and file == self.requirements_file:
             yield from RequirementsIssueFinder(self.context).lint(file)
 
     def lint_python_file(self, file: Path) -> Generator[Issue]:
@@ -200,7 +239,9 @@ class Linter:
             with file.open("r", encoding="utf-8") as f:
                 source = f.read()
         except UnicodeDecodeError as e:
-            raise ValueError(f"Could not read {file}: {e}") from None
+            raise ValueError(
+                f"Could not read {file.relative_to(self.root)}: {e}",
+            ) from None
         tree = ast.parse(source, filename=str(file))
         setting_module_finder = SettingModuleIssueFinder(
             self.context,

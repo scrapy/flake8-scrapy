@@ -18,7 +18,7 @@ def default_issues(path: str = "requirements.txt") -> Sequence[ExpectedIssue]:
             path=path,
         ),
         ExpectedIssue(
-            message="SCP24 missing stack requirements: missing packages: aiohttp, "
+            message="SCP24 missing stack requirements: aiohttp, "
             "awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, "
             "requests, scrapinghub, scrapinghub-entrypoint-scrapy, "
             "scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, "
@@ -427,7 +427,7 @@ CASES = [
             *default_issues("requirements-dev.txt"),
             issue("SCP26 requirements.file mismatch", line=3, column=8),
         ),
-        {"scrapy_requirements_file": "requirements-dev.txt"},
+        {"requirements_file": "requirements-dev.txt"},
     ),
     (
         (
@@ -445,11 +445,11 @@ CASES = [
             File("", "requirements-dev.txt"),
         ),
         (*default_issues("requirements-dev.txt"),),
-        {"scrapy_requirements_file": "requirements-dev.txt"},
+        {"requirements_file": "requirements-dev.txt"},
     ),
 ]
 
 
 @cases(CASES)
-def test(input_, expected, flake8_options):
-    check_project(input_, expected, flake8_options)
+def test(files, expected, options):
+    check_project(files, expected, options)

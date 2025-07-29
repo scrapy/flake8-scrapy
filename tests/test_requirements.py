@@ -52,8 +52,16 @@ ALL_DEPS = "\n".join(
 )
 
 CASES: Cases = (
-    # No scrapy.cfg file
-    ((File("", path="requirements.txt"),), NO_ISSUE, {}),
+    # No scrapy.cfg file: still works because the root directory is the working
+    # directory where scrapy-lint is run.
+    (
+        (File("", path="requirements.txt"),),
+        ExpectedIssue(
+            "SCP13 incomplete requirements freeze",
+            path="requirements.txt",
+        ),
+        {},
+    ),
     # Non-standard requirements file name
     (
         (File("", path="scrapy.cfg"), File("", path="requirements-dev.txt")),
@@ -190,7 +198,7 @@ CASES: Cases = (
                 ),
                 (
                     ExpectedIssue(
-                        "SCP24 missing stack requirements: missing packages: aiohttp, awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, scrapinghub, scrapinghub-entrypoint-scrapy, scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, scrapy-pagestorage, scrapy-querycleaner, scrapy-splitvariants, scrapy-zyte-smartproxy, spidermon, urllib3",
+                        "SCP24 missing stack requirements: aiohttp, awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, scrapinghub, scrapinghub-entrypoint-scrapy, scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, scrapy-pagestorage, scrapy-querycleaner, scrapy-splitvariants, scrapy-zyte-smartproxy, spidermon, urllib3",
                         path=path,
                     ),
                 ),
@@ -201,7 +209,7 @@ CASES: Cases = (
                 (
                     ExpectedIssue("SCP13 incomplete requirements freeze", path=path),
                     ExpectedIssue(
-                        "SCP24 missing stack requirements: missing packages: aiohttp, awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, requests, scrapinghub, scrapinghub-entrypoint-scrapy, scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, scrapy-pagestorage, scrapy-querycleaner, scrapy-splitvariants, scrapy-zyte-smartproxy, spidermon, urllib3",
+                        "SCP24 missing stack requirements: aiohttp, awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, requests, scrapinghub, scrapinghub-entrypoint-scrapy, scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, scrapy-pagestorage, scrapy-querycleaner, scrapy-splitvariants, scrapy-zyte-smartproxy, spidermon, urllib3",
                         path=path,
                     ),
                 ),
@@ -338,62 +346,12 @@ CASES: Cases = (
             ),
         )
     ),
-    # SCP44 requirements_file mismatch
-    (
-        (
-            File("", path="scrapy.cfg"),
-            File(ALL_DEPS, path="requirements.txt"),
-        ),
-        NO_ISSUE,
-        {},
-    ),
-    (
-        (
-            File("", path="scrapy.cfg"),
-            File(ALL_DEPS, path="requirements.txt"),
-        ),
-        NO_ISSUE,
-        {
-            "scrapy_requirements_file": "requirements.txt",
-        },
-    ),
-    (
-        (
-            File("", path="scrapy.cfg"),
-            File(ALL_DEPS, path="custom-requirements.txt"),
-        ),
-        NO_ISSUE,
-        {
-            "requirements_file": "custom-requirements.txt",
-        },
-    ),
-    (
-        (
-            File("", path="scrapy.cfg"),
-            File(ALL_DEPS, path="custom-requirements.txt"),
-        ),
-        NO_ISSUE,
-        {
-            "scrapy_requirements_file": "custom-requirements.txt",
-        },
-    ),
-    (
-        (
-            File("", path="scrapy.cfg"),
-            File(ALL_DEPS, path="custom-requirements.txt"),
-        ),
-        NO_ISSUE,
-        {
-            "requirements_file": "custom-requirements.txt",
-            "scrapy_requirements_file": "custom-requirements.txt",
-        },
-    ),
 )
 
 
 @cases(CASES)
-def test(input_, expected, flake8_options):
-    check_project(input_, expected, flake8_options)
+def test(files, expected, options):
+    check_project(files, expected, options)
 
 
 def test_required_dependencies_are_canonical():

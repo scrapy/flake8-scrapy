@@ -137,6 +137,10 @@ CASES: Cases = (
                             "FEEDS",
                             '{f: {"format": "json", "batch_item_count": 0, "indent": 0, "fields": None}}',
                         ),
+                        (
+                            "FEEDS",
+                            '{f: {"format": "json", "batch_item_count": 0, "indent": 0, "fields": foo}}',
+                        ),
                         ("FEEDS", '{f: {"format": "json"}}'),
                         (
                             "FEEDS",
@@ -830,8 +834,8 @@ CASES: Cases = (
 
 @cases(CASES)
 def test(
-    input_: File | list[File],
+    files: File | list[File],
     expected: ExpectedIssue | list[ExpectedIssue] | None,
-    flake8_options,
+    options,
 ):
-    check_project(input_, expected, flake8_options)
+    check_project(files, expected, options)

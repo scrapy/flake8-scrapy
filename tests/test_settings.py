@@ -652,7 +652,7 @@ CASES: Cases = (
     (
         [File("settings['FOO']", path="a.py")],
         NO_ISSUE,
-        {"known-settings": "FOO,BAR"},
+        {"known-settings": ["FOO", "BAR"]},
     ),
     # and extends automatic suggestions.
     (
@@ -662,7 +662,7 @@ CASES: Cases = (
             column=9,
             path="a.py",
         ),
-        {"known-settings": "FOO_BAR"},
+        {"known-settings": ["FOO_BAR"]},
     ),
     # SCP32 wrong setting method: do not trigger when not using getwithbase()
     # in update_settings()
@@ -717,8 +717,8 @@ CASES: Cases = (
 
 @cases(CASES)
 def test(
-    input_: File | list[File],
+    files: File | list[File],
     expected: ExpectedIssue | list[ExpectedIssue] | None,
-    flake8_options,
+    options,
 ):
-    check_project(input_, expected, flake8_options)
+    check_project(files, expected, options)

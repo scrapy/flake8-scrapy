@@ -4,36 +4,17 @@ from collections import defaultdict
 from configparser import ConfigParser
 from dataclasses import dataclass
 from functools import cached_property
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from packaging.version import Version
-from ruamel.yaml import YAML
-from ruamel.yaml.error import YAMLError
 
 from scrapy_lint.requirements import iter_requirement_lines
 
 if TYPE_CHECKING:
-    from ast import AST
     from collections.abc import Sequence
+    from pathlib import Path
 
     from packaging.requirements import Requirement
-
-
-@dataclass
-class Flake8File:
-    tree: AST | None
-    path: Path
-    lines: Sequence[str] | None = None
-
-    @classmethod
-    def from_params(
-        cls,
-        tree: AST | None,
-        file_path: str,
-        lines: Sequence[str] | None = None,
-    ):
-        return cls(tree, Path(file_path).resolve(), lines)
 
 
 @dataclass
@@ -49,44 +30,6 @@ class Project:
         if "settings" not in config:
             return ()
         return tuple(config["settings"].values())
-
-    @staticmethod
-    def find_requirements_file_path(
-        root: Path | None,
-        requirements_file_path: str | None,
-    ) -> Path | None:
-        if requirements_file_path:
-            return Path(requirements_file_path).resolve()
-        if not root:
-            return None
-
-        # Check scrapinghub.yml for requirements file
-        scrapinghub_file = root / "scrapinghub.yml"
-        yaml_parser = YAML(typ="safe")
-        if scrapinghub_file.exists():
-            try:
-                with scrapinghub_file.open() as f:
-                    data = yaml_parser.load(f)
-            except YAMLError:
-                pass
-            else:
-                try:
-                    requirements_file_name = data.get("requirements", {}).get(
-                        "file",
-                        "",
-                    )
-                except AttributeError:
-                    pass
-                else:
-                    scrapinghub_requirements_file = root / requirements_file_name
-                    if scrapinghub_requirements_file.exists():
-                        return scrapinghub_requirements_file.resolve()
-
-        # Fall back to requirements.txt
-        requirements_file = root / "requirements.txt"
-        if requirements_file.exists():
-            return requirements_file.resolve()
-        return None
 
     @cached_property
     def _requirements(self) -> dict[str, list[Requirement]]:

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from .linter import Linter
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Sequence
 
     from .issues import Issue
 
@@ -25,17 +25,18 @@ def get_parser() -> ArgumentParser:
     return parser
 
 
-def lint() -> Generator[Issue]:
+def lint(args: Sequence[str]) -> Generator[Issue]:
     parser = get_parser()
-    args = parser.parse_args()
-    linter = Linter.from_args(args)
+    parsed_args = parser.parse_args(args)
+    linter = Linter.from_args(parsed_args)
     yield from linter.lint()
 
 
-def main() -> None:
+def main(args: Sequence[str] | None = None) -> None:
+    args = args if args is not None else sys.argv[1:]
     try:
         found_issues = False
-        for issue in lint():
+        for issue in lint(args):
             found_issues = True
             print(issue)
     except Exception as e:  # pylint: disable=broad-exception-caught

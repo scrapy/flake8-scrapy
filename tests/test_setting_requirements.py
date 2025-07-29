@@ -693,7 +693,7 @@ CASES: Cases = (
             ),
         ),
         {
-            "known-settings": "SETTING",
+            "known-settings": ["SETTING"],
         },
     ),
 )
@@ -701,8 +701,8 @@ CASES: Cases = (
 
 @cases(CASES)
 def test(
-    input_: File | list[File],
+    files: File | list[File],
     expected: ExpectedIssue | list[ExpectedIssue] | None,
-    flake8_options,
+    options,
 ):
-    check_project(input_, expected, flake8_options)
+    check_project(files, expected, options)

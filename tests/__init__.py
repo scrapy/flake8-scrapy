@@ -6,9 +6,11 @@ from collections.abc import Generator, Iterable, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, Any, Callable, Union
 
 import pytest
+import tomli_w
 
 if sys.version_info >= (3, 10):
     from typing import TypeAlias
@@ -81,7 +83,7 @@ Cases: TypeAlias = Sequence[tuple[Files, ExpectedIssues, Options]]
 def cases(test_cases: Cases) -> Callable:
     def decorator(func):
         return pytest.mark.parametrize(
-            ("input", "expected", "flake8_options"),
+            ("files", "expected", "options"),
             test_cases,
             ids=range(len(test_cases)),
         )(func)
@@ -98,3 +100,30 @@ def iter_issues(
         yield issues
         return
     yield from issues
+
+
+@contextmanager
+def project(
+    files: File | Sequence[File] | None = None,
+    options: dict | None = None,
+):
+    if isinstance(files, File):
+        files = [files]
+    elif files is None:
+        files = []
+    with TemporaryDirectory() as directory:
+        for file in files:
+            assert file.path
+            file_path = Path(directory) / file.path
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            if isinstance(file.text, str):
+                file_path.write_text(file.text)
+            else:
+                file_path.write_bytes(file.text)
+        if options:
+            options_path = Path(directory) / "pyproject.toml"
+            toml_dict = {"tool": {"scrapy-lint": options}}
+            with options_path.open("wb") as f:
+                f.write(tomli_w.dumps(toml_dict).encode("utf-8"))
+        with chdir(directory):
+            yield directory

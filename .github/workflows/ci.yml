@@ -40,7 +40,8 @@ jobs:
         include:
         - python-version: "3.9"
           toxenv: "mypy"
-        - toxenv: "twinecheck"
+        - toxenv: "pylint"
+        - toxenv: "twine"
         - toxenv: "docs"
     steps:
     - uses: actions/checkout@v4

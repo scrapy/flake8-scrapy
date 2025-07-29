@@ -350,8 +350,8 @@ CASES: Cases = (
 
 @cases(CASES)
 def test(
-    input_: File | Sequence[File],
+    files: File | Sequence[File],
     expected: ExpectedIssue | Sequence[ExpectedIssue] | None,
-    flake8_options,
+    options,
 ):
-    check_project(input_, expected, flake8_options)
+    check_project(files, expected, options)

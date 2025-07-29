@@ -271,13 +271,15 @@ def check_feed_fields(value: expr) -> Generator[Issue]:
         if value.value is not None:
             detail = f"{param!r} must be a list or a dict"
             yield Issue(INVALID_SETTING_VALUE, pos, detail)
-    elif isinstance(value, (List, Set, Tuple)):
+        return
+    if isinstance(value, (List, Set, Tuple)):
         for index, elt in enumerate(value.elts):
             if isinstance(elt, Constant) and not isinstance(elt.value, str):
                 detail = f"{param}[{index}] ({elt.value!r}) must be a string"
                 pos_elt = Pos.from_node(elt)
                 yield Issue(INVALID_SETTING_VALUE, pos_elt, detail)
-    elif not is_dict(value):
+        return
+    if not is_dict(value):
         return
     assert isinstance(value, (Call, Dict))
     for elt_key, elt_value in iter_dict(value):

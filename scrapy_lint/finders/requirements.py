@@ -71,8 +71,12 @@ class RequirementsIssueFinder:
 
     def lint(self, file: Path) -> Generator[Issue]:
         packages: set[str] = set()
+        try:
+            requirements_text = file.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            return
         for line_number, name, requirement in iter_requirement_lines(
-            file.read_text(encoding="utf-8").splitlines(),
+            requirements_text.splitlines(),
         ):
             packages.add(name)
             if name not in PACKAGES:

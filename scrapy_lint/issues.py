@@ -12,9 +12,6 @@ class Pos:
     line: int = 1
     column: int = 0
 
-    def __iter__(self):
-        return iter([self.line, self.column])
-
     @classmethod
     def from_node(cls, node, column: int | None = None, /) -> Pos:
         line = getattr(node, "lineno", 1)

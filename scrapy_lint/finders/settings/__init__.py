@@ -257,8 +257,7 @@ class SettingChecker:
 
     def check_update(self, node: keyword | Constant) -> Generator[Issue]:
         name = node.value if isinstance(node, Constant) else node.arg
-        assert isinstance(name, str)
-        if name not in SETTINGS:
+        if not isinstance(name, str) or name not in SETTINGS:
             return
         setting = SETTINGS[name]
         if setting.is_pre_crawler and not self.in_update_pre_crawler_settings:
