@@ -23,16 +23,19 @@ def is_list_assignment(node, var_name):
 
 
 class UnreachableDomainIssueFinder:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self):
         self.allowed_domains = []
         self.start_urls = []
+        self.reported = False
 
     def url_in_allowed_domains(self, url):
         netloc = urlparse(url).netloc
         return any(domain in netloc for _, _, domain in self.allowed_domains)
 
     def __call__(self, node) -> Generator[Issue]:
+        if self.reported:
+            return
+
         if is_list_assignment(node, var_name="allowed_domains"):
             self.allowed_domains = get_list_metadata(node)
 
@@ -45,6 +48,8 @@ class UnreachableDomainIssueFinder:
         for line, column, url in self.start_urls:
             if not self.url_in_allowed_domains(url):
                 yield Issue(DISALLOWED_DOMAIN, Pos(line, column))
+
+        self.reported = True
 
 
 class UrlInAllowedDomainsIssueFinder:

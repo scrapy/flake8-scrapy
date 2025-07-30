@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import warnings
 from ast import NodeVisitor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
@@ -104,6 +105,12 @@ class PythonIssueFinder(NodeVisitor):
             super().visit(node)
 
 
+class InputFileError(ValueError):
+    def __init__(self, message: str, file: Path):
+        message = f"{file.relative_to(Path.cwd())}: Error: {message}"
+        super().__init__(message)
+
+
 class Linter:
     @classmethod
     def from_args(cls, args: Namespace) -> Linter:
@@ -178,7 +185,7 @@ class Linter:
         try:
             pyproject = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
         except (tomllib.TOMLDecodeError, UnicodeDecodeError) as e:
-            raise ValueError(f"Invalid pyproject.toml: {e}") from None
+            raise InputFileError(str(e), pyproject_path) from None
         return pyproject.get("tool", {}).get("scrapy-lint", {})
 
     @classmethod
@@ -239,16 +246,19 @@ class Linter:
             with file.open("r", encoding="utf-8") as f:
                 source = f.read()
         except UnicodeDecodeError as e:
-            raise ValueError(
-                f"Could not read {file.relative_to(self.root)}: {e}",
-            ) from None
-        tree = ast.parse(source, filename=str(file))
+            raise InputFileError(str(e), file) from None
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SyntaxWarning)
+            try:
+                tree = ast.parse(source, filename=str(file))
+            except SyntaxError as e:
+                raise InputFileError(str(e), file) from None
         setting_module_finder = SettingModuleIssueFinder(
             self.context,
             file,
             self.setting_checker,
         )
-        if setting_module_finder.in_setting_module():
+        if file in self.context.project.setting_module_paths:
             yield from setting_module_finder.check(tree)
         finder = PythonIssueFinder(self.setting_checker)
         finder.visit(tree)

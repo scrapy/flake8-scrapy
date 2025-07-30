@@ -11,7 +11,6 @@ from packaging.version import Version
 from scrapy_lint.requirements import iter_requirement_lines
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
     from pathlib import Path
 
     from packaging.requirements import Requirement
@@ -23,13 +22,23 @@ class Project:
     requirements_file_path: Path | None = None
 
     @cached_property
-    def setting_module_import_paths(self) -> Sequence[str]:
+    def setting_module_paths(self) -> set[Path]:
         config_file = self.root / "scrapy.cfg"
         config = ConfigParser()
         config.read(config_file)
         if "settings" not in config:
-            return ()
-        return tuple(config["settings"].values())
+            return set()
+        result = set()
+        for module_path in config["settings"].values():
+            parts = module_path.split(".")
+            pkg_path = self.root.joinpath(*parts, "__init__.py")
+            if pkg_path.exists():
+                result.add(pkg_path)
+                continue
+            mod_path = self.root.joinpath(*parts[:-1], f"{parts[-1]}.py")
+            if mod_path.exists():
+                result.add(mod_path)
+        return result
 
     @cached_property
     def _requirements(self) -> dict[str, list[Requirement]]:

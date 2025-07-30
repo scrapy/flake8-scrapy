@@ -55,3 +55,11 @@ Use :reqmeta:`zyte_api_automap`:
 .. code-block:: python
 
     Request(url, meta={"zyte_api_automap": {"geolocation": "ie"}})
+
+If you are using ``zyte_api`` because you have set
+:setting:`ZYTE_API_AUTOMAP_PARAMS` but you want different parameters for a
+specific request, set :reqmeta:`zyte_api_default_params` to ``False`` instead:
+
+.. code-block:: python
+
+    Request(url, meta={"zyte_api_default_params": False})
