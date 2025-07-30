@@ -5,6 +5,12 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+from scrapy_lint.versions import (
+    UNKNOWN_UNSUPPORTED_VERSION,
+    UnknownFutureVersion,
+    UnknownUnsupportedVersion,
+)
+
 if TYPE_CHECKING:
     from packaging.version import Version
 
@@ -17,22 +23,11 @@ if TYPE_CHECKING:
 MAX_DEFAULT_VALUE_HISTORY = 2
 
 
-class UnknownFutureVersion:  # pylint: disable=too-few-public-methods
-    pass
-
-
 class UnknownSettingValue:  # pylint: disable=too-few-public-methods
     pass
 
 
-class UnknownUnsupportedVersion:  # pylint: disable=too-few-public-methods
-    pass
-
-
-UNKNOWN_FUTURE_VERSION = UnknownFutureVersion()
 UNKNOWN_SETTING_VALUE = UnknownSettingValue()
-UNKNOWN_UNSUPPORTED_VERSION = UnknownUnsupportedVersion()
-
 # Methods of the Settings class that read a setting value.
 SETTING_GETTERS = {
     "__getitem__",
@@ -148,23 +143,23 @@ class VersionedValue:
         | None = None,
     ):
         self.all_time_value = value
-        self.value_history = history or {}
+        self.history = history or {}
 
     def __getitem__(self, version: Version) -> Any:
-        if not self.value_history:
+        if not self.history:
             return self.all_time_value
         applicable_versions = [
             v
-            for v in self.value_history
+            for v in self.history
             if not isinstance(v, UnknownUnsupportedVersion)
             and not isinstance(v, UnknownFutureVersion)
             and v <= version
         ]
         if not applicable_versions:
-            assert UNKNOWN_UNSUPPORTED_VERSION in self.value_history
-            return self.value_history[UNKNOWN_UNSUPPORTED_VERSION]
+            assert UNKNOWN_UNSUPPORTED_VERSION in self.history
+            return self.history[UNKNOWN_UNSUPPORTED_VERSION]
         latest_applicable = max(applicable_versions)
-        return self.value_history[latest_applicable]
+        return self.history[latest_applicable]
 
 
 @dataclass

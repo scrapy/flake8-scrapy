@@ -44,6 +44,7 @@ from scrapy_lint.ast import (
     is_dict,
     iter_dict,
 )
+from scrapy_lint.data.addons import ADDONS
 from scrapy_lint.data.packages import PACKAGES
 from scrapy_lint.data.settings import (
     MAX_AUTOMATIC_SUGGESTIONS,
@@ -83,15 +84,17 @@ from scrapy_lint.settings import (
     SETTING_TYPE_GETTERS,
     SETTING_UPDATER_TYPES,
     SETTING_UPDATERS,
-    UNKNOWN_FUTURE_VERSION,
     UNKNOWN_SETTING_VALUE,
-    UNKNOWN_UNSUPPORTED_VERSION,
     Setting,
     UnknownSettingValue,
-    UnknownUnsupportedVersion,
     getbool,
 )
 from scrapy_lint.utils import extend_sys_path
+from scrapy_lint.versions import (
+    UNKNOWN_FUTURE_VERSION,
+    UNKNOWN_UNSUPPORTED_VERSION,
+    UnknownUnsupportedVersion,
+)
 
 from .types import TYPE_CHECKERS
 from .values import VALUE_CHECKERS
@@ -614,15 +617,18 @@ class SettingModuleIssueFinder(NodeVisitor):
         processor = SettingsModuleSettingsProcessor(self.context, self.setting_checker)
         for child in iter_nodes(node):
             if isinstance(child, Assign):
-                processor.process_assignment(child)
+                issue_generator = processor.process_assignment(child)
+                self.issues.extend(issue_generator)
             elif isinstance(child, (ClassDef, FunctionDef)):
                 if not child.name.isupper():
                     continue
                 pos = Pos.from_node(child, definition_column(child))
                 self.issues.append(Issue(IMPROPER_SETTING_DEFINITION, pos))
-                for issue in self.setting_checker.check_name(child):
-                    self.issues.append(issue)
-        self.issues.extend(processor.get_issues())
+                issue_generator = self.setting_checker.check_name(child)
+                self.issues.extend(issue_generator)
+            elif isinstance(child, (Import, ImportFrom)):
+                processor.process_import(child)
+        self.issues.extend(processor.iter_issues())
 
 
 class SettingsModuleSettingsProcessor:
@@ -631,26 +637,56 @@ class SettingsModuleSettingsProcessor:
         self.seen_settings: set[str] = set()
         self.robotstxt_obey_values: list[tuple[bool, int, int]] = []
         self.redundant_values: list[tuple[str, int, int]] = []
-        self.issues: list[Issue] = []
         self.setting_checker = setting_checker
+        self.imports: dict[str, str] = {}
+        self.addon_settings: set[str] = set()
 
-    def process_assignment(self, assignment: Assign) -> None:
+    def process_assignment(self, assignment: Assign) -> Generator[Issue]:
         for target in assignment.targets:
             if not (isinstance(target, Name) and target.id.isupper()):
                 continue
-            for issue in self.setting_checker.check_name(target):
-                self.issues.append(issue)
+            yield from self.setting_checker.check_name(target)
             name = target.id
             self.seen_settings.add(name)
-            self.process_setting(name, assignment)
+            if name == "ADDONS":
+                self.process_addons(assignment)
+            yield from self.process_setting(name, assignment)
 
-    def process_setting(self, name: str, assignment: Assign) -> None:
+    def resolve_import_path(self, node) -> str:
+        """Recursively resolve the import path for a Name or Attribute node, using self.imports for base names."""
+        if isinstance(node, Name):
+            return self.imports.get(node.id, node.id)
+        assert isinstance(node, Attribute)
+        base = self.resolve_import_path(node.value)
+        return f"{base}.{node.attr}"
+
+    def process_addons(self, assignment: Assign) -> None:
+        if not is_dict(assignment.value):
+            return
+        assert isinstance(assignment.value, (Call, Dict))
+        for key, _ in iter_dict(assignment.value):
+            import_path = None
+            if (
+                isinstance(key, Name)
+                and key.id in self.imports
+                and self.imports[key.id] in ADDONS
+            ):
+                import_path = self.imports[key.id]
+            elif isinstance(key, Constant) and isinstance(key.value, str):
+                import_path = key.value
+            elif isinstance(key, Attribute):
+                import_path = self.resolve_import_path(key)
+            if import_path not in ADDONS:
+                continue
+            addon_settings = ADDONS[import_path].get_settings(self.context.project)
+            self.addon_settings |= addon_settings
+
+    def process_setting(self, name: str, assignment: Assign) -> Generator[Issue]:
         if name == "ROBOTSTXT_OBEY":
             self.process_robotstxt(assignment)
         self.check_redundant_values(name, assignment)
-        self.check_throttling(name, assignment)
-        for issue in self.setting_checker.check_value(name, assignment.value):
-            self.issues.append(issue)
+        yield from self.check_throttling(name, assignment)
+        yield from self.setting_checker.check_value(name, assignment.value)
 
     def check_redundant_values(self, name: str, assignment: Assign) -> None:
         if name not in SETTINGS:
@@ -671,7 +707,7 @@ class SettingsModuleSettingsProcessor:
                 (name, assignment.value.lineno, assignment.value.col_offset),
             )
 
-    def check_throttling(self, name: str, assignment: Assign) -> None:
+    def check_throttling(self, name: str, assignment: Assign) -> Generator[Issue]:
         if name not in {"CONCURRENT_REQUESTS_PER_DOMAIN", "DOWNLOAD_DELAY"}:
             return
         if not isinstance(assignment.value, Constant):
@@ -683,7 +719,7 @@ class SettingsModuleSettingsProcessor:
             name == "DOWNLOAD_DELAY" and value < 1.0
         ):
             pos = Pos.from_node(assignment.value)
-            self.issues.append(Issue(LOW_PROJECT_THROTTLING, pos))
+            yield Issue(LOW_PROJECT_THROTTLING, pos)
 
     def process_robotstxt(self, child: Assign) -> None:
         value = True
@@ -698,26 +734,25 @@ class SettingsModuleSettingsProcessor:
                 value = getbool(child.value.value)
         self.robotstxt_obey_values.append((value, child.lineno, col_offset))
 
-    def get_issues(self) -> list[Issue]:
-        self.validate_user_agent()
-        self.validate_robotstxt()
-        self.validate_throttling()
-        self.validate_missing_changing_settings()
-        self.validate_redundant_values()
-        return self.issues
+    def iter_issues(self) -> Generator[Issue]:
+        yield from self.validate_user_agent()
+        yield from self.validate_robotstxt()
+        yield from self.validate_throttling()
+        yield from self.validate_missing_changing_settings()
+        yield from self.validate_redundant_values()
 
-    def validate_user_agent(self) -> None:
+    def validate_user_agent(self) -> Generator[Issue]:
         if "USER_AGENT" not in self.seen_settings:
-            self.issues.append(Issue(NO_PROJECT_USER_AGENT))
+            yield Issue(NO_PROJECT_USER_AGENT)
 
-    def validate_robotstxt(self) -> None:
+    def validate_robotstxt(self) -> Generator[Issue]:
         if not self.robotstxt_obey_values:
-            self.issues.append(Issue(ROBOTS_TXT_IGNORED_BY_DEFAULT))
+            yield Issue(ROBOTS_TXT_IGNORED_BY_DEFAULT)
         elif all(not value for value, *_ in self.robotstxt_obey_values):
             _, line, column = self.robotstxt_obey_values[0]
-            self.issues.append(Issue(ROBOTS_TXT_IGNORED_BY_DEFAULT, Pos(line, column)))
+            yield Issue(ROBOTS_TXT_IGNORED_BY_DEFAULT, Pos(line, column))
 
-    def validate_throttling(self) -> None:
+    def validate_throttling(self) -> Generator[Issue]:
         if not all(
             setting in self.seen_settings
             for setting in (
@@ -725,18 +760,22 @@ class SettingsModuleSettingsProcessor:
                 "DOWNLOAD_DELAY",
             )
         ):
-            self.issues.append(Issue(INCOMPLETE_PROJECT_THROTTLING))
+            yield Issue(INCOMPLETE_PROJECT_THROTTLING)
 
-    def validate_missing_changing_settings(self) -> None:
+    def validate_missing_changing_settings(self) -> Generator[Issue]:
         for name, setting in SETTINGS.items():
-            if name in self.seen_settings or name.endswith("_BASE"):
+            if (
+                name in self.seen_settings
+                or name.endswith("_BASE")
+                or name in self.addon_settings
+            ):
                 continue
             default = setting.default_value
             if isinstance(default, UnknownSettingValue):
                 continue
-            if not default or not default.value_history:
+            if not default or not default.history:
                 continue
-            history = default.value_history
+            history = default.history
             assert len(history) == MAX_DEFAULT_VALUE_HISTORY
             assert UNKNOWN_UNSUPPORTED_VERSION in history
             old_value = history[UNKNOWN_UNSUPPORTED_VERSION]
@@ -747,19 +786,13 @@ class SettingsModuleSettingsProcessor:
                     f"future version of {setting.package}"
                 )
                 issue = Issue(MISSING_CHANGING_SETTING, detail=detail)
-                self.issues.append(issue)
+                yield issue
                 continue
             requirements = self.context.project.frozen_requirements
             if not requirements or setting.package not in requirements:
                 continue
             project_version = requirements[setting.package]
-            change_version, new_value = next(
-                iter(
-                    (k, v)
-                    for k, v in history.items()
-                    if k != UNKNOWN_UNSUPPORTED_VERSION
-                ),
-            )
+            change_version, new_value = next(iter(history.items()))  # pylint: disable=stop-iteration-return
             assert isinstance(change_version, Version)
             if project_version >= change_version:
                 continue
@@ -768,22 +801,22 @@ class SettingsModuleSettingsProcessor:
                 f"{setting.package} {change_version}"
             )
             issue = Issue(MISSING_CHANGING_SETTING, detail=detail)
-            self.issues.append(issue)
+            yield issue
 
-    def validate_redundant_values(self) -> None:
+    def validate_redundant_values(self) -> Generator[Issue]:
         for name, line, column in self.redundant_values:
             if self.is_changing_setting(name):
                 continue
-            self.issues.append(Issue(REDUNDANT_SETTING_VALUE, Pos(line, column)))
+            yield Issue(REDUNDANT_SETTING_VALUE, Pos(line, column))
 
     def is_changing_setting(self, name: str) -> bool:
         assert name in SETTINGS
         setting = SETTINGS[name]
         default = setting.default_value
         assert not isinstance(default, UnknownSettingValue)
-        if not default or not default.value_history:
+        if not default or not default.history:
             return False
-        history = default.value_history
+        history = default.history
         assert len(history) == MAX_DEFAULT_VALUE_HISTORY
         assert UNKNOWN_UNSUPPORTED_VERSION in history
         assert UNKNOWN_FUTURE_VERSION not in history
@@ -795,3 +828,13 @@ class SettingsModuleSettingsProcessor:
         )
         assert isinstance(change_version, Version)
         return project_version < change_version
+
+    def process_import(self, node: Import | ImportFrom) -> None:
+        if isinstance(node, Import):
+            for import_alias in node.names:
+                name = import_alias.asname if import_alias.asname else import_alias.name
+                self.imports[name] = import_alias.name
+        elif isinstance(node, ImportFrom):
+            for import_alias in node.names:
+                name = import_alias.asname if import_alias.asname else import_alias.name
+                self.imports[name] = f"{node.module}.{import_alias.name}"

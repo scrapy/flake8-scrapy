@@ -424,6 +424,76 @@ CASES: Cases = (
                     path=path,
                 ),
             ),
+            (
+                ("scrapy==2.12.0",),
+                'ADDONS = {"scrapy_zyte_api.Addon": 500}',
+                ExpectedIssue(
+                    "SCP41 unneeded import path",
+                    column=10,
+                    path=path,
+                ),
+            ),
+            (
+                ("scrapy==2.12.0",),
+                'ADDONS = {"scrapy_zyte_api.addon.Addon": 500}',
+                ExpectedIssue(
+                    "SCP41 unneeded import path",
+                    column=10,
+                    path=path,
+                ),
+            ),
+            (
+                ("scrapy==2.12.0",),
+                "ADDONS = {ScrapyZyteApiAddon: 500}",
+                ExpectedIssue(
+                    "SCP34 missing changing setting: TWISTED_REACTOR changes "
+                    "from None to "
+                    "'twisted.internet.asyncioreactor.AsyncioSelectorReactor' "
+                    "in scrapy 2.13.0",
+                    path=path,
+                ),
+            ),
+            (
+                ("scrapy==2.12.0",),
+                "from scrapy_zyte_api import Addon\nADDONS = {Addon: 500}",
+                NO_ISSUE,
+            ),
+            (
+                ("scrapy==2.12.0",),
+                "from scrapy_zyte_api import Addon as ScrapyZyteApiAddon\n"
+                ""
+                "ADDONS = {ScrapyZyteApiAddon: 500}",
+                NO_ISSUE,
+            ),
+            (
+                ("scrapy==2.12.0",),
+                "from scrapy_zyte_api.addon import Addon as ScrapyZyteApiAddon\n"
+                ""
+                "ADDONS = {ScrapyZyteApiAddon: 500}",
+                NO_ISSUE,
+            ),
+            (
+                ("scrapy==2.12.0",),
+                "import scrapy_zyte_api\nADDONS = {scrapy_zyte_api.Addon: 500}",
+                NO_ISSUE,
+            ),
+            (
+                ("scrapy==2.12.0",),
+                "import scrapy_zyte_api.addon\n"
+                ""
+                "ADDONS = {scrapy_zyte_api.addon.Addon: 500}",
+                NO_ISSUE,
+            ),
+            (
+                ("scrapy==2.12.0",),
+                "import scrapy_zyte_api.addon as foo\nADDONS = {foo.Addon: 500}",
+                NO_ISSUE,
+            ),
+            (
+                ("scrapy==2.12.0", "scrapy_zyte_api==0.30.0"),
+                "import scrapy_zyte_api.addon as foo\nADDONS = {foo.Addon: 500}",
+                NO_ISSUE,
+            ),
             # SCP41 unneeded import path (non-based component priority dict)
             (
                 ("scrapy==2.10.0",),

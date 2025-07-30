@@ -3,14 +3,13 @@ from __future__ import annotations
 from packaging.version import Version
 
 from scrapy_lint.settings import (
-    UNKNOWN_FUTURE_VERSION,
     UNKNOWN_SETTING_VALUE,
-    UNKNOWN_UNSUPPORTED_VERSION,
     Setting,
     SettingType,
     VersionedValue,
     Versioning,
 )
+from scrapy_lint.versions import UNKNOWN_FUTURE_VERSION, UNKNOWN_UNSUPPORTED_VERSION
 
 PREDEFINED_SUGGESTIONS = {
     # NOTE: Somewhat arbitrary for the sake of having a few suggestions to
