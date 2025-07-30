@@ -18,13 +18,8 @@ from scrapy_lint.issues import (
     Issue,
     Pos,
 )
-from scrapy_lint.settings import (
-    UNKNOWN_SETTING_VALUE,
-    UNKNOWN_UNSUPPORTED_VERSION,
-    Setting,
-    SettingType,
-    UnknownUnsupportedVersion,
-)
+from scrapy_lint.settings import UNKNOWN_SETTING_VALUE, Setting, SettingType
+from scrapy_lint.versions import UNKNOWN_UNSUPPORTED_VERSION, UnknownUnsupportedVersion
 
 if TYPE_CHECKING:
     from scrapy_lint.context import Project

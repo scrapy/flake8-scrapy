@@ -8,11 +8,10 @@ from scrapy_lint.data.settings import SETTINGS
 from scrapy_lint.finders.settings.types import PATH_SUPPORT_VERSIONS
 from scrapy_lint.settings import (
     MAX_DEFAULT_VALUE_HISTORY,
-    UNKNOWN_UNSUPPORTED_VERSION,
     SettingType,
     UnknownSettingValue,
-    UnknownUnsupportedVersion,
 )
+from scrapy_lint.versions import UNKNOWN_UNSUPPORTED_VERSION, UnknownUnsupportedVersion
 
 
 def test_canonical_package_names():
@@ -35,7 +34,7 @@ def test_default_value_history():
         default_value = data.default_value
         if isinstance(default_value, UnknownSettingValue):
             continue
-        history = default_value.value_history
+        history = default_value.history
         if not history:
             continue
         assert UNKNOWN_UNSUPPORTED_VERSION in history
