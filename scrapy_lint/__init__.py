@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import traceback
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -39,8 +40,8 @@ def main(args: Sequence[str] | None = None) -> None:
         for issue in lint(args):
             found_issues = True
             print(issue)
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        print(f"Error: {e}", file=sys.stderr)
+    except Exception:  # pylint: disable=broad-exception-caught
+        traceback.print_exc(file=sys.stderr)
         sys.exit(2)
     else:
         if found_issues:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import warnings
 from ast import NodeVisitor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
@@ -242,13 +243,15 @@ class Linter:
             raise ValueError(
                 f"Could not read {file.relative_to(self.root)}: {e}",
             ) from None
-        tree = ast.parse(source, filename=str(file))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", SyntaxWarning)
+            tree = ast.parse(source, filename=str(file))
         setting_module_finder = SettingModuleIssueFinder(
             self.context,
             file,
             self.setting_checker,
         )
-        if setting_module_finder.in_setting_module():
+        if file in self.context.project.setting_module_paths:
             yield from setting_module_finder.check(tree)
         finder = PythonIssueFinder(self.setting_checker)
         finder.visit(tree)

@@ -31,8 +31,6 @@ from ast import (
 from ast import walk as iter_nodes
 from contextlib import suppress
 from difflib import SequenceMatcher
-from importlib.util import find_spec
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Union
 
 from packaging.version import Version
@@ -89,7 +87,6 @@ from scrapy_lint.settings import (
     UnknownSettingValue,
     getbool,
 )
-from scrapy_lint.utils import extend_sys_path
 from scrapy_lint.versions import (
     UNKNOWN_FUTURE_VERSION,
     UNKNOWN_UNSUPPORTED_VERSION,
@@ -101,6 +98,7 @@ from .values import VALUE_CHECKERS
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from pathlib import Path
 
     from scrapy_lint.context import Context
 
@@ -347,8 +345,12 @@ class SettingChecker:
                 or not self.in_update_settings
             )
         ):
-            assert isinstance(node.value, Name)
-            column = node.value.col_offset + len(node.value.id)
+            if isinstance(node.value, Name):
+                column = node.value.col_offset + len(node.value.id)
+            else:
+                assert isinstance(node.value, Attribute)
+                assert node.value.end_col_offset is not None
+                column = node.value.end_col_offset - len(node.value.attr)
             expected = SETTING_TYPE_GETTERS[setting.type]
             pos = Pos.from_node(node, column)
             yield Issue(WRONG_SETTING_METHOD, pos, f"use {expected}()")
@@ -557,18 +559,6 @@ class SettingModuleIssueFinder(NodeVisitor):
         self.file = file.absolute()
         self.issues: list[Issue] = []
         self.setting_checker = setting_checker
-
-    def in_setting_module(self) -> bool:
-        for import_path in self.context.project.setting_module_import_paths:
-            assert self.context.project.root is not None
-            with extend_sys_path(self.context.project.root):
-                spec = find_spec(import_path)
-            if not spec or not spec.origin:
-                continue
-            module_path = Path(spec.origin).absolute()
-            if module_path == self.file:
-                return True
-        return False
 
     def check(self, tree: Module) -> Generator[Issue]:
         self.visit(tree)
