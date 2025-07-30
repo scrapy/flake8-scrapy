@@ -19,6 +19,7 @@ CASES: Cases = (
                         '        "https://c.example",',
                         '        "https://d.example",',
                         "    ]",
+                        "    foo = 'bar'",  # Make sure new assignments do not cause issues
                     ],
                 ),
                 path="a.py",

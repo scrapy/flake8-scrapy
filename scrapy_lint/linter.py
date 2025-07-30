@@ -105,6 +105,12 @@ class PythonIssueFinder(NodeVisitor):
             super().visit(node)
 
 
+class InputFileError(ValueError):
+    def __init__(self, message: str, file: Path):
+        message = f"{file.relative_to(Path.cwd())}: Error: {message}"
+        super().__init__(message)
+
+
 class Linter:
     @classmethod
     def from_args(cls, args: Namespace) -> Linter:
@@ -179,7 +185,7 @@ class Linter:
         try:
             pyproject = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
         except (tomllib.TOMLDecodeError, UnicodeDecodeError) as e:
-            raise ValueError(f"Invalid pyproject.toml: {e}") from None
+            raise InputFileError(str(e), pyproject_path) from None
         return pyproject.get("tool", {}).get("scrapy-lint", {})
 
     @classmethod
@@ -240,12 +246,13 @@ class Linter:
             with file.open("r", encoding="utf-8") as f:
                 source = f.read()
         except UnicodeDecodeError as e:
-            raise ValueError(
-                f"Could not read {file.relative_to(self.root)}: {e}",
-            ) from None
+            raise InputFileError(str(e), file) from None
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", SyntaxWarning)
-            tree = ast.parse(source, filename=str(file))
+            try:
+                tree = ast.parse(source, filename=str(file))
+            except SyntaxError as e:
+                raise InputFileError(str(e), file) from None
         setting_module_finder = SettingModuleIssueFinder(
             self.context,
             file,

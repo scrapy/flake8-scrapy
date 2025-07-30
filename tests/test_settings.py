@@ -490,6 +490,15 @@ CASES: Cases = (
                 "settings.getdict('DEBUG')",
                 NO_ISSUE,
             ),
+            # SCP32 wrong setting method: ast.Attribute in load context
+            (
+                "foo = self.settings['LOG_ENABLED']",
+                ExpectedIssue(
+                    "SCP32 wrong setting method: use getbool()",
+                    column=11,
+                    path=path,
+                ),
+            ),
             # SCP33 base setting use
             (
                 "settings['DOWNLOAD_HANDLERS_BASE']",

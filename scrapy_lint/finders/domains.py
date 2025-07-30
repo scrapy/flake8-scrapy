@@ -23,8 +23,7 @@ def is_list_assignment(node, var_name):
 
 
 class UnreachableDomainIssueFinder:
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self):
         self.allowed_domains = []
         self.start_urls = []
         self.reported = False

@@ -70,7 +70,7 @@ def test_syntax_error(capsys):
         main([])
     out, err = capsys.readouterr()
     assert not out
-    assert err == "Error: unmatched ')' (a.py, line 1)\n"
+    assert err == "a.py: Error: unmatched ')' (a.py, line 1)\n"
     assert excinfo.value.code == 2
 
 
@@ -80,8 +80,8 @@ def test_unicode_error(capsys):
     out, err = capsys.readouterr()
     assert not out
     assert err == (
-        "Error: Could not read a.py: 'utf-8' codec can't decode byte 0xff in "
-        "position 0: invalid start byte\n"
+        "a.py: Error: 'utf-8' codec can't decode byte 0xff in position 0: "
+        "invalid start byte\n"
     )
     assert excinfo.value.code == 2
 
@@ -91,9 +91,7 @@ def test_invalid_pyproject(capsys):
         main([])
     out, err = capsys.readouterr()
     assert not out
-    assert err == (
-        "Error: Invalid pyproject.toml: Invalid statement (at line 1, column 1)\n"
-    )
+    assert err == ("pyproject.toml: Error: Invalid statement (at line 1, column 1)\n")
     assert excinfo.value.code == 2
 
 
@@ -103,7 +101,7 @@ def test_invalid_pyproject_encoding(capsys):
     out, err = capsys.readouterr()
     assert not out
     assert err == (
-        "Error: Invalid pyproject.toml: 'utf-8' codec can't decode byte 0xff "
+        "pyproject.toml: Error: 'utf-8' codec can't decode byte 0xff "
         "in position 0: invalid start byte\n"
     )
     assert excinfo.value.code == 2

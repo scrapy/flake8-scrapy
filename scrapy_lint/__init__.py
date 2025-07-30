@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import sys
-import traceback
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .linter import Linter
+from .linter import InputFileError, Linter
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Sequence
@@ -40,8 +39,8 @@ def main(args: Sequence[str] | None = None) -> None:
         for issue in lint(args):
             found_issues = True
             print(issue)
-    except Exception:  # pylint: disable=broad-exception-caught
-        traceback.print_exc(file=sys.stderr)
+    except InputFileError as e:
+        print(e, file=sys.stderr)
         sys.exit(2)
     else:
         if found_issues:
