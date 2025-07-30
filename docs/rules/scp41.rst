@@ -39,8 +39,8 @@ Instead use:
 
 .. code-block:: python
 
-    from scrapy_poet import Addon as ScrapyPoetAddon
+    import scrapy_poet
 
     ADDONS = {
-        ScrapyPoetAddon: 300,
+        scrapy_poet.Addon: 300,
     }
