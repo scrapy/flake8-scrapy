@@ -53,6 +53,7 @@ class PythonIssueFinder(NodeVisitor):
     def __init__(self, setting_checker: SettingChecker):
         super().__init__()
         self.issues: list[Issue] = []
+        domain_issue_finder = UnreachableDomainIssueFinder()
         lambda_callback_issue_finder = LambdaCallbackIssueFinder()
         setting_issue_finder = SettingIssueFinder(setting_checker)
 
@@ -61,7 +62,7 @@ class PythonIssueFinder(NodeVisitor):
                 lambda_callback_issue_finder,
                 OldSelectorIssueFinder(),
                 setting_issue_finder,
-                UnreachableDomainIssueFinder(),
+                domain_issue_finder,
                 UrlInAllowedDomainsIssueFinder(),
             ],
             "Call": [
@@ -70,6 +71,9 @@ class PythonIssueFinder(NodeVisitor):
                 RequestIssueFinder(),
                 setting_issue_finder,
                 find_url_join_issues,
+            ],
+            "ClassDef": [
+                domain_issue_finder,
             ],
             "Compare": [
                 setting_issue_finder,

@@ -1,5 +1,5 @@
 import ast
-from ast import AST
+from ast import AST, ClassDef
 from collections.abc import Generator
 from urllib.parse import urlparse
 
@@ -33,6 +33,12 @@ class UnreachableDomainIssueFinder:
         return any(domain in netloc for _, _, domain in self.allowed_domains)
 
     def __call__(self, node) -> Generator[Issue]:
+        if isinstance(node, ClassDef):
+            self.allowed_domains = []
+            self.start_urls = []
+            self.reported = False
+            return
+
         if self.reported:
             return
 
