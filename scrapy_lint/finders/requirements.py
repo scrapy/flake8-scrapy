@@ -139,8 +139,10 @@ class RequirementsIssueFinder:
         packages: set[str],
     ) -> Generator[Issue]:
         if (
-            not self.context.project.root
-            or not (self.context.project.root / "scrapinghub.yml").exists()
+            not self.context.project.path
+            or not self.context.project.scrapy_cloud_config
+            or not has_stack(self.context.project.scrapy_cloud_config)
+            or has_image(self.context.project.scrapy_cloud_config)
         ):
             return
         missing = self.SCRAPY_CLOUD_STACK_DEPENDENCIES - packages
@@ -148,3 +150,22 @@ class RequirementsIssueFinder:
             return
         detail = ", ".join(sorted(missing))
         yield Issue(MISSING_STACK_REQUIREMENTS, detail=detail)
+
+
+def has_stack(d):
+    if isinstance(d, dict):
+        if "stack" in d or "stacks" in d:
+            return True
+        return any(has_stack(v) for v in d.values())
+    return False
+
+
+def has_image(d):
+    if isinstance(d, dict):
+        if "image" in d:
+            return d["image"]
+        for v in d.values():
+            result = has_image(v)
+            if result is not False:
+                return result
+    return False

@@ -112,13 +112,13 @@ class ZyteCloudConfigIssueFinder:
             yield Issue(INVALID_SCRAPINGHUB_YML, pos, "empty requirements.file")
             return
 
-        if self.context.project.root:
-            requirements_path = self.context.project.root / file_value
+        if self.context.project.path:
+            requirements_path = self.context.project.path / file_value
             if not requirements_path.exists():
                 yield Issue(UNEXISTING_REQUIREMENTS_FILE, pos)
             elif (
-                self.context.project.requirements_file_path
-                and requirements_path != self.context.project.requirements_file_path
+                self.context.project.requirements_file
+                and requirements_path != self.context.project.requirements_file
             ):
                 yield Issue(REQUIREMENTS_FILE_MISMATCH, pos)
 

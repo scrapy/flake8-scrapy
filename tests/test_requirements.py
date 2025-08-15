@@ -1,3 +1,5 @@
+from inspect import cleandoc
+
 from packaging.utils import canonicalize_name
 from packaging.version import Version
 
@@ -164,7 +166,16 @@ CASES: Cases = (
         (
             (
                 File("", path="scrapy.cfg"),
-                File("image: custom:latest", path="scrapinghub.yml"),
+                File(
+                    cleandoc(
+                        """
+                        stack: scrapy:2.13-20250721
+                        requirements:
+                          file: requirements.txt
+                        """
+                    ),
+                    path="scrapinghub.yml",
+                ),
                 File(requirements, path=path),
             ),
             issues,
