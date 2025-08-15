@@ -9,22 +9,22 @@ def issue(message, path="scrapinghub.yml", **kwargs):
 
 
 LATEST_KNOWN_STACK = "scrapy:2.12-20241202"
+MISSING_STACK_ISSUE = ExpectedIssue(
+    message="SCP24 missing stack requirements: aiohttp, "
+    "awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, "
+    "requests, scrapinghub, scrapinghub-entrypoint-scrapy, "
+    "scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, "
+    "scrapy-pagestorage, scrapy-querycleaner, "
+    "scrapy-splitvariants, scrapy-zyte-smartproxy, spidermon, "
+    "urllib3",
+    path="requirements.txt",
+)
 
 
 def default_issues(path: str = "requirements.txt") -> Sequence[ExpectedIssue]:
     return (
         ExpectedIssue(
             message="SCP13 incomplete requirements freeze",
-            path=path,
-        ),
-        ExpectedIssue(
-            message="SCP24 missing stack requirements: aiohttp, "
-            "awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, "
-            "requests, scrapinghub, scrapinghub-entrypoint-scrapy, "
-            "scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, "
-            "scrapy-pagestorage, scrapy-querycleaner, "
-            "scrapy-splitvariants, scrapy-zyte-smartproxy, spidermon, "
-            "urllib3",
             path=path,
         ),
     )
@@ -49,13 +49,6 @@ CASES = [
             *(
                 (config, NO_ISSUE)
                 for config in (
-                    "\n".join(
-                        [
-                            "requirements:",
-                            "  file: requirements.txt",
-                            f"stack: {LATEST_KNOWN_STACK}",
-                        ],
-                    ),
                     "image: custom:latest",
                     "\n".join(
                         [
@@ -75,6 +68,21 @@ CASES = [
                             "    stack: scrapy:2.12",
                             "    requirements:",
                             "      file: requirements.txt",
+                        ],
+                    ),
+                )
+            ),
+            *(
+                (
+                    config,
+                    MISSING_STACK_ISSUE,
+                )
+                for config in (
+                    "\n".join(
+                        [
+                            "requirements:",
+                            "  file: requirements.txt",
+                            f"stack: {LATEST_KNOWN_STACK}",
                         ],
                     ),
                 )
@@ -100,6 +108,7 @@ CASES = [
                 (
                     issue("SCP18 no root stack"),
                     issue("SCP19 non-root stack", line=5, column=4),
+                    MISSING_STACK_ISSUE,
                 ),
             ),
             (
@@ -111,7 +120,10 @@ CASES = [
                         f"  default: {LATEST_KNOWN_STACK}",
                     ],
                 ),
-                issue("SCP19 non-root stack", line=4, column=2),
+                (
+                    issue("SCP19 non-root stack", line=4, column=2),
+                    MISSING_STACK_ISSUE,
+                ),
             ),
             (
                 "\n".join(
@@ -127,13 +139,17 @@ CASES = [
                     issue("SCP18 no root stack"),
                     issue("SCP19 non-root stack", line=4, column=2),
                     issue("SCP19 non-root stack", line=5, column=2),
+                    MISSING_STACK_ISSUE,
                 ),
             ),
             # SCP20 stack not frozen
             *(
                 (
-                    (f"{config}\nrequirements:\n  file: requirements.txt"),
-                    issue("SCP20 stack not frozen", column=7),
+                    f"{config}\nrequirements:\n  file: requirements.txt",
+                    (
+                        issue("SCP20 stack not frozen", column=7),
+                        MISSING_STACK_ISSUE,
+                    ),
                 )
                 for config in (
                     "stack: scrapy:2.12",
@@ -150,7 +166,10 @@ CASES = [
                         "  file: requirements.txt",
                     ],
                 ),
-                issue("SCP20 stack not frozen", line=2, column=7),
+                (
+                    issue("SCP20 stack not frozen", line=2, column=7),
+                    MISSING_STACK_ISSUE,
+                ),
             ),
             (
                 "\n".join(
@@ -167,18 +186,31 @@ CASES = [
                     issue("SCP19 non-root stack", line=5, column=2),
                     issue("SCP20 stack not frozen", line=4, column=11),
                     issue("SCP20 stack not frozen", line=5, column=8),
+                    MISSING_STACK_ISSUE,
                 ),
             ),
             # SCP21 no root requirements
             *(
-                (config, issue("SCP21 no root requirements"))
+                (
+                    config,
+                    (
+                        issue("SCP21 no root requirements"),
+                        MISSING_STACK_ISSUE,
+                    ),
+                )
                 for config in (
                     "\n".join([f"stack: {LATEST_KNOWN_STACK}", "project: 12345"]),
                 )
             ),
             # SCP22 non-root requirements
             *(
-                (config, issue("SCP22 non-root requirements", line=6, column=4))
+                (
+                    config,
+                    (
+                        issue("SCP22 non-root requirements", line=6, column=4),
+                        MISSING_STACK_ISSUE,
+                    ),
+                )
                 for config in (
                     "\n".join(
                         [
@@ -197,10 +229,13 @@ CASES = [
             *(
                 (
                     config,
-                    issue(
-                        "SCP23 invalid scrapinghub.yml: no requirements.file key",
-                        line=3,
-                        column=2,
+                    (
+                        issue(
+                            "SCP23 invalid scrapinghub.yml: no requirements.file key",
+                            line=3,
+                            column=2,
+                        ),
+                        MISSING_STACK_ISSUE,
                     ),
                 )
                 for config in (
@@ -214,7 +249,7 @@ CASES = [
                     ),
                 )
             ),
-            # SCP24 invalid requirements.file
+            # SCP23 invalid requirements.file
             *(
                 (
                     "\n".join(
@@ -224,7 +259,12 @@ CASES = [
                             f"  file: {value}",
                         ],
                     ),
-                    issue(f"SCP23 invalid scrapinghub.yml: {detail}", line=3, column=8),
+                    (
+                        issue(
+                            f"SCP23 invalid scrapinghub.yml: {detail}", line=3, column=8
+                        ),
+                        MISSING_STACK_ISSUE,
+                    ),
                 )
                 for value, detail in (
                     ("", "non-str requirements.file"),
@@ -242,7 +282,10 @@ CASES = [
                             f"  file: {path}",
                         ],
                     ),
-                    issue("SCP25 unexisting requirements.file", line=3, column=8),
+                    (
+                        issue("SCP25 unexisting requirements.file", line=3, column=8),
+                        MISSING_STACK_ISSUE,
+                    ),
                 )
                 for path in (
                     "missing-requirements.txt",
@@ -273,6 +316,7 @@ CASES = [
                         line=6,
                         column=6,
                     ),
+                    MISSING_STACK_ISSUE,
                 ),
             ),
             # SCP23 invalid scrapinghub.yml
@@ -312,10 +356,13 @@ CASES = [
                         "requirements: yes",
                     ],
                 ),
-                issue(
-                    "SCP23 invalid scrapinghub.yml: non-mapping requirements",
-                    line=2,
-                    column=14,
+                (
+                    issue(
+                        "SCP23 invalid scrapinghub.yml: non-mapping requirements",
+                        line=2,
+                        column=14,
+                    ),
+                    MISSING_STACK_ISSUE,
                 ),
             ),
             (
@@ -333,6 +380,7 @@ CASES = [
                         line=3,
                         column=8,
                     ),
+                    MISSING_STACK_ISSUE,
                 ],
             ),
             (
@@ -358,6 +406,7 @@ CASES = [
                         line=4,
                         column=11,
                     ),
+                    MISSING_STACK_ISSUE,
                 ],
             ),
         )
@@ -426,6 +475,16 @@ CASES = [
         (
             *default_issues("requirements-dev.txt"),
             issue("SCP26 requirements.file mismatch", line=3, column=8),
+            ExpectedIssue(
+                message="SCP24 missing stack requirements: aiohttp, "
+                "awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, "
+                "requests, scrapinghub, scrapinghub-entrypoint-scrapy, "
+                "scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, "
+                "scrapy-pagestorage, scrapy-querycleaner, "
+                "scrapy-splitvariants, scrapy-zyte-smartproxy, spidermon, "
+                "urllib3",
+                path="requirements-dev.txt",
+            ),
         ),
         {"requirements_file": "requirements-dev.txt"},
     ),
@@ -444,7 +503,19 @@ CASES = [
             File("", "scrapy.cfg"),
             File("", "requirements-dev.txt"),
         ),
-        (*default_issues("requirements-dev.txt"),),
+        (
+            *default_issues("requirements-dev.txt"),
+            ExpectedIssue(
+                message="SCP24 missing stack requirements: aiohttp, "
+                "awscli, boto, boto3, jinja2, monkeylearn, pillow, pyyaml, "
+                "requests, scrapinghub, scrapinghub-entrypoint-scrapy, "
+                "scrapy-deltafetch, scrapy-dotpersistence, scrapy-magicfields, "
+                "scrapy-pagestorage, scrapy-querycleaner, "
+                "scrapy-splitvariants, scrapy-zyte-smartproxy, spidermon, "
+                "urllib3",
+                path="requirements-dev.txt",
+            ),
+        ),
         {"requirements_file": "requirements-dev.txt"},
     ),
 ]

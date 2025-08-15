@@ -1282,6 +1282,13 @@ SETTINGS = {
         type=SettingType.DICT_OR_LIST,
         default_value=VersionedValue([]),
     ),
+    # https://spidermon.readthedocs.io/en/latest/howto/stats-collection.html
+    "SPIDERMON_MAX_STORED_STATS": Setting(
+        package="spidermon",
+        type=SettingType.INT,
+        default_value=VersionedValue(100),
+        versioning=Versioning(added_in=Version("1.10.0")),
+    ),
     # https://spidermon.readthedocs.io/en/latest/actions/email-action.html
     "SPIDERMON_EMAIL_SENDER": Setting(
         package="spidermon",

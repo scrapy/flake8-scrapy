@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from . import Cases, ExpectedIssue, File, cases
+from inspect import cleandoc
+
+from . import NO_ISSUE, Cases, ExpectedIssue, File, cases
 from .helpers import check_project
 
 CASES: Cases = (
@@ -45,6 +47,28 @@ CASES: Cases = (
                 path="a.py",
             ),
         ),
+        {},
+    ),
+    # The allowed_domains from a given class should not affect other classes.
+    (
+        (
+            File(
+                cleandoc(
+                    """
+                    class ASpider(Spider):
+                        name = 'a'
+                        start_urls = ['https://a.example/']
+
+                    class BSpider(Spider):
+                        name = 'b'
+                        allowed_domains = ['b.example']
+                        start_urls = ['https://b.example/']
+                    """
+                ),
+                path="a.py",
+            ),
+        ),
+        NO_ISSUE,
         {},
     ),
 )
