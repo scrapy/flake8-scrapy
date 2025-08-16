@@ -28,7 +28,6 @@ from ast import (
     expr,
     keyword,
 )
-from ast import walk as iter_nodes
 from contextlib import suppress
 from difflib import SequenceMatcher
 from typing import TYPE_CHECKING, Any, Union
@@ -605,19 +604,36 @@ class SettingModuleIssueFinder(NodeVisitor):
 
     def check_all_nodes_issues(self, node: Module) -> None:
         processor = SettingsModuleSettingsProcessor(self.context, self.setting_checker)
-        for child in iter_nodes(node):
-            if isinstance(child, Assign):
-                issue_generator = processor.process_assignment(child)
-                self.issues.extend(issue_generator)
-            elif isinstance(child, (ClassDef, FunctionDef)):
-                if not child.name.isupper():
-                    continue
-                pos = Pos.from_node(child, definition_column(child))
-                self.issues.append(Issue(IMPROPER_SETTING_DEFINITION, pos))
-                issue_generator = self.setting_checker.check_name(child)
-                self.issues.extend(issue_generator)
-            elif isinstance(child, (Import, ImportFrom)):
-                processor.process_import(child)
+
+        def visit_nested_body(child) -> None:
+            visit_body(child.body)
+            for attr in ("orelse", "finalbody", "handlers"):
+                sub = getattr(child, attr, None)
+                if sub:
+                    if attr == "handlers":
+                        for handler in sub:
+                            visit_body(getattr(handler, "body", []))
+                    else:
+                        visit_body(sub)
+
+        def visit_body(body):
+            for child in body:
+                if isinstance(child, (ClassDef, FunctionDef)):
+                    if not child.name.isupper():
+                        continue
+                    pos = Pos.from_node(child, definition_column(child))
+                    self.issues.append(Issue(IMPROPER_SETTING_DEFINITION, pos))
+                    issue_generator = self.setting_checker.check_name(child)
+                    self.issues.extend(issue_generator)
+                elif isinstance(child, (Import, ImportFrom)):
+                    processor.process_import(child)
+                elif isinstance(child, Assign):
+                    issue_generator = processor.process_assignment(child)
+                    self.issues.extend(issue_generator)
+                elif hasattr(child, "body"):
+                    visit_nested_body(child)
+
+        visit_body(node.body)
         self.issues.extend(processor.iter_issues())
 
 
