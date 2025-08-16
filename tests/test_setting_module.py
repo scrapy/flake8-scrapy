@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 from collections.abc import Sequence
+from inspect import cleandoc
 
 from tests.helpers import check_project
 from tests.settings import default_issues
@@ -10,6 +11,7 @@ from . import NO_ISSUE, Cases, ExpectedIssue, File, cases, iter_issues
 
 FALSE_BOOLS = ("False", "'false'", "0")
 TRUE_BOOLS = ("True", "'true'", "1")
+PATH = "a.py"
 
 
 def supports_alias_col_offset():
@@ -67,22 +69,21 @@ CASES: Cases = (
         (
             [
                 File("[settings]\na=a", path="scrapy.cfg"),
-                File(code, path=path),
+                File(code, path=PATH),
             ],
             (
-                *default_issues(path),
+                *default_issues(PATH),
                 *iter_issues(issues),
             ),
             {},
         )
-        for path in ["a.py"]
         for code, issues in (
             # Baseline
             ("BOT_NAME = 'a'", NO_ISSUE),
             # Non-setting-module specific checks for Python files also apply
             (
                 "settings['FOO']",
-                ExpectedIssue("SCP27 unknown setting", column=9, path=path),
+                ExpectedIssue("SCP27 unknown setting", column=9, path=PATH),
             ),
             # Setting name checks work with module-specific setting syntax
             *(
@@ -92,7 +93,7 @@ CASES: Cases = (
                         ExpectedIssue(
                             "SCP27 unknown setting",
                             column=column,
-                            path=path,
+                            path=PATH,
                         ),
                         *extra_issues,
                     ),
@@ -106,7 +107,7 @@ CASES: Cases = (
                             ExpectedIssue(
                                 "SCP11 improper setting definition",
                                 column=6,
-                                path=path,
+                                path=PATH,
                             ),
                         ),
                     ),
@@ -117,7 +118,7 @@ CASES: Cases = (
                             ExpectedIssue(
                                 "SCP11 improper setting definition",
                                 column=4,
-                                path=path,
+                                path=PATH,
                             ),
                         ),
                     ),
@@ -128,7 +129,7 @@ CASES: Cases = (
                             ExpectedIssue(
                                 "SCP12 imported setting",
                                 column=7 if ALIAS_HAS_COL_OFFSET else 0,
-                                path=path,
+                                path=PATH,
                             ),
                         ),
                     ),
@@ -141,7 +142,7 @@ CASES: Cases = (
                     ExpectedIssue(
                         "SCP07 redefined setting: seen first at line 1",
                         line=2,
-                        path=path,
+                        path=PATH,
                     ),
                 )
                 for code in (
@@ -160,7 +161,7 @@ CASES: Cases = (
                     ExpectedIssue(
                         "SCP11 improper setting definition",
                         column=column,
-                        path=path,
+                        path=PATH,
                     ),
                 )
                 for lines, column in (
@@ -203,7 +204,7 @@ CASES: Cases = (
                     ExpectedIssue(
                         "SCP12 imported setting",
                         column=column if ALIAS_HAS_COL_OFFSET else 0,
-                        path=path,
+                        path=PATH,
                     ),
                 )
                 for code, column in (
@@ -219,12 +220,12 @@ CASES: Cases = (
                     ExpectedIssue(
                         "SCP12 imported setting",
                         column=16 if ALIAS_HAS_COL_OFFSET else 0,
-                        path=path,
+                        path=PATH,
                     ),
                     ExpectedIssue(
                         "SCP12 imported setting",
                         column=26 if ALIAS_HAS_COL_OFFSET else 0,
-                        path=path,
+                        path=PATH,
                     ),
                 ],
             ),
@@ -233,7 +234,7 @@ CASES: Cases = (
                 ExpectedIssue(
                     "SCP12 imported setting",
                     column=12 if ALIAS_HAS_COL_OFFSET else 0,
-                    path=path,
+                    path=PATH,
                 ),
             ),
             *(
@@ -254,7 +255,7 @@ CASES: Cases = (
                         "SCP17 redundant setting value",
                         line=1,
                         column=len(name) + 3,
-                        path=path,
+                        path=PATH,
                     ),
                 )
                 for name, value in (
@@ -287,7 +288,7 @@ CASES: Cases = (
                             "SCP17 redundant setting value",
                             line=1,
                             column=len(name) + 3,
-                            path=path,
+                            path=PATH,
                         ),
                         *iter_issues(issues),
                     ),
@@ -300,7 +301,7 @@ CASES: Cases = (
                             ExpectedIssue(
                                 "SCP38 low project throttling",
                                 column=17,
-                                path=path,
+                                path=PATH,
                             ),
                         )
                         for value in ("0", "0.0")
@@ -337,7 +338,7 @@ CASES: Cases = (
             # SCP27 unknown setting
             (
                 "FOO = 'bar'",
-                ExpectedIssue("SCP27 unknown setting", path=path),
+                ExpectedIssue("SCP27 unknown setting", path=PATH),
             ),
             # SCP35 no-op setting update
             (
@@ -346,16 +347,16 @@ CASES: Cases = (
             ),
             (
                 "settings['SPIDER_MODULES'] = ['myproject.spiders']",
-                ExpectedIssue("SCP35 no-op setting update", column=9, path=path),
+                ExpectedIssue("SCP35 no-op setting update", column=9, path=PATH),
             ),
             # Setting value checks for pre-crawler settings
             (
                 "ADDONS = '{}'",
-                ExpectedIssue("SCP17 redundant setting value", column=9, path=path),
+                ExpectedIssue("SCP17 redundant setting value", column=9, path=PATH),
             ),
             (
                 "ADDONS = {}",
-                ExpectedIssue("SCP17 redundant setting value", column=9, path=path),
+                ExpectedIssue("SCP17 redundant setting value", column=9, path=PATH),
             ),
             *(
                 (
@@ -373,7 +374,7 @@ CASES: Cases = (
                     ExpectedIssue(
                         f"SCP36 invalid setting value: {detail}",
                         column=9 + offset,
-                        path=path,
+                        path=PATH,
                     ),
                 )
                 for value, detail, offset in (
@@ -406,7 +407,7 @@ CASES: Cases = (
         (
             [
                 File("[settings]\na=a", path="scrapy.cfg"),
-                File(code, path=path),
+                File(code, path=PATH),
             ],
             (
                 *(
@@ -416,12 +417,12 @@ CASES: Cases = (
                     if issues and is_setting_like
                     else ()
                 ),
-                *default_issues(path),
+                *default_issues(PATH),
                 *(
                     ExpectedIssue(
                         "SCP27 unknown setting",
                         line=line,
-                        path=path,
+                        path=PATH,
                     )
                     for line in range(1, 3)
                     if is_setting_like
@@ -429,7 +430,6 @@ CASES: Cases = (
             ),
             {},
         )
-        for path in ["a.py"]
         for setting, is_setting_like in (
             ("_FOO", True),  # _-prefixed
             ("F", True),  # short
@@ -442,7 +442,7 @@ CASES: Cases = (
                 ExpectedIssue(
                     "SCP07 redefined setting: seen first at line 1",
                     line=2,
-                    path=path,
+                    path=PATH,
                 ),
             ),
         )
@@ -453,15 +453,14 @@ CASES: Cases = (
         (
             [
                 File("[settings]\na=a", path="scrapy.cfg"),
-                File(code, path=path),
+                File(code, path=PATH),
             ],
             (
-                *default_issues(path, exclude=exclude),
+                *default_issues(PATH, exclude=exclude),
                 *iter_issues(issues),
             ),
             {},
         )
-        for path in ["a.py"]
         for code, exclude, issues in (
             # SCP08 no project USER_AGENT
             *(
@@ -484,12 +483,12 @@ CASES: Cases = (
                         ExpectedIssue(
                             "SCP09 robots.txt ignored by default",
                             column=17,
-                            path=path,
+                            path=PATH,
                         ),
                         ExpectedIssue(
                             "SCP17 redundant setting value",
                             column=17,
-                            path=path,
+                            path=PATH,
                         ),
                     ),
                 )
@@ -499,7 +498,7 @@ CASES: Cases = (
             (
                 "ROBOTSTXT_OBEY = 'foo'",
                 9,
-                (ExpectedIssue("SCP36 invalid setting value", column=17, path=path),),
+                (ExpectedIssue("SCP36 invalid setting value", column=17, path=PATH),),
             ),
             # SCP10 incomplete project throttling
             (
@@ -515,7 +514,7 @@ CASES: Cases = (
                         ExpectedIssue(
                             "SCP10 incomplete project throttling",
                             column=0,
-                            path=path,
+                            path=PATH,
                         ),
                     ),
                 )
@@ -529,21 +528,21 @@ CASES: Cases = (
                 (
                     f"AUTOTHROTTLE_ENABLED = {value}",
                     10,
-                    ExpectedIssue("SCP10 incomplete project throttling", path=path),
+                    ExpectedIssue("SCP10 incomplete project throttling", path=PATH),
                 )
                 for value in TRUE_BOOLS
             ),
             (
                 "AUTOTHROTTLE_ENABLED = foo",
                 10,
-                ExpectedIssue("SCP10 incomplete project throttling", path=path),
+                ExpectedIssue("SCP10 incomplete project throttling", path=PATH),
             ),
             (
                 "AUTOTHROTTLE_ENABLED = 'foo'",
                 10,
                 (
-                    ExpectedIssue("SCP10 incomplete project throttling", path=path),
-                    ExpectedIssue("SCP36 invalid setting value", column=23, path=path),
+                    ExpectedIssue("SCP10 incomplete project throttling", path=PATH),
+                    ExpectedIssue("SCP36 invalid setting value", column=23, path=PATH),
                 ),
             ),
             *(
@@ -551,11 +550,11 @@ CASES: Cases = (
                     f"AUTOTHROTTLE_ENABLED = {value}",
                     10,
                     (
-                        ExpectedIssue("SCP10 incomplete project throttling", path=path),
+                        ExpectedIssue("SCP10 incomplete project throttling", path=PATH),
                         ExpectedIssue(
                             "SCP17 redundant setting value",
                             column=23,
-                            path=path,
+                            path=PATH,
                         ),
                     ),
                 )
@@ -580,12 +579,12 @@ CASES: Cases = (
                 "CONCURRENT_REQUESTS_PER_DOMAIN = 2\nDOWNLOAD_DELAY = 0.9",
                 10,
                 (
-                    ExpectedIssue("SCP38 low project throttling", column=33, path=path),
+                    ExpectedIssue("SCP38 low project throttling", column=33, path=PATH),
                     ExpectedIssue(
                         "SCP38 low project throttling",
                         line=2,
                         column=17,
-                        path=path,
+                        path=PATH,
                     ),
                 ),
             ),
@@ -598,16 +597,76 @@ CASES: Cases = (
                 "CONCURRENT_REQUESTS_PER_DOMAIN = 'foo'\nDOWNLOAD_DELAY = 'bar'",
                 10,
                 (
-                    ExpectedIssue("SCP36 invalid setting value", column=33, path=path),
+                    ExpectedIssue("SCP36 invalid setting value", column=33, path=PATH),
                     ExpectedIssue(
                         "SCP36 invalid setting value",
                         line=2,
                         column=17,
-                        path=path,
+                        path=PATH,
                     ),
                 ),
             ),
         )
+    ),
+    # SCP27 must not trigger for assignments within class of function
+    # definitions.
+    *(
+        (
+            [
+                File("[settings]\na=a", path="scrapy.cfg"),
+                File(
+                    cleandoc(code),
+                    path=PATH,
+                ),
+            ],
+            (*default_issues(PATH),),
+            {},
+        )
+        for code in (
+            """
+            class Foo:
+                BAR = 'baz'
+            """,
+            """
+            def foo():
+                BAR = 'baz'
+            """,
+        )
+    ),
+    # Settings defined in any branch of a try-except block must be taken into
+    # account.
+    (
+        [
+            File("[settings]\na=a", path="scrapy.cfg"),
+            File(
+                cleandoc(
+                    """
+                    try:
+                        USER_AGENT = 'a'
+                    except Exception as e:
+                        USER_AGENT = 'b'
+                    else:
+                        USER_AGENT = 'c'
+                    finally:
+                        USER_AGENT = 'd'
+                    """
+                ),
+                path=PATH,
+            ),
+        ],
+        (
+            *default_issues(PATH, exclude=8),
+            *(
+                ExpectedIssue(
+                    "SCP39 no contact info",
+                    line=line,
+                    column=17,
+                    path=PATH,
+                )
+                for line in (2, 4, 6, 8)
+            ),
+        ),
+        {},
     ),
 )
 
