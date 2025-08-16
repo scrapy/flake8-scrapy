@@ -1065,6 +1065,28 @@ SETTINGS = {
     # scrapy-feedexporter-google-sheets plugin settings, in order of appearance
     # in https://github.com/scrapy-plugins/scrapy-feedexporter-google-sheets
     "GOOGLE_CREDENTIALS": Setting(package="scrapy-feedexporter-google-sheets"),
+    # scrapy-fieldstats plugin settings, in order of appearance in
+    # https://github.com/stummjr/scrapy-fieldstats
+    "FIELDSTATS_ENABLED": Setting(
+        package="scrapy-fieldstats",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
+    "FIELDSTATS_COUNTS_ONLY": Setting(
+        package="scrapy-fieldstats",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
+    "FIELDSTATS_SKIP_NONE": Setting(
+        package="scrapy-fieldstats",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
+    "FIELDSTATS_ADD_TO_STATS": Setting(
+        package="scrapy-fieldstats",
+        type=SettingType.BOOL,
+        default_value=VersionedValue(False),
+    ),
     # hcf-backend plugin settings, in order of appearance in
     # https://github.com/scrapinghub/hcf-backend/blob/master/hcf_backend/backend.py
     "HCF_CONSUMER_MAX_REQUESTS": Setting(package="hcf-backend"),
